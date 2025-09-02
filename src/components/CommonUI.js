@@ -1,1 +1,263 @@
-import React, { memo, useCallback } from 'react';\nimport { ChevronUp, ChevronDown } from 'lucide-react';\n\n// ========== COMMON UI COMPONENTS ==========\nexport const Modal = memo(({ show, onClose, title, size = 'md', children }) => {\n  if (!show) return null;\n\n  const sizeClasses = {\n    sm: 'max-w-sm',\n    md: 'max-w-md',\n    lg: 'max-w-lg',\n    xl: 'max-w-xl'\n  };\n\n  return (\n    <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40\">\n      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`}>\n        {title && (\n          <h3 className=\"text-lg font-medium text-gray-900 mb-4\">{title}</h3>\n        )}\n        {children}\n      </div>\n    </div>\n  );\n});\n\nexport const ConfirmModal = memo(({ \n  show, \n  onClose, \n  onConfirm, \n  title, \n  message, \n  confirmText = \"확인\", \n  cancelText = \"취소\", \n  confirmColor = \"bg-red-600 hover:bg-red-700\" \n}) => {\n  return (\n    <Modal show={show} onClose={onClose} title={title}>\n      <div className=\"mb-6\">\n        {typeof message === 'string' ? (\n          <p className=\"text-sm text-gray-600\">{message}</p>\n        ) : (\n          message\n        )}\n      </div>\n      <div className=\"flex justify-end space-x-2\">\n        <button\n          onClick={onClose}\n          className=\"px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50\"\n        >\n          {cancelText}\n        </button>\n        <button\n          onClick={onConfirm}\n          className={`px-4 py-2 text-white rounded-md ${confirmColor}`}\n        >\n          {confirmText}\n        </button>\n      </div>\n    </Modal>\n  );\n});\n\nexport const InputField = memo(({ \n  label, \n  value, \n  onChange, \n  onBlur,\n  error, \n  type = \"text\", \n  placeholder, \n  className = \"\",\n  autoFocus = false,\n  ...rest \n}) => {\n  return (\n    <div className={className}>\n      {label && (\n        <label className=\"block text-sm font-medium text-gray-700 mb-2\">\n          {label}\n        </label>\n      )}\n      <input\n        type={type}\n        value={value}\n        onChange={onChange}\n        onBlur={onBlur}\n        placeholder={placeholder}\n        autoFocus={autoFocus}\n        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${\n          error ? 'border-red-300' : 'border-gray-300'\n        }`}\n        {...rest}\n      />\n      {error && (\n        <p className=\"mt-2 text-sm text-red-600\">{error}</p>\n      )}\n    </div>\n  );\n});\n\nexport const TableHeader = memo(({ children, className = \"\" }) => {\n  return (\n    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>\n      {children}\n    </th>\n  );\n});\n\nexport const SortableHeader = memo(({ field, sortConfig, onSort, children, className = \"\" }) => {\n  const getSortIcon = () => {\n    if (sortConfig.field === field) {\n      return sortConfig.direction === 'desc' ? \n        <ChevronDown className=\"w-4 h-4\" /> : \n        <ChevronUp className=\"w-4 h-4\" />;\n    }\n    return <ChevronDown className=\"w-4 h-4 text-gray-300\" />;\n  };\n\n  return (\n    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>\n      <button\n        onClick={() => onSort(field)}\n        className=\"flex items-center space-x-1 hover:text-gray-700\"\n      >\n        <span>{children}</span>\n        {getSortIcon()}\n      </button>\n    </th>\n  );\n});\n\nexport const EmptyState = memo(({ message, colSpan }) => {\n  return (\n    <tr>\n      <td colSpan={colSpan} className=\"px-6 py-8 text-center text-gray-500\">\n        {message}\n      </td>\n    </tr>\n  );\n});\n\n// ========== PAGINATION COMPONENT ==========\nexport const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPerPage, totalItems }) => {\n  const startItem = (currentPage - 1) * itemsPerPage + 1;\n  const endItem = Math.min(currentPage * itemsPerPage, totalItems);\n\n  // 현재 페이지 그룹 계산 (1-5, 6-10, 11-15...)\n  const currentGroup = Math.ceil(currentPage / 5);\n  const startPage = (currentGroup - 1) * 5 + 1;\n  const endPage = Math.min(startPage + 4, totalPages);\n  \n  // 페이지 번호 배열 생성\n  const getPageNumbers = useCallback(() => {\n    const pages = [];\n    for (let i = startPage; i <= endPage; i++) {\n      pages.push(i);\n    }\n    return pages;\n  }, [startPage, endPage]);\n\n  // 버튼 활성화 상태\n  const canGoToPrevGroup = currentGroup > 1;\n  const canGoToNextGroup = currentGroup < Math.ceil(totalPages / 5);\n  const canGoToFirst = currentPage > 1;\n  const canGoToLast = currentPage < totalPages;\n\n  // 네비게이션 핸들러\n  const goToFirstPage = useCallback(() => {\n    onPageChange(1);\n  }, [onPageChange]);\n\n  const goToLastPage = useCallback(() => {\n    onPageChange(totalPages);\n  }, [onPageChange, totalPages]);\n\n  const goToPrevGroup = useCallback(() => {\n    if (canGoToPrevGroup) {\n      const prevGroupStart = (currentGroup - 2) * 5 + 1;\n      onPageChange(prevGroupStart);\n    }\n  }, [canGoToPrevGroup, currentGroup, onPageChange]);\n\n  const goToNextGroup = useCallback(() => {\n    if (canGoToNextGroup) {\n      const nextGroupStart = currentGroup * 5 + 1;\n      onPageChange(Math.min(nextGroupStart, totalPages));\n    }\n  }, [canGoToNextGroup, currentGroup, totalPages, onPageChange]);\n\n  if (totalItems === 0) return null;\n\n  return (\n    <div className=\"flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200\" style={{minHeight: '60px'}}>\n      <div className=\"flex-1 flex items-center justify-between\">\n        <div>\n          <p className=\"text-xs text-gray-500\">\n            총 <span className=\"font-medium\">{totalItems}</span>개 중{' '}\n            <span className=\"font-medium\">{startItem}</span>-<span className=\"font-medium\">{endItem}</span>개 표시\n          </p>\n        </div>\n        <div className=\"flex items-center space-x-2\">\n          {/* 처음으로 */}\n          <button\n            onClick={goToFirstPage}\n            disabled={!canGoToFirst}\n            className=\"px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed\"\n            title=\"처음으로\"\n          >\n            &lt;&lt;\n          </button>\n          \n          {/* 이전 그룹 */}\n          <button\n            onClick={goToPrevGroup}\n            disabled={!canGoToPrevGroup}\n            className=\"px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed\"\n            title=\"이전 5개\"\n          >\n            &lt;\n          </button>\n          \n          {/* 페이지 번호들 */}\n          <div className=\"flex items-center space-x-1 min-w-[200px] justify-center\">\n            {getPageNumbers().map((page) => (\n              <button\n                key={page}\n                onClick={() => onPageChange(page)}\n                className={`px-3 py-1 text-sm rounded ${\n                  page === currentPage\n                    ? 'bg-blue-100 text-blue-600 font-medium'\n                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'\n                }`}\n              >\n                {page}\n              </button>\n            ))}\n          </div>\n          \n          {/* 다음 그룹 */}\n          <button\n            onClick={goToNextGroup}\n            disabled={!canGoToNextGroup}\n            className=\"px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed\"\n            title=\"다음 5개\"\n          >\n            &gt;\n          </button>\n          \n          {/* 마지막으로 */}\n          <button\n            onClick={goToLastPage}\n            disabled={!canGoToLast}\n            className=\"px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed\"\n            title=\"마지막으로\"\n          >\n            &gt;&gt;\n          </button>\n        </div>\n      </div>\n    </div>\n  );\n});", "oldText": null}]
+import React, { memo, useCallback } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+
+// ========== COMMON UI COMPONENTS ==========
+export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
+  if (!show) return null;
+
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl'
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
+      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`}>
+        {title && (
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+});
+
+export const ConfirmModal = memo(({ 
+  show, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "확인", 
+  cancelText = "취소", 
+  confirmColor = "bg-red-600 hover:bg-red-700" 
+}) => {
+  return (
+    <Modal show={show} onClose={onClose} title={title}>
+      <div className="mb-6">
+        {typeof message === 'string' ? (
+          <p className="text-sm text-gray-600">{message}</p>
+        ) : (
+          message
+        )}
+      </div>
+      <div className="flex justify-end space-x-2">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          {cancelText}
+        </button>
+        <button
+          onClick={onConfirm}
+          className={`px-4 py-2 text-white rounded-md ${confirmColor}`}
+        >
+          {confirmText}
+        </button>
+      </div>
+    </Modal>
+  );
+});
+
+export const InputField = memo(({ 
+  label, 
+  value, 
+  onChange, 
+  onBlur,
+  error, 
+  type = "text", 
+  placeholder, 
+  className = "",
+  autoFocus = false,
+  ...rest 
+}) => {
+  return (
+    <div className={className}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {label}
+        </label>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          error ? 'border-red-300' : 'border-gray-300'
+        }`}
+        {...rest}
+      />
+      {error && (
+        <p className="mt-2 text-sm text-red-600">{error}</p>
+      )}
+    </div>
+  );
+});
+
+export const TableHeader = memo(({ children, className = "" }) => {
+  return (
+    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+      {children}
+    </th>
+  );
+});
+
+export const SortableHeader = memo(({ field, sortConfig, onSort, children, className = "" }) => {
+  const getSortIcon = () => {
+    if (sortConfig.field === field) {
+      return sortConfig.direction === 'desc' ? 
+        <ChevronDown className="w-4 h-4" /> : 
+        <ChevronUp className="w-4 h-4" />;
+    }
+    return <ChevronDown className="w-4 h-4 text-gray-300" />;
+  };
+
+  return (
+    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+      <button
+        onClick={() => onSort(field)}
+        className="flex items-center space-x-1 hover:text-gray-700"
+      >
+        <span>{children}</span>
+        {getSortIcon()}
+      </button>
+    </th>
+  );
+});
+
+export const EmptyState = memo(({ message, colSpan }) => {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-6 py-8 text-center text-gray-500">
+        {message}
+      </td>
+    </tr>
+  );
+});
+
+// ========== PAGINATION COMPONENT ==========
+export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPerPage, totalItems }) => {
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  // 현재 페이지 그룹 계산 (1-5, 6-10, 11-15...)
+  const currentGroup = Math.ceil(currentPage / 5);
+  const startPage = (currentGroup - 1) * 5 + 1;
+  const endPage = Math.min(startPage + 4, totalPages);
+  
+  // 페이지 번호 배열 생성
+  const getPageNumbers = useCallback(() => {
+    const pages = [];
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }, [startPage, endPage]);
+
+  // 버튼 활성화 상태
+  const canGoToPrevGroup = currentGroup > 1;
+  const canGoToNextGroup = currentGroup < Math.ceil(totalPages / 5);
+  const canGoToFirst = currentPage > 1;
+  const canGoToLast = currentPage < totalPages;
+
+  // 네비게이션 핸들러
+  const goToFirstPage = useCallback(() => {
+    onPageChange(1);
+  }, [onPageChange]);
+
+  const goToLastPage = useCallback(() => {
+    onPageChange(totalPages);
+  }, [onPageChange, totalPages]);
+
+  const goToPrevGroup = useCallback(() => {
+    if (canGoToPrevGroup) {
+      const prevGroupStart = (currentGroup - 2) * 5 + 1;
+      onPageChange(prevGroupStart);
+    }
+  }, [canGoToPrevGroup, currentGroup, onPageChange]);
+
+  const goToNextGroup = useCallback(() => {
+    if (canGoToNextGroup) {
+      const nextGroupStart = currentGroup * 5 + 1;
+      onPageChange(Math.min(nextGroupStart, totalPages));
+    }
+  }, [canGoToNextGroup, currentGroup, totalPages, onPageChange]);
+
+  if (totalItems === 0) return null;
+
+  return (
+    <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200" style={{minHeight: '60px'}}>
+      <div className="flex-1 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500">
+            총 <span className="font-medium">{totalItems}</span>개 중{' '}
+            <span className="font-medium">{startItem}</span>-<span className="font-medium">{endItem}</span>개 표시
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          {/* 처음으로 */}
+          <button
+            onClick={goToFirstPage}
+            disabled={!canGoToFirst}
+            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="처음으로"
+          >
+            &lt;&lt;
+          </button>
+          
+          {/* 이전 그룹 */}
+          <button
+            onClick={goToPrevGroup}
+            disabled={!canGoToPrevGroup}
+            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="이전 5개"
+          >
+            &lt;
+          </button>
+          
+          {/* 페이지 번호들 */}
+          <div className="flex items-center space-x-1 min-w-[200px] justify-center">
+            {getPageNumbers().map((page) => (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`px-3 py-1 text-sm rounded ${
+                  page === currentPage
+                    ? 'bg-blue-100 text-blue-600 font-medium'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          
+          {/* 다음 그룹 */}
+          <button
+            onClick={goToNextGroup}
+            disabled={!canGoToNextGroup}
+            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="다음 5개"
+          >
+            &gt;
+          </button>
+          
+          {/* 마지막으로 */}
+          <button
+            onClick={goToLastPage}
+            disabled={!canGoToLast}
+            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="마지막으로"
+          >
+            &gt;&gt;
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
