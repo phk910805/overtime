@@ -4,6 +4,7 @@ import { OvertimeProvider, useOvertimeContext } from './context';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
+import SettingsModal from './components/SettingsModal';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
@@ -126,6 +127,11 @@ const OvertimeManagementApp = memo(() => {
           <EmployeeManagement />
         )}
       </div>
+
+      <SettingsModal
+        show={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 });
