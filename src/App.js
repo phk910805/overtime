@@ -1,6 +1,7 @@
 import React, { useState, useCallback, memo } from 'react';
 import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { OvertimeProvider, useOvertimeContext } from './context';
+import EmployeeManagement from './components/EmployeeManagement';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
@@ -111,32 +112,31 @@ const OvertimeManagementApp = memo(() => {
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-20">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            모듈화 완료!
-          </h2>
-          <p className="text-gray-600 mb-6">
-            코드가 4개의 핵심 파일로 분리되었습니다:<br/>
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm">utils.js</code>, 
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm ml-1">dataManager.js</code>, 
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm ml-1">context.js</code>, 
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm ml-1">App.js</code>
-          </p>
-          <div className="bg-green-50 border border-green-200 rounded-md p-4 max-w-lg mx-auto">
-            <p className="text-sm text-green-800">
-              선택된 월: <strong>{selectedMonth}</strong><br/>
-              활성 탭: <strong>{activeTab}</strong><br/>
-              데이터 저장: <strong>LocalStorage 연동완료</strong><br/>
-              구조: <strong>모듈화 완료</strong>
+        {activeTab === 'dashboard' && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              대시보드
+            </h2>
+            <p className="text-gray-600">
+              월별 현황표가 곧 추가될 예정입니다.
             </p>
           </div>
-          <div className="mt-6">
-            <p className="text-sm text-gray-500">
-              이제 각 컴포넌트(Dashboard, EmployeeManagement, etc.)를<br/>
-              별도 파일로 추가하여 완전한 기능을 구현할 수 있습니다.
+        )}
+        
+        {activeTab === 'records' && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              히스토리
+            </h2>
+            <p className="text-gray-600">
+              기록 히스토리가 곧 추가될 예정입니다.
             </p>
           </div>
-        </div>
+        )}
+        
+        {activeTab === 'employees' && (
+          <EmployeeManagement />
+        )}
       </div>
     </div>
   );
