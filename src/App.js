@@ -1,5 +1,5 @@
-import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, memo, useRef } from 'react';
-import { Calendar, Clock, Users, Plus, Edit2, Trash2, BarChart3, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Settings } from 'lucide-react';
+import React, { useState, createContext, useContext, useMemo, memo } from 'react';
+import { Clock, BarChart3, Users, Settings } from 'lucide-react';
 
 // ========== UTILS ==========
 const timeUtils = {
@@ -337,8 +337,8 @@ class DataCalculator {
 
     const filterByMonth = (records) => records.filter(record => {
       const recordDate = new Date(record.date);
-      return recordDate.getFullYear() == year && 
-             (recordDate.getMonth() + 1).toString().padStart(2, '0') == month;
+      return recordDate.getFullYear() === parseInt(year) && 
+             (recordDate.getMonth() + 1).toString().padStart(2, '0') === month;
     });
 
     const result = {

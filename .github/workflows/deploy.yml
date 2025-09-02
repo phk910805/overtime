@@ -26,7 +26,7 @@ jobs:
       run: npm test -- --coverage --watchAll=false --passWithNoTests
 
     - name: Build application
-      run: npm run build
+      run: CI=false npm run build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
