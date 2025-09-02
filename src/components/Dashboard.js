@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
+import BulkSettingModal from './BulkSettingModal';
 
 // ========== COMMON COMPONENTS ==========
 const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
@@ -324,6 +325,7 @@ const Dashboard = memo(() => {
   } = useOvertimeContext();
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
+  const [showBulkSetting, setShowBulkSetting] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
   const [holidays, setHolidays] = useState({});
   const [currentTimeInput, setCurrentTimeInput] = useState({
@@ -354,6 +356,10 @@ const Dashboard = memo(() => {
     setToast({ show: false, message: '' });
   }, []);
 
+  const handleBulkApplySuccess = useCallback((message) => {
+    showToast(message);
+  }, [showToast]);
+
   const handleDailyTimeChange = useCallback((employeeId, day, totalMinutes, type) => {
     const [year, month] = selectedMonth.split('-');
     const date = dateUtils.formatDateString(year, month, day);
@@ -382,7 +388,7 @@ const Dashboard = memo(() => {
           {selectedMonth} 월별 현황
         </h2>
         <button
-          onClick={() => showToast('일괄 설정 기능이 곧 추가될 예정입니다')}
+          onClick={() => setShowBulkSetting(true)}
           className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -544,6 +550,12 @@ const Dashboard = memo(() => {
         onSave={handleTimeInputSave}
         title={currentTimeInput.type === 'overtime' ? "초과근무 시간 입력" : "휴가사용 시간 입력"}
         type={currentTimeInput.type}
+      />
+
+      <BulkSettingModal
+        show={showBulkSetting}
+        onClose={() => setShowBulkSetting(false)}
+        onApplySuccess={handleBulkApplySuccess}
       />
     </div>
   );
