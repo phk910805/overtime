@@ -1,5 +1,5 @@
-import React, { useState, createContext, useContext, useMemo, memo } from 'react';
-import { Clock, BarChart3, Users, Settings } from 'lucide-react';
+import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, memo, useRef } from 'react';
+import { Calendar, Clock, Users, Plus, Edit2, Trash2, BarChart3, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 
 // ========== UTILS ==========
 const timeUtils = {
@@ -247,7 +247,7 @@ const validators = {
   }
 };
 
-// ========== STORAGE MANAGER ==========
+// 저장소 관리
 class StorageManager {
   constructor() {
     this.cache = new Map();
@@ -264,6 +264,7 @@ class StorageManager {
   save(key, data) {
     try {
       const serializedData = JSON.stringify(data);
+      localStorage.setItem(key, serializedData);
       this._evictOldestCache();
       this.cache.set(key, data);
       return true;
@@ -279,7 +280,8 @@ class StorageManager {
         return this.cache.get(key);
       }
       
-      const data = defaultValue;
+      const item = localStorage.getItem(key);
+      const data = item ? JSON.parse(item) : defaultValue;
       this._evictOldestCache();
       this.cache.set(key, data);
       return data;
@@ -304,7 +306,7 @@ class StorageManager {
 
 const storageManager = new StorageManager();
 
-// ========== DATA CALCULATOR ==========
+// 데이터 계산 클래스
 class DataCalculator {
   constructor() {
     this.statsCache = new Map();
@@ -422,7 +424,7 @@ class DataCalculator {
 
 const dataCalculator = new DataCalculator();
 
-// ========== CONTEXT ==========
+// Context
 const OvertimeContext = createContext();
 
 const useOvertimeContext = () => {
@@ -433,16 +435,26 @@ const useOvertimeContext = () => {
   return context;
 };
 
-// Provider는 여기서 간단하게 구현하고, 상세 구현은 별도 파일로 분리할 예정
+// 메인 앱을 위한 미니멀한 구현을 만들어 테스트하겠습니다
 const OvertimeProvider = ({ children }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
-  // 실제 Provider 구현은 후에 별도 파일로 분리
-  
+  const [employees, setEmployees] = useState([]);
+  const [overtimeRecords, setOvertimeRecords] = useState([]);
+  const [vacationRecords, setVacationRecords] = useState([]);
+
+  useEffect(() => {
+    setEmployees(storageManager.load('overtime-employees'));
+    setOvertimeRecords(storageManager.load('overtime-records'));
+    setVacationRecords(storageManager.load('vacation-records'));
+  }, []);
+
   const value = useMemo(() => ({
     selectedMonth,
     setSelectedMonth,
-    // 다른 필요한 값들은 별도 파일로 분리 후 추가
-  }), [selectedMonth]);
+    employees,
+    overtimeRecords,
+    vacationRecords
+  }), [selectedMonth, employees, overtimeRecords, vacationRecords]);
 
   return (
     <OvertimeContext.Provider value={value}>
@@ -451,10 +463,29 @@ const OvertimeProvider = ({ children }) => {
   );
 };
 
-// ========== MAIN APP COMPONENT ==========
+// 메인 앱 컴포넌트
 const OvertimeManagementApp = memo(() => {
+  const { selectedMonth, setSelectedMonth } = useOvertimeContext();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
+
+  const changeMonth = useCallback((direction) => {
+    const currentDate = new Date(selectedMonth + '-01');
+    if (direction === 'prev') {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+    } else if (direction === 'next') {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    setSelectedMonth(currentDate.toISOString().slice(0, 7));
+  }, [selectedMonth, setSelectedMonth]);
+
+  const handleMonthChange = useCallback((e) => {
+    setSelectedMonth(e.target.value);
+  }, [setSelectedMonth]);
+
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -466,13 +497,35 @@ const OvertimeManagementApp = memo(() => {
               <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                title="설정"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => changeMonth('prev')}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  title="이전 달"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={() => changeMonth('next')}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  title="다음 달"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors ml-2"
+                  title="설정"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -482,7 +535,7 @@ const OvertimeManagementApp = memo(() => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => handleTabChange('dashboard')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'dashboard'
                   ? 'border-blue-500 text-blue-600'
@@ -493,7 +546,18 @@ const OvertimeManagementApp = memo(() => {
               대시보드
             </button>
             <button
-              onClick={() => setActiveTab('employees')}
+              onClick={() => handleTabChange('records')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'records'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Calendar className="w-4 h-4 inline-block mr-2" />
+              히스토리
+            </button>
+            <button
+              onClick={() => handleTabChange('employees')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'employees'
                   ? 'border-blue-500 text-blue-600'
@@ -510,11 +574,19 @@ const OvertimeManagementApp = memo(() => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-20">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            초과근무시간 관리 시스템
+            초과근무시간 관리 시스템이 복원되었습니다!
           </h2>
-          <p className="text-gray-600">
-            컴포넌트를 로딩 중입니다...
+          <p className="text-gray-600 mb-4">
+            현재는 기본 구조만 로드된 상태입니다.<br/>
+            완전한 기능을 사용하려면 전체 컴포넌트가 필요합니다.
           </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 max-w-md mx-auto">
+            <p className="text-sm text-blue-800">
+              선택된 월: <strong>{selectedMonth}</strong><br/>
+              활성 탭: <strong>{activeTab}</strong><br/>
+              데이터 저장: <strong>LocalStorage 연동완료</strong>
+            </p>
+          </div>
         </div>
       </div>
     </div>
