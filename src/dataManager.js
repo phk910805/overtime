@@ -190,6 +190,12 @@ class DataCalculator {
     this.dailyDataCache = new Map();
     this.filteredRecordsCache = new Map();
     this.maxCacheSize = 200;
+    this.statistics = {
+      calculations: 0,
+      cacheHits: 0,
+      cacheMisses: 0
+    };
+    this.lastOptimization = Date.now();
   }
 
   _evictOldestCache(cache) {
@@ -199,14 +205,99 @@ class DataCalculator {
     }
   }
 
+  _shouldOptimize() {
+    return Date.now() - this.lastOptimization > 600000; // 10분마다
+  }
+
+  _optimizeCaches() {
+    const now = Date.now();
+    const maxAge = 1800000; // 30분
+    
+    // 만료된 엔트리 삭제
+    const caches = [this.statsCache, this.dailyDataCache, this.filteredRecordsCache];
+    let totalRemoved = 0;
+    
+    caches.forEach(cache => {
+      const expiredKeys = [];
+      for (const [key, data] of cache) {
+        if (data.timestamp && now - data.timestamp > maxAge) {
+          expiredKeys.push(key);
+        }
+      }
+      expiredKeys.forEach(key => cache.delete(key));
+      totalRemoved += expiredKeys.length;
+    });
+    
+    // 캐시 크기 제한
+    caches.forEach(cache => {
+      while (cache.size > this.maxCacheSize * 0.8) {
+        const oldestKey = cache.keys().next().value;
+        cache.delete(oldestKey);
+        totalRemoved++;
+      }
+    });
+    
+    this.lastOptimization = now;
+    if (totalRemoved > 0) {
+      console.log(`Cache optimization: removed ${totalRemoved} expired/old entries`);
+    }
+  }
+
+  _createCacheEntry(data) {
+    return {
+      data,
+      timestamp: Date.now(),
+      accessCount: 1,
+      lastAccess: Date.now()
+    };
+  }
+
+  _getCacheEntry(cache, key) {
+    if (cache.has(key)) {
+      const entry = cache.get(key);
+      entry.accessCount++;
+      entry.lastAccess = Date.now();
+      this.statistics.cacheHits++;
+      return entry.data;
+    }
+    this.statistics.cacheMisses++;
+    return null;
+  }
+
+  _setCacheEntry(cache, key, data) {
+    this._evictOldestCache(cache);
+    cache.set(key, this._createCacheEntry(data));
+    
+    if (this._shouldOptimize()) {
+      this._optimizeCaches();
+    }
+  }
+
   clearCache() {
     this.statsCache.clear();
     this.dailyDataCache.clear();
     this.filteredRecordsCache.clear();
+    this.statistics = { calculations: 0, cacheHits: 0, cacheMisses: 0 };
+  }
+
+  getCacheStats() {
+    const totalRequests = this.statistics.cacheHits + this.statistics.cacheMisses;
+    const hitRate = totalRequests > 0 
+      ? (this.statistics.cacheHits / totalRequests * 100).toFixed(2)
+      : '0.00';
+    
+    return {
+      statsCache: this.statsCache.size,
+      dailyCache: this.dailyDataCache.size,
+      filteredCache: this.filteredRecordsCache.size,
+      maxSize: this.maxCacheSize,
+      hitRate: `${hitRate}%`,
+      statistics: this.statistics
+    };
   }
 
   _getFilteredMonthlyRecords(selectedMonth, overtimeRecords, vacationRecords) {
-    const     const cacheKey = `${selectedMonth}-${overtimeRecords.length}-${vacationRecords.length}`;
+    const cacheKey = `${selectedMonth}-${overtimeRecords.length}-${vacationRecords.length}`;
     
     const cached = this._getCacheEntry(this.filteredRecordsCache, cacheKey);
     if (cached) return cached;
