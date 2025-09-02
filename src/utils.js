@@ -196,7 +196,15 @@ export const validators = {
   employeeName: (name, employees, excludeId = null) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      return { isValid: false, message: '직원명을 입력해주세요.' };
+      return { isValid: false, message: '직원명을 입력해주세요.', type: 'error' };
+    }
+    
+    if (trimmedName.length < 2) {
+      return { isValid: false, message: '직원명은 2자 이상 입력해주세요.', type: 'error' };
+    }
+    
+    if (trimmedName.length > 20) {
+      return { isValid: false, message: '직원명은 20자 이하로 입력해주세요.', type: 'error' };
     }
     
     const isDuplicate = employees.some(emp => 
@@ -205,37 +213,97 @@ export const validators = {
     );
     
     if (isDuplicate) {
-      return { isValid: false, message: '동일한 직원명이 이미 존재합니다.' };
+      return { isValid: false, message: '동일한 직원명이 이미 존재합니다.', type: 'error' };
     }
     
-    return { isValid: true, message: '' };
+    return { isValid: true, message: '사용 가능한 직원명입니다.', type: 'success' };
   },
 
   timeValue: (hours, minutes) => {
     const h = parseInt(hours) || 0;
     const m = parseInt(minutes) || 0;
     
+    if (h < 0 || m < 0) {
+      return { isValid: false, message: '음수는 입력할 수 없습니다.', type: 'error' };
+    }
+    
     if (h > 24) {
-      return { isValid: false, message: '시간은 0-24 사이의 값을 입력해주세요' };
+      return { isValid: false, message: '시간은 0-24 사이의 값을 입력해주세요', type: 'error' };
     }
     
     if (m >= 60) {
-      return { isValid: false, message: '분은 0-59 사이의 값을 입력해주세요' };
+      return { isValid: false, message: '분은 0-59 사이의 값을 입력해주세요', type: 'error' };
     }
     
     if (h === 24 && m > 0) {
-      return { isValid: false, message: '24시간을 초과할 수 없습니다' };
+      return { isValid: false, message: '24시간을 초과할 수 없습니다', type: 'error' };
     }
     
-    return { isValid: true, message: '' };
+    if (h === 0 && m === 0) {
+      return { isValid: true, message: '시간이 삭제됩니다.', type: 'warning' };
+    }
+    
+    return { isValid: true, message: `${h}시간 ${m}분으로 설정됩니다.`, type: 'info' };
   },
 
   multiplier: (value) => {
     const num = parseFloat(value);
-    if (isNaN(num) || num < 1.0 || num > 3.0) {
-      return { isValid: false, message: '배수는 1.0 ~ 3.0 사이의 값을 입력해주세요' };
+    if (isNaN(num)) {
+      return { isValid: false, message: '숫자를 입력해주세요.', type: 'error' };
     }
-    return { isValid: true, message: '' };
+    
+    if (num < 1.0 || num > 3.0) {
+      return { isValid: false, message: '배수는 1.0 ~ 3.0 사이의 값을 입력해주세요', type: 'error' };
+    }
+    
+    if (num === 1.0) {
+      return { isValid: true, message: '기본 배수로 설정됩니다.', type: 'info' };
+    }
+    
+    return { isValid: true, message: `${num}배로 설정됩니다.`, type: 'success' };
+  },
+
+  bulkSettings: (settings) => {
+    const errors = [];
+    
+    if (settings.rangeType === 'selected' && settings.selectedEmployees.length === 0) {
+      errors.push({ field: 'employees', message: '직원을 선택해주세요.', type: 'error' });
+    }
+    
+    if (settings.dateType === 'range') {
+      const startDate = new Date(settings.startDate);
+      const endDate = new Date(settings.endDate);
+      
+      if (startDate > endDate) {
+        errors.push({ field: 'dateRange', message: '시작일이 종료일보다 늦을 수 없습니다.', type: 'error' });
+      }
+      
+      const dayDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+      if (dayDiff > 31) {
+        errors.push({ field: 'dateRange', message: '최대 31일까지만 선택 가능합니다.', type: 'warning' });
+      }
+    }
+    
+    const overtimeTotal = (parseInt(settings.overtimeHours) || 0) * 60 + (parseInt(settings.overtimeMinutes) || 0);
+    const vacationTotal = (parseInt(settings.vacationHours) || 0) * 60 + (parseInt(settings.vacationMinutes) || 0);
+    
+    if (settings.timeType === 'overtime' && overtimeTotal === 0) {
+      errors.push({ field: 'overtime', message: '초과시간을 입력해주세요.', type: 'error' });
+    }
+    
+    if (settings.timeType === 'vacation' && vacationTotal === 0) {
+      errors.push({ field: 'vacation', message: '사용시간을 입력해주세요.', type: 'error' });
+    }
+    
+    if (settings.timeType === 'both' && overtimeTotal === 0 && vacationTotal === 0) {
+      errors.push({ field: 'time', message: '시간을 입력해주세요.', type: 'error' });
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      message: errors.length === 0 ? '설정이 올바릅니다.' : `${errors.length}개의 문제가 있습니다.`
+    };
   }
 };
 
@@ -270,6 +338,8 @@ export const useSortingPaging = (initialSort = { field: 'createdAt', direction: 
 // ========== VALIDATION HOOK ==========
 export const useValidation = () => {
   const [errors, setErrors] = React.useState({});
+  const [warnings, setWarnings] = React.useState({});
+  const [infos, setInfos] = React.useState({});
 
   const validate = React.useCallback((fieldName, validatorName, ...args) => {
     const validator = validators[validatorName];
@@ -277,16 +347,48 @@ export const useValidation = () => {
 
     const result = validator(...args);
     
+    // 에러 상태 초기화
     setErrors(prev => ({
       ...prev,
-      [fieldName]: result.isValid ? '' : result.message
+      [fieldName]: result.type === 'error' && !result.isValid ? result.message : ''
+    }));
+    
+    setWarnings(prev => ({
+      ...prev,
+      [fieldName]: result.type === 'warning' ? result.message : ''
+    }));
+    
+    setInfos(prev => ({
+      ...prev,
+      [fieldName]: result.type === 'info' || (result.type === 'success' && result.isValid) ? result.message : ''
     }));
 
     return result.isValid;
   }, []);
 
+  const validateMultiple = React.useCallback((validations) => {
+    const results = {};
+    let allValid = true;
+    
+    validations.forEach(({ field, validator, args }) => {
+      const isValid = validate(field, validator, ...args);
+      results[field] = isValid;
+      if (!isValid) allValid = false;
+    });
+    
+    return { allValid, results };
+  }, [validate]);
+
   const clearError = React.useCallback((fieldName) => {
     setErrors(prev => ({
+      ...prev,
+      [fieldName]: ''
+    }));
+    setWarnings(prev => ({
+      ...prev,
+      [fieldName]: ''
+    }));
+    setInfos(prev => ({
       ...prev,
       [fieldName]: ''
     }));
@@ -294,12 +396,35 @@ export const useValidation = () => {
 
   const clearAllErrors = React.useCallback(() => {
     setErrors({});
+    setWarnings({});
+    setInfos({});
   }, []);
+
+  const hasErrors = React.useMemo(() => {
+    return Object.values(errors).some(error => error !== '');
+  }, [errors]);
+
+  const hasWarnings = React.useMemo(() => {
+    return Object.values(warnings).some(warning => warning !== '');
+  }, [warnings]);
+
+  const getFieldStatus = React.useCallback((fieldName) => {
+    if (errors[fieldName]) return { type: 'error', message: errors[fieldName] };
+    if (warnings[fieldName]) return { type: 'warning', message: warnings[fieldName] };
+    if (infos[fieldName]) return { type: 'info', message: infos[fieldName] };
+    return { type: 'none', message: '' };
+  }, [errors, warnings, infos]);
 
   return {
     errors,
+    warnings,
+    infos,
     validate,
+    validateMultiple,
     clearError,
-    clearAllErrors
+    clearAllErrors,
+    hasErrors,
+    hasWarnings,
+    getFieldStatus
   };
 };

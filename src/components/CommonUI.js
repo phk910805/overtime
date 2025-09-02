@@ -1,7 +1,7 @@
-import React, { memo, useCallback } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+import { ChevronUp, ChevronDown, CheckCircle, XCircle, AlertTriangle, Info, Loader } from 'lucide-react';
 
-// ========== COMMON UI COMPONENTS ==========
+// ========== BASIC COMPONENTS ==========
 export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
   if (!show) return null;
 
@@ -21,43 +21,6 @@ export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
         {children}
       </div>
     </div>
-  );
-});
-
-export const ConfirmModal = memo(({ 
-  show, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
-  confirmText = "확인", 
-  cancelText = "취소", 
-  confirmColor = "bg-red-600 hover:bg-red-700" 
-}) => {
-  return (
-    <Modal show={show} onClose={onClose} title={title}>
-      <div className="mb-6">
-        {typeof message === 'string' ? (
-          <p className="text-sm text-gray-600">{message}</p>
-        ) : (
-          message
-        )}
-      </div>
-      <div className="flex justify-end space-x-2">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          {cancelText}
-        </button>
-        <button
-          onClick={onConfirm}
-          className={`px-4 py-2 text-white rounded-md ${confirmColor}`}
-        >
-          {confirmText}
-        </button>
-      </div>
-    </Modal>
   );
 });
 
@@ -99,6 +62,7 @@ export const InputField = memo(({
   );
 });
 
+// ========== TABLE COMPONENTS ==========
 export const TableHeader = memo(({ children, className = "" }) => {
   return (
     <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
@@ -137,6 +101,245 @@ export const EmptyState = memo(({ message, colSpan }) => {
         {message}
       </td>
     </tr>
+  );
+});
+
+// ========== ENHANCED TOAST COMPONENT ==========
+export const Toast = memo(({ message, show, onClose, type = 'success', duration = 3000, position = 'top-center' }) => {
+  useEffect(() => {
+    if (show && duration > 0) {
+      const timer = setTimeout(onClose, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose, duration]);
+
+  if (!show) return null;
+
+  const getToastConfig = () => {
+    switch (type) {
+      case 'success':
+        return {
+          bgColor: 'bg-green-500',
+          icon: <CheckCircle className="w-5 h-5" />,
+          textColor: 'text-white'
+        };
+      case 'error':
+        return {
+          bgColor: 'bg-red-500',
+          icon: <XCircle className="w-5 h-5" />,
+          textColor: 'text-white'
+        };
+      case 'warning':
+        return {
+          bgColor: 'bg-orange-500',
+          icon: <AlertTriangle className="w-5 h-5" />,
+          textColor: 'text-white'
+        };
+      case 'info':
+        return {
+          bgColor: 'bg-blue-500',
+          icon: <Info className="w-5 h-5" />,
+          textColor: 'text-white'
+        };
+      default:
+        return {
+          bgColor: 'bg-gray-500',
+          icon: <Info className="w-5 h-5" />,
+          textColor: 'text-white'
+        };
+    }
+  };
+
+  const getPositionClass = () => {
+    switch (position) {
+      case 'top-left':
+        return 'top-4 left-4';
+      case 'top-right':
+        return 'top-4 right-4';
+      case 'bottom-center':
+        return 'bottom-4 left-1/2 transform -translate-x-1/2';
+      case 'bottom-left':
+        return 'bottom-4 left-4';
+      case 'bottom-right':
+        return 'bottom-4 right-4';
+      default: // top-center
+        return 'top-4 left-1/2 transform -translate-x-1/2';
+    }
+  };
+
+  const config = getToastConfig();
+
+  return (
+    <div className={`fixed ${getPositionClass()} z-50 animate-in slide-in-from-top-2 duration-300`}>
+      <div className={`${config.bgColor} ${config.textColor} px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-[500px]`}>
+        {config.icon}
+        <span className="flex-1 text-sm font-medium">{message}</span>
+        <button
+          onClick={onClose}
+          className="ml-2 opacity-70 hover:opacity-100 transition-opacity"
+          title="닫기"
+        >
+          <XCircle className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ========== LOADING COMPONENTS ==========
+export const LoadingSpinner = memo(({ size = 'md', color = 'blue' }) => {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12'
+  };
+
+  const colorClasses = {
+    blue: 'text-blue-500',
+    green: 'text-green-500',
+    red: 'text-red-500',
+    gray: 'text-gray-500',
+    white: 'text-white'
+  };
+
+  return (
+    <Loader className={`${sizeClasses[size]} ${colorClasses[color]} animate-spin`} />
+  );
+});
+
+export const LoadingOverlay = memo(({ show, message = '로딩 중...' }) => {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4 min-w-[200px]">
+        <LoadingSpinner size="lg" />
+        <p className="text-gray-700 font-medium">{message}</p>
+      </div>
+    </div>
+  );
+});
+
+// ========== PROGRESS BAR ==========
+export const ProgressBar = memo(({ progress, showPercent = true, color = 'blue', size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'h-2',
+    md: 'h-3',
+    lg: 'h-4'
+  };
+
+  const colorClasses = {
+    blue: 'bg-blue-500',
+    green: 'bg-green-500',
+    red: 'bg-red-500',
+    orange: 'bg-orange-500'
+  };
+
+  const clampedProgress = Math.min(100, Math.max(0, progress));
+
+  return (
+    <div className="w-full">
+      <div className={`w-full ${sizeClasses[size]} bg-gray-200 rounded-full overflow-hidden`}>
+        <div
+          className={`${colorClasses[color]} ${sizeClasses[size]} rounded-full transition-all duration-300 ease-out`}
+          style={{ width: `${clampedProgress}%` }}
+        />
+      </div>
+      {showPercent && (
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-xs text-gray-500">진행률</span>
+          <span className="text-xs font-medium text-gray-700">{Math.round(clampedProgress)}%</span>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ========== ENHANCED CONFIRM MODAL ==========
+export const ConfirmModal = memo(({ 
+  show, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "확인", 
+  cancelText = "취소", 
+  type = 'danger', // danger, warning, info, success
+  showIcon = true,
+  loading = false
+}) => {
+  const getModalConfig = () => {
+    switch (type) {
+      case 'danger':
+        return {
+          confirmColor: 'bg-red-600 hover:bg-red-700',
+          icon: <XCircle className="w-8 h-8 text-red-500" />,
+          borderColor: 'border-red-200'
+        };
+      case 'warning':
+        return {
+          confirmColor: 'bg-orange-600 hover:bg-orange-700',
+          icon: <AlertTriangle className="w-8 h-8 text-orange-500" />,
+          borderColor: 'border-orange-200'
+        };
+      case 'info':
+        return {
+          confirmColor: 'bg-blue-600 hover:bg-blue-700',
+          icon: <Info className="w-8 h-8 text-blue-500" />,
+          borderColor: 'border-blue-200'
+        };
+      case 'success':
+        return {
+          confirmColor: 'bg-green-600 hover:bg-green-700',
+          icon: <CheckCircle className="w-8 h-8 text-green-500" />,
+          borderColor: 'border-green-200'
+        };
+      default:
+        return {
+          confirmColor: 'bg-gray-600 hover:bg-gray-700',
+          icon: <Info className="w-8 h-8 text-gray-500" />,
+          borderColor: 'border-gray-200'
+        };
+    }
+  };
+
+  const config = getModalConfig();
+
+  return (
+    <Modal show={show} onClose={!loading ? onClose : undefined} title={title}>
+      <div className={`mb-6 ${showIcon ? 'flex items-start space-x-4' : ''}`}>
+        {showIcon && (
+          <div className={`flex-shrink-0 p-2 rounded-full bg-gray-50 border ${config.borderColor}`}>
+            {config.icon}
+          </div>
+        )}
+        <div className="flex-1">
+          {typeof message === 'string' ? (
+            <p className="text-sm text-gray-600">{message}</p>
+          ) : (
+            message
+          )}
+        </div>
+      </div>
+      <div className="flex justify-end space-x-2">
+        <button
+          onClick={onClose}
+          disabled={loading}
+          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {cancelText}
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className={`px-4 py-2 text-white rounded-md ${config.confirmColor} disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
+        >
+          {loading && <LoadingSpinner size="sm" color="white" />}
+          <span>{confirmText}</span>
+        </button>
+      </div>
+    </Modal>
   );
 });
 
