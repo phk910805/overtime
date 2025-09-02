@@ -3,6 +3,7 @@ import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings 
 import { OvertimeProvider, useOvertimeContext } from './context';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
+import RecordHistory from './components/RecordHistory';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
@@ -118,14 +119,7 @@ const OvertimeManagementApp = memo(() => {
         )}
         
         {activeTab === 'records' && (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              히스토리
-            </h2>
-            <p className="text-gray-600">
-              기록 히스토리가 곧 추가될 예정입니다.
-            </p>
-          </div>
+          <RecordHistory />
         )}
         
         {activeTab === 'employees' && (
