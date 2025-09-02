@@ -49,6 +49,7 @@ const useOvertimeData = () => {
     storageManager.save('employee-change-records', updatedChangeRecords);
     
     dataCalculator.clearCache();
+    dataCalculator.invalidateRelatedCaches(newEmployee.id, null);
     return newEmployee;
   }, [employees, employeeChangeRecords]);
 
@@ -80,6 +81,7 @@ const useOvertimeData = () => {
       storageManager.save('employee-change-records', updatedChangeRecords);
       
       dataCalculator.clearCache();
+      dataCalculator.invalidateRelatedCaches(id, null);
     }
   }, [employees, employeeChangeRecords]);
 
@@ -115,6 +117,7 @@ const useOvertimeData = () => {
     setEmployees(updatedEmployees);
     storageManager.save('overtime-employees', updatedEmployees);
     dataCalculator.clearCache();
+    dataCalculator.invalidateRelatedCaches(id, null);
     return true;
   }, [employees, overtimeRecords, vacationRecords, employeeChangeRecords]);
 
@@ -166,6 +169,7 @@ const useOvertimeData = () => {
     }
 
     dataCalculator.clearCache();
+    dataCalculator.invalidateRelatedCaches(employeeId, date);
   }, [employees, overtimeRecords, vacationRecords]);
 
   return {
@@ -195,6 +199,8 @@ const useEmployeeHelpers = (employees, overtimeRecords, vacationRecords, selecte
     
     return () => {
       window.removeEventListener('settingsChanged', handleSettingsChange);
+      // 추가 메모리 정리
+      dataCalculator.clearCache();
     };
   }, []);
 

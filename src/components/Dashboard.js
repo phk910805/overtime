@@ -1,51 +1,9 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { useOvertimeContext } from '../context';
-import { timeUtils, dateUtils, holidayUtils } from '../utils';
+import { timeUtils, dateUtils, holidayUtils, validators } from '../utils';
+import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
-
-// ========== COMMON COMPONENTS ==========
-const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
-  if (!show) return null;
-
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl'
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
-      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`}>
-        {title && (
-          <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
-        )}
-        {children}
-      </div>
-    </div>
-  );
-});
-
-// Toast 컴포넌트
-const Toast = memo(({ message, show, onClose }) => {
-  useEffect(() => {
-    if (show) {
-      const timer = setTimeout(onClose, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [show, onClose]);
-
-  if (!show) return null;
-
-  return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="bg-green-500 text-white px-4 py-2 rounded-md shadow-lg">
-        {message}
-      </div>
-    </div>
-  );
-});
 
 // 시간 표시 컴포넌트
 const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:00", color = "blue" }) => {
@@ -84,7 +42,7 @@ const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:
 const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입력", type = "overtime" }) => {
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
   const hoursRef = useRef(null);
   const minutesRef = useRef(null);
 
@@ -105,13 +63,13 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
     }
   }, [show, value]);
 
-  const showToast = useCallback((message) => {
-    setToast({ show: true, message });
+  const showToast = useCallback((message, type = 'error') => {
+    setToast({ show: true, message, type });
   }, []);
 
   const hideToast = useCallback(() => {
-    setToast({ show: false, message: '' });
-  }, []);
+    setToast({ show: false, message: '', type: 'error' });
+  }, []); 
 
   const validateAndFormatHours = useCallback((value) => {
     if (!value.trim()) return { valid: true, formatted: '' };
@@ -119,8 +77,10 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
     const num = parseInt(value);
     if (isNaN(num)) return { valid: false, formatted: value };
     
-    if (num > 24) {
-      showToast('시간은 0-24 사이의 값을 입력해주세요');
+    // 강화된 validators.timeValue 사용
+    const validation = validators.timeValue(num, 0);
+    if (!validation.isValid) {
+      showToast(validation.message, validation.type || 'error');
       return { valid: false, formatted: value };
     }
     
@@ -133,14 +93,12 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
     const num = parseInt(value);
     if (isNaN(num)) return { valid: false, formatted: value };
     
-    if (num >= 60) {
-      showToast('분은 0-59 사이의 값을 입력해주세요');
-      return { valid: false, formatted: value };
-    }
-    
     const hoursNum = parseInt(currentHours) || 0;
-    if (hoursNum === 24 && num > 0) {
-      showToast('24시간을 초과할 수 없습니다');
+    
+    // 강화된 validators.timeValue 사용
+    const validation = validators.timeValue(hoursNum, num);
+    if (!validation.isValid) {
+      showToast(validation.message, validation.type || 'error');
       return { valid: false, formatted: value };
     }
     
@@ -246,7 +204,13 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
 
   return (
     <>
-      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
+      <Toast 
+        message={toast.message} 
+        show={toast.show} 
+        onClose={hideToast}
+        type={toast.type}
+        duration={3000}
+      />
       <Modal show={show} onClose={onClose} title={title}>
         <div className="mb-6">
           <div className="flex items-center space-x-3">
@@ -326,7 +290,7 @@ const Dashboard = memo(() => {
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
   const [showBulkSetting, setShowBulkSetting] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [holidays, setHolidays] = useState({});
   const [currentTimeInput, setCurrentTimeInput] = useState({
     employeeId: null,
@@ -337,23 +301,32 @@ const Dashboard = memo(() => {
 
   // 공휴일 데이터 로드
   useEffect(() => {
+    let isCancelled = false;
+    
     const loadHolidays = async () => {
       const year = selectedMonth.split('-')[0];
       console.log('Loading holidays for year:', year);
       const holidayData = await holidayUtils.fetchHolidays(year);
-      console.log('Holiday data loaded:', holidayData);
-      setHolidays(holidayData);
+      
+      if (!isCancelled) {
+        console.log('Holiday data loaded:', holidayData);
+        setHolidays(holidayData);
+      }
     };
     
     loadHolidays();
+    
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedMonth]);
 
-  const showToast = useCallback((message) => {
-    setToast({ show: true, message });
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
   }, []);
 
   const hideToast = useCallback(() => {
-    setToast({ show: false, message: '' });
+    setToast({ show: false, message: '', type: 'success' });
   }, []);
 
   const handleBulkApplySuccess = useCallback((message) => {
@@ -382,7 +355,13 @@ const Dashboard = memo(() => {
 
   return (
     <div className="space-y-6">
-      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
+      <Toast 
+        message={toast.message} 
+        show={toast.show} 
+        onClose={hideToast}
+        type={toast.type}
+        duration={3000}
+      />
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">
           {selectedMonth} 월별 현황
