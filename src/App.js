@@ -2,6 +2,7 @@ import React, { useState, useCallback, memo } from 'react';
 import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { OvertimeProvider, useOvertimeContext } from './context';
 import EmployeeManagement from './components/EmployeeManagement';
+import Dashboard from './components/Dashboard';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
@@ -113,14 +114,7 @@ const OvertimeManagementApp = memo(() => {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              대시보드
-            </h2>
-            <p className="text-gray-600">
-              월별 현황표가 곧 추가될 예정입니다.
-            </p>
-          </div>
+          <Dashboard />
         )}
         
         {activeTab === 'records' && (
