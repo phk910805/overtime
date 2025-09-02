@@ -1,160 +1,8 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Users, Plus, Edit2, Trash2, Calendar } from 'lucide-react';
 import { useOvertimeContext } from '../context';
-import { validators } from '../utils';
-
-// ========== COMMON COMPONENTS ==========
-const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
-  if (!show) return null;
-
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl'
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
-      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`}>
-        {title && (
-          <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
-        )}
-        {children}
-      </div>
-    </div>
-  );
-});
-
-const ConfirmModal = memo(({ 
-  show, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
-  confirmText = "확인", 
-  cancelText = "취소", 
-  confirmColor = "bg-red-600 hover:bg-red-700" 
-}) => {
-  return (
-    <Modal show={show} onClose={onClose} title={title}>
-      <div className="mb-6">
-        {typeof message === 'string' ? (
-          <p className="text-sm text-gray-600">{message}</p>
-        ) : (
-          message
-        )}
-      </div>
-      <div className="flex justify-end space-x-2">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          {cancelText}
-        </button>
-        <button
-          onClick={onConfirm}
-          className={`px-4 py-2 text-white rounded-md ${confirmColor}`}
-        >
-          {confirmText}
-        </button>
-      </div>
-    </Modal>
-  );
-});
-
-const InputField = memo(({ 
-  label, 
-  value, 
-  onChange, 
-  onBlur,
-  error, 
-  type = "text", 
-  placeholder, 
-  className = "",
-  autoFocus = false,
-  ...rest 
-}) => {
-  return (
-    <div className={className}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-        </label>
-      )}
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          error ? 'border-red-300' : 'border-gray-300'
-        }`}
-        {...rest}
-      />
-      {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
-      )}
-    </div>
-  );
-});
-
-const TableHeader = memo(({ children, className = "" }) => {
-  return (
-    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
-      {children}
-    </th>
-  );
-});
-
-const EmptyState = memo(({ message, colSpan }) => {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="px-6 py-8 text-center text-gray-500">
-        {message}
-      </td>
-    </tr>
-  );
-});
-
-// ========== VALIDATION HOOK ==========
-const useValidation = () => {
-  const [errors, setErrors] = useState({});
-
-  const validate = useCallback((fieldName, validatorName, ...args) => {
-    const validator = validators[validatorName];
-    if (!validator) return true;
-
-    const result = validator(...args);
-    
-    setErrors(prev => ({
-      ...prev,
-      [fieldName]: result.isValid ? '' : result.message
-    }));
-
-    return result.isValid;
-  }, []);
-
-  const clearError = useCallback((fieldName) => {
-    setErrors(prev => ({
-      ...prev,
-      [fieldName]: ''
-    }));
-  }, []);
-
-  const clearAllErrors = useCallback(() => {
-    setErrors({});
-  }, []);
-
-  return {
-    errors,
-    validate,
-    clearError,
-    clearAllErrors
-  };
-};
+import { useSortingPaging, useValidation } from '../utils';
+import { Modal, ConfirmModal, InputField, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
 
 // ========== MAIN COMPONENT ==========
 const EmployeeManagement = memo(() => {
@@ -168,6 +16,12 @@ const EmployeeManagement = memo(() => {
 
   // 검증 훅 사용
   const { errors, validate, clearError, clearAllErrors } = useValidation();
+  
+  // 직원 목록용 정렬/페이징 훅
+  const employeeListPaging = useSortingPaging({ field: 'name', direction: 'asc' }, 10);
+  
+  // 관리 이력용 정렬/페이징 훅
+  const historyPaging = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
 
   const handleSubmit = useCallback(() => {
     const isValidName = validate('employeeName', 'employeeName', employeeName, employees, editingEmployee?.id);
@@ -223,7 +77,7 @@ const EmployeeManagement = memo(() => {
   }, []);
 
   // 직원 관리 기록 계산
-  const employeeManagementRecords = React.useMemo(() => {
+  const employeeManagementRecords = useMemo(() => {
     const records = [];
     
     employeeChangeRecords.forEach(changeRecord => {
@@ -257,12 +111,82 @@ const EmployeeManagement = memo(() => {
       }
     });
 
-    return records.sort((a, b) => {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return dateB - dateA; // 최신순
-    });
+    return records;
   }, [employeeChangeRecords]);
+
+  // 정렬된 직원 목록
+  const sortedEmployees = useMemo(() => {
+    return [...employees].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (employeeListPaging.sortConfig.field) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return employeeListPaging.sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return employeeListPaging.sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [employees, employeeListPaging.sortConfig]);
+
+  // 정렬된 관리 기록
+  const sortedHistoryRecords = useMemo(() => {
+    return [...employeeManagementRecords].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (historyPaging.sortConfig.field) {
+        case 'createdAt':
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+          break;
+        case 'employeeName':
+          aValue = a.employeeName.toLowerCase();
+          bValue = b.employeeName.toLowerCase();
+          break;
+        case 'action':
+          aValue = a.action;
+          bValue = b.action;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return historyPaging.sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return historyPaging.sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [employeeManagementRecords, historyPaging.sortConfig]);
+
+  // 페이징된 직원 목록
+  const paginatedEmployees = useMemo(() => {
+    const startIndex = (employeeListPaging.currentPage - 1) * employeeListPaging.itemsPerPage;
+    const endIndex = startIndex + employeeListPaging.itemsPerPage;
+    return sortedEmployees.slice(startIndex, endIndex);
+  }, [sortedEmployees, employeeListPaging.currentPage, employeeListPaging.itemsPerPage]);
+
+  // 페이징된 관리 기록
+  const paginatedHistoryRecords = useMemo(() => {
+    const startIndex = (historyPaging.currentPage - 1) * historyPaging.itemsPerPage;
+    const endIndex = startIndex + historyPaging.itemsPerPage;
+    return sortedHistoryRecords.slice(startIndex, endIndex);
+  }, [sortedHistoryRecords, historyPaging.currentPage, historyPaging.itemsPerPage]);
 
   return (
     <div className="space-y-6">
@@ -301,92 +225,140 @@ const EmployeeManagement = memo(() => {
             }`}
           >
             <Calendar className="w-4 h-4 inline-block mr-2" />
-            관리 이력
+            관리 이력 ({employeeManagementRecords.length})
           </button>
         </nav>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {activeEmployeeTab === 'list' && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <TableHeader>직원명</TableHeader>
-                  <TableHeader>등록일</TableHeader>
-                  <TableHeader className="text-right">작업</TableHeader>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {employees.map((employee) => (
-                  <tr key={employee.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {employee.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(employee.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(employee)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(employee)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <SortableHeader 
+                      field="name" 
+                      sortConfig={employeeListPaging.sortConfig} 
+                      onSort={employeeListPaging.handleSort}
+                    >
+                      직원명
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="createdAt" 
+                      sortConfig={employeeListPaging.sortConfig} 
+                      onSort={employeeListPaging.handleSort}
+                    >
+                      등록일
+                    </SortableHeader>
+                    <TableHeader className="text-right">작업</TableHeader>
                   </tr>
-                ))}
-                {employees.length === 0 && (
-                  <EmptyState message="등록된 직원이 없습니다." colSpan="3" />
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedEmployees.map((employee) => (
+                    <tr key={employee.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {employee.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(employee.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(employee)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(employee)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {paginatedEmployees.length === 0 && (
+                    <EmptyState message="등록된 직원이 없습니다." colSpan="3" />
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={employeeListPaging.currentPage}
+              totalPages={Math.max(1, Math.ceil(sortedEmployees.length / employeeListPaging.itemsPerPage))}
+              onPageChange={employeeListPaging.setCurrentPage}
+              itemsPerPage={employeeListPaging.itemsPerPage}
+              totalItems={sortedEmployees.length}
+            />
+          </>
         )}
 
         {activeEmployeeTab === 'history' && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <TableHeader>일시</TableHeader>
-                  <TableHeader>동작</TableHeader>
-                  <TableHeader>직원명</TableHeader>
-                  <TableHeader>세부사항</TableHeader>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {employeeManagementRecords.map((record) => (
-                  <tr key={record.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                      {new Date(record.createdAt).toLocaleString('ko-KR')}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                      record.action === '생성' ? 'text-green-600' : 
-                      record.action === '수정' ? 'text-orange-600' : 'text-red-600'
-                    }`}>
-                      {record.action}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {record.employeeName}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {record.details}
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <SortableHeader 
+                      field="createdAt" 
+                      sortConfig={historyPaging.sortConfig} 
+                      onSort={historyPaging.handleSort}
+                    >
+                      일시
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="action" 
+                      sortConfig={historyPaging.sortConfig} 
+                      onSort={historyPaging.handleSort}
+                    >
+                      동작
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="employeeName" 
+                      sortConfig={historyPaging.sortConfig} 
+                      onSort={historyPaging.handleSort}
+                    >
+                      직원명
+                    </SortableHeader>
+                    <TableHeader>세부사항</TableHeader>
                   </tr>
-                ))}
-                {employeeManagementRecords.length === 0 && (
-                  <EmptyState message="관리 기록이 없습니다." colSpan="4" />
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedHistoryRecords.map((record) => (
+                    <tr key={record.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                        {new Date(record.createdAt).toLocaleString('ko-KR')}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        record.action === '생성' ? 'text-green-600' : 
+                        record.action === '수정' ? 'text-orange-600' : 'text-red-600'
+                      }`}>
+                        {record.action}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {record.employeeName}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {record.details}
+                      </td>
+                    </tr>
+                  ))}
+                  {paginatedHistoryRecords.length === 0 && (
+                    <EmptyState message="관리 기록이 없습니다." colSpan="4" />
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={historyPaging.currentPage}
+              totalPages={Math.max(1, Math.ceil(sortedHistoryRecords.length / historyPaging.itemsPerPage))}
+              onPageChange={historyPaging.setCurrentPage}
+              itemsPerPage={historyPaging.itemsPerPage}
+              totalItems={sortedHistoryRecords.length}
+            />
+          </>
         )}
       </div>
 

@@ -1,3 +1,5 @@
+import React from 'react';
+
 // ========== TIME UTILS ==========
 export const timeUtils = {
   formatTime: (totalMinutes) => {
@@ -235,4 +237,69 @@ export const validators = {
     }
     return { isValid: true, message: '' };
   }
+};
+
+// ========== SORTING & PAGING HOOK ==========
+export const useSortingPaging = (initialSort = { field: 'createdAt', direction: 'desc' }, initialItemsPerPage = 10) => {
+  const [sortConfig, setSortConfig] = React.useState(initialSort);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage] = React.useState(initialItemsPerPage);
+
+  const handleSort = React.useCallback((field) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+    setCurrentPage(1);
+  }, []);
+
+  const resetPage = React.useCallback(() => {
+    setCurrentPage(1);
+  }, []);
+
+  return {
+    sortConfig,
+    currentPage,
+    itemsPerPage,
+    handleSort,
+    resetPage,
+    setCurrentPage
+  };
+};
+
+// ========== VALIDATION HOOK ==========
+export const useValidation = () => {
+  const [errors, setErrors] = React.useState({});
+
+  const validate = React.useCallback((fieldName, validatorName, ...args) => {
+    const validator = validators[validatorName];
+    if (!validator) return true;
+
+    const result = validator(...args);
+    
+    setErrors(prev => ({
+      ...prev,
+      [fieldName]: result.isValid ? '' : result.message
+    }));
+
+    return result.isValid;
+  }, []);
+
+  const clearError = React.useCallback((fieldName) => {
+    setErrors(prev => ({
+      ...prev,
+      [fieldName]: ''
+    }));
+  }, []);
+
+  const clearAllErrors = React.useCallback(() => {
+    setErrors({});
+  }, []);
+
+  return {
+    errors,
+    validate,
+    clearError,
+    clearAllErrors
+  };
 };
