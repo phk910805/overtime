@@ -381,19 +381,19 @@ const Dashboard = memo(() => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr className="h-12">
-                  <th className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap">
+                  <th className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap min-w-[80px]">
                     이름
                   </th>
-                  <th className="sticky left-[120px] z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap">
+                  <th className="sticky left-[80px] z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap min-w-[85px]">
                     초과시간
                   </th>
-                  <th className="sticky left-[200px] z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap">
+                  <th className="sticky left-[165px] z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap min-w-[85px]">
                     사용시간
                   </th>
-                  <th className="sticky left-[280px] z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r-2 border-gray-300 whitespace-nowrap">
+                  <th className="sticky left-[250px] z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r-2 border-gray-300 whitespace-nowrap min-w-[100px]">
                     잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                   </th>
-                  <th className="sticky left-[360px] z-20 bg-gray-50 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 w-16 whitespace-nowrap">
+                  <th className="sticky left-[350px] z-20 bg-gray-50 px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 w-16 whitespace-nowrap">
                     구분
                   </th>
                   {daysArray.map((day) => {
@@ -435,7 +435,7 @@ const Dashboard = memo(() => {
                   
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
-                      <td className={`sticky left-0 z-10 px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200 ${
+                      <td className={`sticky left-0 z-10 px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200 min-w-[80px] ${
                         employee.isActive ? 'bg-white' : 'bg-gray-50'
                       }`}>
                         {employee.name}
@@ -445,23 +445,23 @@ const Dashboard = memo(() => {
                           </span>
                         )}
                       </td>
-                      <td className={`sticky left-[120px] z-10 px-4 py-4 whitespace-nowrap text-sm text-blue-600 border-r border-gray-200 ${
+                      <td className={`sticky left-[80px] z-10 px-3 py-4 whitespace-nowrap text-sm text-blue-600 border-r border-gray-200 min-w-[85px] ${
                         employee.isActive ? 'bg-white' : 'bg-gray-50'
                       }`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
                       </td>
-                      <td className={`sticky left-[200px] z-10 px-4 py-4 whitespace-nowrap text-sm text-green-600 border-r border-gray-200 ${
+                      <td className={`sticky left-[165px] z-10 px-3 py-4 whitespace-nowrap text-sm text-green-600 border-r border-gray-200 min-w-[85px] ${
                         employee.isActive ? 'bg-white' : 'bg-gray-50'
                       }`}>
                         -{timeUtils.formatTime(stats.totalVacation)}
                       </td>
-                      <td className={`sticky left-[280px] z-10 px-4 py-4 whitespace-nowrap text-sm border-r-2 border-gray-300 ${
+                      <td className={`sticky left-[250px] z-10 px-3 py-4 whitespace-nowrap text-sm border-r-2 border-gray-300 min-w-[100px] ${
                         stats.remaining >= 0 ? 'text-orange-600' : 'text-red-600'
                       } ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         {stats.remaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(stats.remaining))}
                         {stats.remaining < 0 && '(초과)'}
                       </td>
-                      <td className={`sticky left-[360px] z-10 px-2 py-2 text-center text-xs border-r border-gray-200 relative h-20 ${
+                      <td className={`sticky left-[350px] z-10 px-2 py-2 text-center text-xs border-r border-gray-200 relative h-20 ${
                         employee.isActive ? 'bg-white' : 'bg-gray-50'
                       }`}>
                         <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
