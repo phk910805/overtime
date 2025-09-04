@@ -1,1 +1,0 @@
-module.exports = {\n  extends: [\n    'react-app',\n    'react-app/jest'\n  ],\n  rules: {\n    'no-irregular-whitespace': 'off',\n    'no-control-regex': 'off',\n    'unicode-bom': 'off'\n  }\n};\n
