@@ -24,9 +24,10 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, getEmployeeNameFr
 
     const currentTime = timeUtils.formatTime(record.totalMinutes);
     
-    // 동작에 따른 색상 결정
+    // 동작에 따른 색상 결정 (두 필드 모두 지원)
+    const action = record.description || record.action;
     let textColor;
-    switch(record.description) {
+    switch(action) {
       case '생성':
         textColor = type === 'overtime' ? 'text-blue-600' : 'text-green-600';
         break;
@@ -104,8 +105,8 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, getEmployeeNameFr
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {getChangeDisplay(record, records, type)}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getDescriptionColor(record.description, type)}`}>
-                  {record.description || '-'}
+                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getDescriptionColor(record.description || record.action || '-', type)}`}>
+                  {record.description || record.action || '-'}
                 </td>
               </tr>
             ))}

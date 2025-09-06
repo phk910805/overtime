@@ -192,18 +192,25 @@ const useOvertimeData = () => {
         throw error;
       }
     } else {
-      // 기존 기록이 있는지 확인하여 동작 타입 결정
-      const existingRecord = overtimeRecords.find(record => 
-        record.employeeId === employeeId && record.date === date
-      );
+      // 정책 1: 00:00인 경우 히스토리에 기록하지 않음
+      if (totalMinutes === 0) {
+        return; // 아무 의미 없는 행동이므로 로그 안남
+      }
+      
+      // 정책 2: 마지막 의미있는 기록(0이 아닌) 찾기
+      const lastMeaningfulRecord = overtimeRecords
+        .filter(record => 
+          record.employeeId === employeeId && 
+          record.date === date &&
+          record.totalMinutes > 0
+        )
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
       
       let description;
-      if (totalMinutes === 0) {
-        description = '삭제';
-      } else if (existingRecord) {
-        description = '수정';
+      if (lastMeaningfulRecord) {
+        description = '수정'; // 의미있는 기록이 있으면 수정
       } else {
-        description = '생성';
+        description = '생성'; // 삭제 후 재입력도 생성
       }
       
       const newRecord = {
@@ -211,7 +218,7 @@ const useOvertimeData = () => {
         employeeId,
         date,
         totalMinutes,
-        description, // 동작 타입 추가
+        description,
         createdAt: new Date().toISOString()
       };
       
@@ -238,11 +245,26 @@ const useOvertimeData = () => {
         throw error;
       }
     } else {
+      // 기존 기록이 있는지 확인하여 동작 타입 결정
+      const existingRecord = vacationRecords.find(record => 
+        record.employeeId === employeeId && record.date === date
+      );
+      
+      let description;
+      if (totalMinutes === 0) {
+        description = '삭제';
+      } else if (existingRecord) {
+        description = '수정';
+      } else {
+        description = '생성';
+      }
+      
       const newRecord = {
         id: Date.now() + Math.random(),
         employeeId,
         date,
         totalMinutes,
+        description, // 동작 타입 추가
         createdAt: new Date().toISOString()
       };
       
@@ -273,6 +295,7 @@ const useOvertimeData = () => {
         employeeId: update.employeeId,
         date: update.date,
         totalMinutes: update.totalMinutes,
+        description: '생성', // 대량 업데이트는 생성으로 처리
         createdAt: new Date().toISOString()
       }));
       
@@ -303,6 +326,7 @@ const useOvertimeData = () => {
         employeeId: update.employeeId,
         date: update.date,
         totalMinutes: update.totalMinutes,
+        description: '생성', // 대량 업데이트는 생성으로 처리
         createdAt: new Date().toISOString()
       }));
       
