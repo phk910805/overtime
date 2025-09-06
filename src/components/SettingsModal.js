@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { validators } from '../utils';
-import { storageManager } from '../dataManager';
+import { useOvertimeContext } from '../context';
 
 // ========== MODAL COMPONENTS ==========
 const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
@@ -48,6 +48,7 @@ const Toast = memo(({ message, show, onClose, type = 'success' }) => {
 
 // ========== SETTINGS MODAL ==========
 const SettingsModal = memo(({ show, onClose }) => {
+  const { multiplier: contextMultiplier, updateSettings } = useOvertimeContext();
   const [multiplier, setMultiplier] = useState('1.0');
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -63,11 +64,10 @@ const SettingsModal = memo(({ show, onClose }) => {
   // 모달이 열릴 때 현재 설정 로드
   useEffect(() => {
     if (show) {
-      const settings = storageManager.loadSettings();
-      setMultiplier(settings.multiplier?.toString() || '1.0');
+      setMultiplier(contextMultiplier?.toString() || '1.0');
       setError('');
     }
-  }, [show]);
+  }, [show, contextMultiplier]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -98,33 +98,23 @@ const SettingsModal = memo(({ show, onClose }) => {
     return true;
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!validateMultiplier(multiplier)) {
       return;
     }
 
-    const currentSettings = storageManager.loadSettings();
-    const newSettings = {
-      ...currentSettings,
-      multiplier: parseFloat(multiplier)
-    };
-
-    const saved = storageManager.saveSettings(newSettings);
-    
-    if (saved) {
-      // 전역 이벤트 발생시켜서 다른 컴포넌트들이 업데이트 되도록 함
-      window.dispatchEvent(new CustomEvent('settingsChanged', { 
-        detail: newSettings 
-      }));
-      
+    try {
+      const multiplierValue = parseFloat(multiplier);
+      await updateSettings({ multiplier: multiplierValue });
       showToast('설정이 저장되었습니다');
       setTimeout(() => {
         onClose();
-      }, 1500);
-    } else {
+      }, 1000);
+    } catch (error) {
+      console.error('설정 저장 실패:', error);
       showToast('설정 저장에 실패했습니다', 'error');
     }
-  }, [multiplier, validateMultiplier, onClose, showToast]);
+  }, [multiplier, validateMultiplier, updateSettings, showToast, onClose]);
 
   const handleReset = useCallback(() => {
     setMultiplier('1.0');
@@ -132,25 +122,18 @@ const SettingsModal = memo(({ show, onClose }) => {
   }, []);
 
   const handleClose = useCallback(() => {
-    setError('');
     onClose();
   }, [onClose]);
 
   const getCurrentMultiplierDisplay = useCallback(() => {
-    const num = parseFloat(multiplier);
-    if (isNaN(num)) return '잘못된 값';
-    
-    return `${num}배 적용`;
+    const value = parseFloat(multiplier);
+    return isNaN(value) ? '1.0배' : `${value}배`;
   }, [multiplier]);
 
   const getExampleCalculation = useCallback(() => {
-    const num = parseFloat(multiplier);
-    if (isNaN(num)) return '';
-    
-    const baseHours = 10; // 예시: 10시간
-    const adjustedHours = Math.round(baseHours * 60 * num) / 60; // 분 단위로 계산 후 시간으로 변환
-    
-    return `예: 초과근무 ${baseHours}시간 → 잔여시간 계산용 ${adjustedHours}시간`;
+    const value = parseFloat(multiplier);
+    if (isNaN(value)) return '예: 초과근무 10시간 × 1.0배 = 잔여시간 10시간';
+    return `예: 초과근무 10시간 × ${value}배 = 잔여시간 ${(10 * value).toFixed(1)}시간`;
   }, [multiplier]);
 
   if (!show) return null;
@@ -163,92 +146,70 @@ const SettingsModal = memo(({ show, onClose }) => {
         onClose={hideToast}
         type={toast.type}
       />
-      <Modal show={show} onClose={handleClose} title="설정" size="md">
+      <Modal show={show} onClose={onClose} title="설정" size="lg">
         <div className="space-y-6">
-          {/* 잔여시간 계산 배수 설정 */}
+          {/* 배수 설정 */}
           <div>
-            <h4 className="text-lg font-medium text-gray-900 mb-3">잔여시간 계산 배수</h4>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                배수 값 (1.0 ~ 3.0)
-              </label>
-              <input
-                type="number"
-                value={multiplier}
-                onChange={handleMultiplierChange}
-                onBlur={() => validateMultiplier(multiplier)}
-                step="0.1"
-                min="1.0"
-                max="3.0"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  error ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="예: 1.5"
-              />
-              {error && (
-                <p className="mt-2 text-sm text-red-600">{error}</p>
-              )}
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              잔여시간 계산 배수
+            </label>
+            <input
+              type="text"
+              value={multiplier}
+              onChange={handleMultiplierChange}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="예: 1.5"
+            />
+            {error && (
+              <p className="mt-2 text-sm text-red-600">{error}</p>
+            )}
+          </div>
 
-            {/* 프리셋 버튼들 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                자주 사용하는 배수
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {presets.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => handlePresetClick(preset.value)}
-                    className={`px-3 py-2 text-sm rounded-md border transition-colors ${
-                      multiplier === preset.value
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 현재 설정 미리보기 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <div className="text-sm text-blue-800">
-                <div className="font-medium mb-1">현재 설정: {getCurrentMultiplierDisplay()}</div>
-                <div className="text-xs text-blue-600">
-                  {getExampleCalculation()}
-                </div>
-              </div>
-            </div>
-
-            {/* 설명 */}
-            <div className="mt-4 text-sm text-gray-600">
-              <p className="mb-2">
-                <strong>배수 적용 방법:</strong>
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>초과근무 시간에 배수를 곱하여 잔여시간을 계산합니다</li>
-                <li>예: 초과근무 10시간 × 1.5배 = 잔여시간 15시간</li>
-                <li>휴가사용 시간에는 배수가 적용되지 않습니다</li>
-                <li>잔여시간 = (초과시간 × 배수) - 사용시간</li>
-              </ul>
+          {/* 프리셋 버튼들 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              자주 사용하는 배수
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {presets.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => handlePresetClick(preset.value)}
+                  className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                    multiplier === preset.value
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* 저장 영역 정보 */}
-          <div className="border-t pt-4">
-            <div className="text-sm text-gray-500">
-              <p className="mb-2">
-                <strong>데이터 저장:</strong>
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>설정은 브라우저의 로컬 스토리지에 저장됩니다</li>
-                <li>브라우저 데이터를 삭제하면 설정도 초기화됩니다</li>
-                <li>다른 브라우저나 기기에서는 별도로 설정해야 합니다</li>
-              </ul>
+          {/* 현재 설정 미리보기 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="text-sm text-blue-800">
+              <div className="font-medium mb-1">현재 설정: {getCurrentMultiplierDisplay()}</div>
+              <div className="text-xs text-blue-600">
+                {getExampleCalculation()}
+              </div>
             </div>
+          </div>
+
+          {/* 설명 */}
+          <div className="mt-4 text-sm text-gray-600">
+            <p className="mb-2">
+              <strong>배수 적용 방법:</strong>
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>초과근무 시간에 배수를 곱하여 잔여시간을 계산합니다</li>
+              <li>예: 초과근무 10시간 × 1.5배 = 잔여시간 15시간</li>
+              <li>휴가사용 시간에는 배수가 적용되지 않습니다</li>
+              <li>잔여시간 = (초과시간 × 배수) - 사용시간</li>
+            </ul>
           </div>
         </div>
 

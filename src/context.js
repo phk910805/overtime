@@ -269,6 +269,19 @@ const useOvertimeData = () => {
     }
   }, [dataService, isLoading]);
 
+  const updateSettings = useCallback(async (newSettings) => {
+    try {
+      await dataService.updateSettings(newSettings);
+      if (newSettings.multiplier !== undefined) {
+        setMultiplier(newSettings.multiplier);
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      throw error;
+    }
+  }, [dataService]);
+
   return {
     // 상태
     employees,
@@ -298,6 +311,9 @@ const useOvertimeData = () => {
 
     // 유틸리티
     getEmployeeNameFromRecord,
+
+    // 설정 관리
+    updateSettings,
 
     // 캐시 관리
     clearCache: () => dataService.clearCache()
