@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { createStorageAdapter } from './services/storage/index.js';
-import { getConfig } from './services/config.js';
 import { getDataService } from './services/dataService.js';
 import { dataCalculator } from './dataManager';
 
-// Supabase 클라이언트 (필요시)
-import { createClient } from '@supabase/supabase-js';
+// BACKUP: 복원용 imports (Supabase 모드용)
+// import { getConfig } from './services/config.js';
+// import { createClient } from '@supabase/supabase-js';
 
 // ========== CONTEXT ==========
 const OvertimeContext = createContext();
@@ -21,41 +21,42 @@ export const useOvertimeContext = () => {
 // ========== 초기화 ==========
 let isInitialized = false;
 
-const initializeDataLayer = async () => {
+// BACKUP: 기존 복잡한 초기화 로직 (복원용)
+// const initializeDataLayer_COMPLEX = async () => {
+//   if (isInitialized) return;
+//   try {
+//     const config = getConfig();
+//     const storageConfig = config.getStorageConfig();
+//     console.log('Initializing data layer:', storageConfig.type);
+//     if (storageConfig.type === 'supabase') {
+//       const supabaseConfig = config.getSupabaseConfig();
+//       if (!supabaseConfig.url || !supabaseConfig.anonKey) {
+//         console.warn('Supabase config missing, falling back to localStorage');
+//         createStorageAdapter({ type: 'localStorage' });
+//       } else {
+//         const supabaseClient = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+//         createStorageAdapter({ type: 'supabase', options: { supabaseClient } });
+//       }
+//     } else {
+//       createStorageAdapter({ type: 'localStorage' });
+//     }
+//     isInitialized = true;
+//     console.log('Data layer initialized successfully');
+//   } catch (error) {
+//     console.error('Failed to initialize data layer:', error);
+//     createStorageAdapter({ type: 'localStorage' });
+//     isInitialized = true;
+//   }
+// };
+
+// 단순화된 초기화 로직 (현재 환경: localStorage 전용)
+const initializeDataLayer = () => {
   if (isInitialized) return;
-
-  try {
-    const config = getConfig();
-    const storageConfig = config.getStorageConfig();
-
-    console.log('Initializing data layer:', storageConfig.type);
-
-    // 스토리지 어댑터 설정
-    if (storageConfig.type === 'supabase') {
-      const supabaseConfig = config.getSupabaseConfig();
-      
-      if (!supabaseConfig.url || !supabaseConfig.anonKey) {
-        console.warn('Supabase config missing, falling back to localStorage');
-        createStorageAdapter({ type: 'localStorage' });
-      } else {
-        const supabaseClient = createClient(supabaseConfig.url, supabaseConfig.anonKey);
-        createStorageAdapter({ 
-          type: 'supabase', 
-          options: { supabaseClient } 
-        });
-      }
-    } else {
-      createStorageAdapter({ type: 'localStorage' });
-    }
-
-    isInitialized = true;
-    console.log('Data layer initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize data layer:', error);
-    // 폴백: localStorage 사용
-    createStorageAdapter({ type: 'localStorage' });
-    isInitialized = true;
-  }
+  
+  console.log('Initializing data layer: localStorage');
+  createStorageAdapter({ type: 'localStorage' });
+  isInitialized = true;
+  console.log('Data layer initialized successfully');
 };
 
 // ========== CUSTOM HOOKS ==========
@@ -77,7 +78,7 @@ const useOvertimeData = () => {
         setError(null);
 
         // 데이터 계층 초기화
-        await initializeDataLayer();
+        initializeDataLayer();
 
         // 데이터 로드
         const [employeesData, employeeChangesData] = await Promise.all([
