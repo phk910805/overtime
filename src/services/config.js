@@ -9,10 +9,13 @@ export class ConfigService {
   }
 
   _loadConfig() {
+    // 긴급 수정: 프로덕션에서 localStorage 강제 사용
+    const forceLocalStorage = true; // Supabase 스키마 이슈로 인한 임시 조치
+    
     return {
       // 스토리지 설정
       storage: {
-        type: process.env.REACT_APP_USE_SUPABASE === 'true' ? 'supabase' : 'localStorage',
+        type: (process.env.REACT_APP_USE_SUPABASE === 'true' && !forceLocalStorage) ? 'supabase' : 'localStorage',
         supabase: {
           url: process.env.REACT_APP_SUPABASE_URL,
           anonKey: process.env.REACT_APP_SUPABASE_ANON_KEY
