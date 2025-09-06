@@ -31,7 +31,7 @@ export class SupabaseAdapter extends StorageAdapter {
       const { data, error } = await this.supabase
         .from(this.tables.employees)
         .select('*')
-        .eq('deleted_at', null)
+        .is('deleted_at', null)  // .eq('deleted_at', null) → .is('deleted_at', null)로 수정
         .order('created_at', { ascending: true });
 
       if (error) throw error;

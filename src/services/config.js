@@ -9,8 +9,8 @@ export class ConfigService {
   }
 
   _loadConfig() {
-    // 긴급 수정: 프로덕션에서 localStorage 강제 사용
-    const forceLocalStorage = true; // Supabase 스키마 이슈로 인한 임시 조치
+    // Supabase 스키마 수정 완료 - 정상 모드로 복귀
+    const forceLocalStorage = false; // 수정 완료, Supabase 모드 재활성화
     
     return {
       // 스토리지 설정
