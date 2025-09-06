@@ -30,6 +30,26 @@ src/
 └── App.js              # 메인 애플리케이션 컴포넌트
 ```
 
+## 환경 설정
+
+### 개발 환경
+로컬에서 빠른 테스트를 위해 localStorage를 사용:
+```bash
+# .env.local (Git에서 제외됨)
+REACT_APP_USE_SUPABASE=false
+```
+
+### 프로덕션 환경
+Supabase 클라우드 데이터베이스 사용:
+```bash
+# .env.production (Git에 포함됨)
+REACT_APP_USE_SUPABASE=true
+REACT_APP_SUPABASE_URL=your_supabase_url
+REACT_APP_SUPABASE_ANON_KEY=your_anon_key
+```
+
+**중요**: GitHub에 올라가는 코드는 항상 Supabase 모드여야 합니다.
+
 ## 시작하기
 
 ### 필수 요구사항

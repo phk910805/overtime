@@ -5,9 +5,10 @@
   "homepage": "https://phk910805.github.io/overtime",
   "description": "초과근무시간 관리 시스템",
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.2",
+    "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -17,10 +18,10 @@
     "eject": "react-scripts eject"
   },
   "devDependencies": {
-    "react-scripts": "5.0.1",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
-    "@testing-library/user-event": "^13.5.0"
+    "@testing-library/user-event": "^13.5.0",
+    "react-scripts": "5.0.1"
   },
   "eslintConfig": {
     "extends": [
