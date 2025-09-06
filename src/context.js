@@ -7,7 +7,6 @@ import { dataCalculator } from './dataManager';
 // import { getConfig } from './services/config.js';
 // import { createClient } from '@supabase/supabase-js';
 
-// ========== CONTEXT ==========
 const OvertimeContext = createContext();
 
 export const useOvertimeContext = () => {
@@ -18,7 +17,6 @@ export const useOvertimeContext = () => {
   return context;
 };
 
-// ========== 초기화 ==========
 let isInitialized = false;
 
 // BACKUP: 기존 복잡한 초기화 로직 (복원용)
@@ -52,7 +50,6 @@ let isInitialized = false;
 // 단순화된 초기화 로직 (현재 환경: localStorage 전용)
 const initializeDataLayer = () => {
   if (isInitialized) return;
-  
   if (process.env.NODE_ENV === 'development') {
     console.log('Initializing data layer: localStorage');
   }
@@ -63,7 +60,6 @@ const initializeDataLayer = () => {
   }
 };
 
-// ========== CUSTOM HOOKS ==========
 const useOvertimeData = () => {
   const [employees, setEmployees] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]);
@@ -83,7 +79,6 @@ const useOvertimeData = () => {
 
         // 데이터 계층 초기화
         initializeDataLayer();
-
         // 데이터 로드
         const [employeesData, employeeChangesData] = await Promise.all([
           dataService.getEmployees(),
@@ -92,7 +87,6 @@ const useOvertimeData = () => {
 
         setEmployees(employeesData || []);
         setEmployeeChangeRecords(employeeChangesData || []);
-
         // 현재 월 시간 기록 로드
         const currentMonth = new Date().toISOString().slice(0, 7);
         const monthlyRecords = await dataService.getMonthlyRecords(currentMonth);
@@ -112,8 +106,6 @@ const useOvertimeData = () => {
 
     loadData();
   }, [dataService]);
-
-  // ========== 직원 관리 ==========
 
   const addEmployee = useCallback(async (name) => {
     try {
@@ -171,8 +163,6 @@ const useOvertimeData = () => {
       throw error;
     }
   }, [dataService]);
-
-  // ========== 시간 기록 관리 ==========
 
   const updateOvertimeRecord = useCallback(async (employeeId, date, totalMinutes) => {
     try {
@@ -238,13 +228,9 @@ const useOvertimeData = () => {
     }
   }, [dataService]);
 
-  // ========== 히스토리 및 유틸리티 ==========
-
   const getEmployeeNameFromRecord = useCallback(async (record) => {
     return await dataService.getEmployeeNameFromRecord(record);
   }, [dataService]);
-
-  // ========== Dashboard 지원 기능들 ==========
 
   const getAllEmployeesWithRecords = useMemo(() => {
     return employees.map(employee => ({
@@ -270,8 +256,6 @@ const useOvertimeData = () => {
       return await updateVacationRecord(employeeId, date, totalMinutes);
     }
   }, [updateOvertimeRecord, updateVacationRecord]);
-
-  // ========== 설정 관리 ==========
 
   const [multiplier, setMultiplier] = useState(1.0);
 
@@ -340,12 +324,10 @@ const useOvertimeData = () => {
     // 설정 관리
     updateSettings,
 
-    // 캐시 관리
     clearCache: () => dataService.clearCache()
   };
 };
 
-// ========== PROVIDER ==========
 export const OvertimeProvider = ({ children }) => {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return new Date().toISOString().slice(0, 7);

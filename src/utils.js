@@ -1,6 +1,5 @@
 import React from 'react';
 
-// ========== TIME UTILS ==========
 export const timeUtils = {
   formatTime: (totalMinutes) => {
     if (!totalMinutes) return '0:00';
@@ -44,7 +43,6 @@ export const timeUtils = {
   }
 };
 
-// ========== DATE UTILS ==========
 export const dateUtils = {
   getDaysInMonth: (yearMonth) => {
     const [year, month] = yearMonth.split('-');
@@ -56,7 +54,6 @@ export const dateUtils = {
   }
 };
 
-// ========== HOLIDAY UTILS ==========
 export const holidayUtils = {
   // 공휴일 데이터 캐시
   holidayCache: new Map(),
@@ -209,7 +206,6 @@ export const holidayUtils = {
   }
 };
 
-// ========== VALIDATORS ==========
 export const validators = {
   employeeName: (name, employees, excludeId = null) => {
     const trimmedName = name.trim();

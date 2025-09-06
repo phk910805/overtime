@@ -1,4 +1,3 @@
-// ========== STORAGE MANAGER ==========
 class StorageManager {
   constructor() {
     this.cache = new Map();
@@ -189,7 +188,6 @@ class StorageManager {
 
 export const storageManager = new StorageManager();
 
-// ========== DATA CALCULATOR ==========
 class DataCalculator {
   constructor() {
     this.statsCache = new Map();
