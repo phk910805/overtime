@@ -336,6 +336,8 @@ export class SupabaseAdapter extends StorageAdapter {
           multiplier: settings.multiplier,
           value: { multiplier: settings.multiplier },
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
         })
         .select('multiplier')
         .single();
