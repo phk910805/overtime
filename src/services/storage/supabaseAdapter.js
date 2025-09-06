@@ -133,7 +133,9 @@ export class SupabaseAdapter extends StorageAdapter {
       if (filters.month) {
         const [year, month] = filters.month.split('-');
         const startDate = `${year}-${month}-01`;
-        const endDate = `${year}-${month}-31`;
+        // 올바른 월말 계산
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const endDate = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`;
         query = query.gte('date', startDate).lte('date', endDate);
       }
 
@@ -160,7 +162,9 @@ export class SupabaseAdapter extends StorageAdapter {
       if (filters.month) {
         const [year, month] = filters.month.split('-');
         const startDate = `${year}-${month}-01`;
-        const endDate = `${year}-${month}-31`;
+        // 올바른 월말 계산
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const endDate = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`;
         query = query.gte('date', startDate).lte('date', endDate);
       }
 
