@@ -36,6 +36,11 @@ jobs:
 
     - name: Build application
       run: CI=false npm run build
+      env:
+        REACT_APP_USE_SUPABASE: true
+        REACT_APP_SUPABASE_URL: https://qcsvkxtxtdljphyyrwcg.supabase.co
+        REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjc3ZreHR4dGRsanBoeXlyd2NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY1MjYsImV4cCI6MjA3Mjc0MjUyNn0.nvOp1fAJGgDBAXOw1tLIbDRRWZXHi7yf4zRsoUf95Gk
+        REACT_APP_HOLIDAY_API_URL: https://holidays.hyunbin.page
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
