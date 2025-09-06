@@ -21,9 +21,9 @@ export const timeUtils = {
     const cleaned = timeStr.replace(/[^\d:]/g, '');
     
     if (cleaned.includes(':')) {
-      const [h, m] = cleaned.split(':');
-      const hours = parseInt(h) || 0;
-      const minutes = parseInt(m) || 0;
+      const [hourStr, minuteStr] = cleaned.split(':');
+      const hours = parseInt(hourStr) || 0;
+      const minutes = parseInt(minuteStr) || 0;
       
       if (hours <= 23 && minutes <= 59) {
         return hours * 60 + minutes;
