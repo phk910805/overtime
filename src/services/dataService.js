@@ -201,6 +201,22 @@ export class DataService {
     };
   }
 
+  // ========== 설정 관리 ==========
+
+  /**
+   * 설정 가져오기
+   */
+  async getSettings() {
+    return await this._getAdapter().getSettings();
+  }
+
+  /**
+   * 설정 업데이트
+   */
+  async updateSettings(settings) {
+    return await this._getAdapter().updateSettings(settings);
+  }
+
   // ========== 유틸리티 ==========
 
   /**

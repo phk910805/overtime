@@ -340,6 +340,12 @@ export class SupabaseAdapter extends StorageAdapter {
     }
   }
 
+  async updateSettings(settings) {
+    const currentSettings = await this.getSettings();
+    const updatedSettings = { ...currentSettings, ...settings };
+    return await this.saveSettings(updatedSettings);
+  }
+
   // ========== 캐시 관리 ==========
 
   clearCache() {

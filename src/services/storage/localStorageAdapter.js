@@ -233,6 +233,12 @@ export class LocalStorageAdapter extends StorageAdapter {
     }
   }
 
+  async updateSettings(settings) {
+    const currentSettings = this._loadSettings();
+    const updatedSettings = { ...currentSettings, ...settings };
+    return await this.saveSettings(updatedSettings);
+  }
+
   // ========== 캐시 관리 ==========
 
   clearCache() {
