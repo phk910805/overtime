@@ -192,11 +192,26 @@ const useOvertimeData = () => {
         throw error;
       }
     } else {
+      // 기존 기록이 있는지 확인하여 동작 타입 결정
+      const existingRecord = overtimeRecords.find(record => 
+        record.employeeId === employeeId && record.date === date
+      );
+      
+      let description;
+      if (totalMinutes === 0) {
+        description = '삭제';
+      } else if (existingRecord) {
+        description = '수정';
+      } else {
+        description = '생성';
+      }
+      
       const newRecord = {
         id: Date.now() + Math.random(),
         employeeId,
         date,
         totalMinutes,
+        description, // 동작 타입 추가
         createdAt: new Date().toISOString()
       };
       
@@ -299,6 +314,18 @@ const useOvertimeData = () => {
     dataCalculator.clearCache();
   }, [useSupabase, vacationRecords]);
 
+  // 직원 이름 조회 함수 (히스토리에서 사용)
+  const getEmployeeNameFromRecord = useCallback((record) => {
+    if (record.employeeName) {
+      // 직원 변경 기록에서는 employeeName 필드 사용
+      return record.employeeName;
+    }
+    
+    // 초과근무/휴가 기록에서는 employeeId로 조회
+    const employee = employees.find(emp => emp.id === record.employeeId);
+    return employee ? employee.name : '알 수 없는 직원';
+  }, [employees]);
+
   // Dashboard에서 사용하는 기능들 (기존과 동일)
   const getAllEmployeesWithRecords = useMemo(() => {
     return employees.map(employee => ({
@@ -341,6 +368,7 @@ const useOvertimeData = () => {
     getDailyData,
     getMonthlyStats,
     updateDailyTime,
+    getEmployeeNameFromRecord, // 추가된 함수
     multiplier: storageManager.loadSettings().multiplier || 1.0,
     useSupabase // 모드 확인용
   };
