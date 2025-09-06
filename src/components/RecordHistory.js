@@ -5,12 +5,24 @@ import { timeUtils, useSortingPaging } from '../utils';
 import { SortableHeader, TableHeader, EmptyState, Pagination } from './CommonUI';
 
 // ========== RECORD TABLE COMPONENT ==========
-const RecordTable = memo(({ records, type, sortConfig, onSort, getEmployeeNameFromRecord, currentPage, itemsPerPage }) => {
+const RecordTable = memo(({ records, type, sortConfig, onSort, employees, currentPage, itemsPerPage }) => {
   const paginatedRecords = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return records.slice(startIndex, endIndex);
   }, [records, currentPage, itemsPerPage]);
+
+  // 직원 이름 조회 함수 (동기적 처리)
+  const getEmployeeNameFromRecord = useCallback((record) => {
+    if (record.employeeName) {
+      // 직원 변경 기록에서는 employeeName 필드 사용
+      return record.employeeName;
+    }
+    
+    // 초과근무/휴가 기록에서는 employeeId로 조회
+    const employee = employees.find(emp => emp.id === record.employeeId);
+    return employee ? employee.name : '알 수 없는 직원';
+  }, [employees]);
 
   const getChangeDisplay = useCallback((record, records, type) => {
     const recordDate = new Date(record.createdAt);
@@ -123,10 +135,10 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, getEmployeeNameFr
 // ========== MAIN RECORD HISTORY COMPONENT ==========
 const RecordHistory = memo(() => {
   const {
+    employees,
     overtimeRecords,
     vacationRecords,
-    selectedMonth,
-    getEmployeeNameFromRecord
+    selectedMonth
   } = useOvertimeContext();
   
   const [activeHistoryTab, setActiveHistoryTab] = useState('overtime');
@@ -150,7 +162,15 @@ const RecordHistory = memo(() => {
     };
   }, [selectedMonth, overtimeRecords, vacationRecords]);
 
-  const sortRecords = useCallback((records, sortConfig, getEmployeeNameFromRecord) => {
+  const sortRecords = useCallback((records, sortConfig, employees) => {
+    const getEmployeeNameFromRecord = (record) => {
+      if (record.employeeName) {
+        return record.employeeName;
+      }
+      const employee = employees.find(emp => emp.id === record.employeeId);
+      return employee ? employee.name : '알 수 없는 직원';
+    };
+
     return [...records].sort((a, b) => {
       let aValue, bValue;
 
@@ -182,12 +202,12 @@ const RecordHistory = memo(() => {
   }, []);
 
   const sortedOvertimeRecords = useMemo(() => {
-    return sortRecords(getMonthlyRecords.overtimeRecords, overtimeSorting.sortConfig, getEmployeeNameFromRecord);
-  }, [getMonthlyRecords.overtimeRecords, overtimeSorting.sortConfig, sortRecords, getEmployeeNameFromRecord]);
+    return sortRecords(getMonthlyRecords.overtimeRecords, overtimeSorting.sortConfig, employees);
+  }, [getMonthlyRecords.overtimeRecords, overtimeSorting.sortConfig, sortRecords, employees]);
 
   const sortedVacationRecords = useMemo(() => {
-    return sortRecords(getMonthlyRecords.vacationRecords, vacationSorting.sortConfig, getEmployeeNameFromRecord);
-  }, [getMonthlyRecords.vacationRecords, vacationSorting.sortConfig, sortRecords, getEmployeeNameFromRecord]);
+    return sortRecords(getMonthlyRecords.vacationRecords, vacationSorting.sortConfig, employees);
+  }, [getMonthlyRecords.vacationRecords, vacationSorting.sortConfig, sortRecords, employees]);
 
   const handleTabChange = useCallback((tab) => {
     setActiveHistoryTab(tab);
@@ -236,7 +256,7 @@ const RecordHistory = memo(() => {
               type="overtime"
               sortConfig={overtimeSorting.sortConfig}
               onSort={overtimeSorting.handleSort}
-              getEmployeeNameFromRecord={getEmployeeNameFromRecord}
+              employees={employees}
               currentPage={overtimeSorting.currentPage}
               itemsPerPage={overtimeSorting.itemsPerPage}
             />
@@ -257,7 +277,7 @@ const RecordHistory = memo(() => {
               type="vacation"
               sortConfig={vacationSorting.sortConfig}
               onSort={vacationSorting.handleSort}
-              getEmployeeNameFromRecord={getEmployeeNameFromRecord}
+              employees={employees}
               currentPage={vacationSorting.currentPage}
               itemsPerPage={vacationSorting.itemsPerPage}
             />

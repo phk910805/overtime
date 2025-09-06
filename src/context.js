@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { storageManager, dataCalculator } from './dataManager';
-// Supabase API 추가 (기존 코드와 독립적)
-import { 
-  supabaseEmployeeAPI, 
-  supabaseOvertimeAPI, 
-  supabaseVacationAPI, 
-  supabaseHistoryAPI 
-} from './services/supabaseAPI';
+import { createStorageAdapter } from './services/storage/index.js';
+import { getConfig } from './services/config.js';
+import { getDataService } from './services/dataService.js';
+import { dataCalculator } from './dataManager';
+
+// Supabase 클라이언트 (필요시)
+import { createClient } from '@supabase/supabase-js';
 
 // ========== CONTEXT ==========
 const OvertimeContext = createContext();
@@ -19,347 +18,213 @@ export const useOvertimeContext = () => {
   return context;
 };
 
+// ========== 초기화 ==========
+let isInitialized = false;
+
+const initializeDataLayer = async () => {
+  if (isInitialized) return;
+
+  try {
+    const config = getConfig();
+    const storageConfig = config.getStorageConfig();
+
+    console.log('Initializing data layer:', storageConfig.type);
+
+    // 스토리지 어댑터 설정
+    if (storageConfig.type === 'supabase') {
+      const supabaseConfig = config.getSupabaseConfig();
+      
+      if (!supabaseConfig.url || !supabaseConfig.anonKey) {
+        console.warn('Supabase config missing, falling back to localStorage');
+        createStorageAdapter({ type: 'localStorage' });
+      } else {
+        const supabaseClient = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+        createStorageAdapter({ 
+          type: 'supabase', 
+          options: { supabaseClient } 
+        });
+      }
+    } else {
+      createStorageAdapter({ type: 'localStorage' });
+    }
+
+    isInitialized = true;
+    console.log('Data layer initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize data layer:', error);
+    // 폴백: localStorage 사용
+    createStorageAdapter({ type: 'localStorage' });
+    isInitialized = true;
+  }
+};
+
 // ========== CUSTOM HOOKS ==========
 const useOvertimeData = () => {
   const [employees, setEmployees] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]);
   const [vacationRecords, setVacationRecords] = useState([]);
   const [employeeChangeRecords, setEmployeeChangeRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 모드 전환 로직 (기본값: localStorage)
-  const useSupabase = process.env.REACT_APP_USE_SUPABASE === 'true';
+  const dataService = getDataService();
 
+  // 초기 데이터 로드
   useEffect(() => {
     const loadData = async () => {
-      if (useSupabase) {
-        // Supabase 모드
-        try {
-          const [employeesData, historyData] = await Promise.all([
-            supabaseEmployeeAPI.getAll(),
-            supabaseHistoryAPI.getAll()
-          ]);
-          setEmployees(employeesData || []);
-          setEmployeeChangeRecords(historyData || []);
-          
-          const currentMonth = new Date().toISOString().slice(0, 7);
-          const [overtimeData, vacationData] = await Promise.all([
-            supabaseOvertimeAPI.getByMonth(currentMonth),
-            supabaseVacationAPI.getByMonth(currentMonth)
-          ]);
-          setOvertimeRecords(overtimeData || []);
-          setVacationRecords(vacationData || []);
-        } catch (error) {
-          console.error('Supabase 로드 실패, localStorage로 폴백:', error);
-          // 오류 시 localStorage로 폴백
-          setEmployees(storageManager.load('overtime-employees'));
-          setOvertimeRecords(storageManager.load('overtime-records'));
-          setVacationRecords(storageManager.load('vacation-records'));
-          setEmployeeChangeRecords(storageManager.load('employee-change-records'));
-        }
-      } else {
-        // 기존 localStorage 모드 (기본값)
-        setEmployees(storageManager.load('overtime-employees'));
-        setOvertimeRecords(storageManager.load('overtime-records'));
-        setVacationRecords(storageManager.load('vacation-records'));
-        setEmployeeChangeRecords(storageManager.load('employee-change-records'));
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // 데이터 계층 초기화
+        await initializeDataLayer();
+
+        // 데이터 로드
+        const [employeesData, employeeChangesData] = await Promise.all([
+          dataService.getEmployees(),
+          dataService.getEmployeeChangeRecords()
+        ]);
+
+        setEmployees(employeesData || []);
+        setEmployeeChangeRecords(employeeChangesData || []);
+
+        // 현재 월 시간 기록 로드
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const monthlyRecords = await dataService.getMonthlyRecords(currentMonth);
+        
+        setOvertimeRecords(monthlyRecords.overtimeRecords || []);
+        setVacationRecords(monthlyRecords.vacationRecords || []);
+
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
+
     loadData();
-  }, [useSupabase]);
+  }, [dataService]);
+
+  // ========== 직원 관리 ==========
 
   const addEmployee = useCallback(async (name) => {
-    if (useSupabase) {
-      // Supabase 모드
-      try {
-        const newEmployee = await supabaseEmployeeAPI.create(name);
-        setEmployees(prev => [...prev, newEmployee]);
-        // 새로고침된 이력 데이터 로드
-        const historyData = await supabaseHistoryAPI.getAll();
-        setEmployeeChangeRecords(historyData || []);
-      } catch (error) {
-        console.error('Supabase addEmployee 실패:', error);
-        throw error;
-      }
-    } else {
-      // 기존 localStorage 모드
-      const newEmployee = {
-        id: Date.now(),
-        name: name.trim(),
-        createdAt: new Date().toISOString()
-      };
-      const updated = [...employees, newEmployee];
-      setEmployees(updated);
-      storageManager.save('overtime-employees', updated);
+    try {
+      const newEmployee = await dataService.addEmployee(name);
+      setEmployees(prev => [...prev, newEmployee]);
       
-      const createRecord = {
-        id: Date.now() + Math.random(),
-        employeeId: newEmployee.id,
-        action: '생성',
-        employeeName: newEmployee.name,
-        createdAt: newEmployee.createdAt
-      };
+      // 변경 이력 새로고침
+      const updatedChanges = await dataService.getEmployeeChangeRecords();
+      setEmployeeChangeRecords(updatedChanges);
       
-      const updatedChangeRecords = [...employeeChangeRecords, createRecord];
-      setEmployeeChangeRecords(updatedChangeRecords);
-      storageManager.save('employee-change-records', updatedChangeRecords);
+      dataCalculator.invalidateRelatedCaches();
+      return newEmployee;
+    } catch (error) {
+      console.error('Failed to add employee:', error);
+      throw error;
     }
-    
-    dataCalculator.invalidateRelatedCaches();
-  }, [useSupabase, employees, employeeChangeRecords]);
+  }, [dataService]);
 
   const updateEmployee = useCallback(async (id, newName) => {
-    if (useSupabase) {
-      try {
-        const updatedEmployee = await supabaseEmployeeAPI.update(id, newName);
-        setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));
-        const historyData = await supabaseHistoryAPI.getAll();
-        setEmployeeChangeRecords(historyData || []);
-      } catch (error) {
-        console.error('Supabase updateEmployee 실패:', error);
-        throw error;
-      }
-    } else {
-      const updated = employees.map(emp => 
-        emp.id === id ? { ...emp, name: newName.trim() } : emp
-      );
-      setEmployees(updated);
-      storageManager.save('overtime-employees', updated);
+    try {
+      const updatedEmployee = await dataService.updateEmployee(id, newName);
+      setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));
       
-      const updateRecord = {
-        id: Date.now() + Math.random(),
-        employeeId: id,
-        action: '수정',
-        employeeName: newName.trim(),
-        createdAt: new Date().toISOString()
-      };
+      // 변경 이력 새로고침
+      const updatedChanges = await dataService.getEmployeeChangeRecords();
+      setEmployeeChangeRecords(updatedChanges);
       
-      const updatedChangeRecords = [...employeeChangeRecords, updateRecord];
-      setEmployeeChangeRecords(updatedChangeRecords);
-      storageManager.save('employee-change-records', updatedChangeRecords);
+      dataCalculator.invalidateRelatedCaches(id);
+      return updatedEmployee;
+    } catch (error) {
+      console.error('Failed to update employee:', error);
+      throw error;
     }
-    
-    dataCalculator.invalidateRelatedCaches(id);
-  }, [useSupabase, employees, employeeChangeRecords]);
+  }, [dataService]);
 
   const deleteEmployee = useCallback(async (id) => {
-    if (useSupabase) {
-      try {
-        await supabaseEmployeeAPI.delete(id);
-        setEmployees(prev => prev.filter(emp => emp.id !== id));
-        const historyData = await supabaseHistoryAPI.getAll();
-        setEmployeeChangeRecords(historyData || []);
-      } catch (error) {
-        console.error('Supabase deleteEmployee 실패:', error);
-        throw error;
-      }
-    } else {
-      const employeeToDelete = employees.find(emp => emp.id === id);
-      if (!employeeToDelete) return;
+    try {
+      const deletedEmployee = await dataService.deleteEmployee(id);
+      setEmployees(prev => prev.filter(emp => emp.id !== id));
       
-      const updated = employees.filter(emp => emp.id !== id);
-      setEmployees(updated);
-      storageManager.save('overtime-employees', updated);
+      // 변경 이력 새로고침
+      const updatedChanges = await dataService.getEmployeeChangeRecords();
+      setEmployeeChangeRecords(updatedChanges);
       
-      const deleteRecord = {
-        id: Date.now() + Math.random(),
-        employeeId: id,
-        action: '삭제',
-        employeeName: employeeToDelete.name,
-        createdAt: new Date().toISOString()
-      };
-      
-      const updatedChangeRecords = [...employeeChangeRecords, deleteRecord];
-      setEmployeeChangeRecords(updatedChangeRecords);
-      storageManager.save('employee-change-records', updatedChangeRecords);
+      dataCalculator.invalidateRelatedCaches(id);
+      return deletedEmployee;
+    } catch (error) {
+      console.error('Failed to delete employee:', error);
+      throw error;
     }
-    
-    dataCalculator.invalidateRelatedCaches(id);
-  }, [useSupabase, employees, employeeChangeRecords]);
+  }, [dataService]);
+
+  // ========== 시간 기록 관리 ==========
 
   const updateOvertimeRecord = useCallback(async (employeeId, date, totalMinutes) => {
-    if (useSupabase) {
-      try {
-        const updatedRecord = await supabaseOvertimeAPI.upsert(employeeId, date, totalMinutes);
-        setOvertimeRecords(prev => {
-          const filtered = prev.filter(record => 
-            !(record.employeeId === employeeId && record.date === date)
-          );
-          return [...filtered, updatedRecord];
-        });
-      } catch (error) {
-        console.error('Supabase updateOvertimeRecord 실패:', error);
-        throw error;
-      }
-    } else {
-      // 마지막 기록 찾기 (시간 순서)
-      const lastRecord = overtimeRecords
-        .filter(record => 
-          record.employeeId === employeeId && 
-          record.date === date
-        )
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    try {
+      const newRecord = await dataService.updateTimeRecord('overtime', employeeId, date, totalMinutes);
       
-      // 정책: 00:00 상태에서 00:00 입력만 의미 없음
-      if (totalMinutes === 0 && (!lastRecord || lastRecord.totalMinutes === 0)) {
-        return; // 이미 00:00인 상태에서 00:00 입력은 의미 없음
+      if (newRecord) {
+        setOvertimeRecords(prev => [...prev, newRecord]);
       }
       
-      let description;
-      if (totalMinutes === 0) {
-        description = '삭제'; // 기존 시간을 00:00으로 변경 = 삭제
-      } else if (lastRecord && lastRecord.totalMinutes > 0) {
-        description = '수정'; // 마지막이 의미있는 기록이면 수정
-      } else {
-        description = '생성'; // 삭제 후 재입력 또는 처음 입력 = 생성
-      }
-      
-      const newRecord = {
-        id: Date.now() + Math.random(),
-        employeeId,
-        date,
-        totalMinutes,
-        description,
-        createdAt: new Date().toISOString()
-      };
-      
-      const updated = [...overtimeRecords, newRecord];
-      setOvertimeRecords(updated);
-      storageManager.save('overtime-records', updated);
+      dataCalculator.invalidateRelatedCaches(employeeId, date);
+      return newRecord;
+    } catch (error) {
+      console.error('Failed to update overtime record:', error);
+      throw error;
     }
-    
-    dataCalculator.invalidateRelatedCaches(employeeId, date);
-  }, [useSupabase, overtimeRecords]);
+  }, [dataService]);
 
   const updateVacationRecord = useCallback(async (employeeId, date, totalMinutes) => {
-    if (useSupabase) {
-      try {
-        const updatedRecord = await supabaseVacationAPI.upsert(employeeId, date, totalMinutes);
-        setVacationRecords(prev => {
-          const filtered = prev.filter(record => 
-            !(record.employeeId === employeeId && record.date === date)
-          );
-          return [...filtered, updatedRecord];
-        });
-      } catch (error) {
-        console.error('Supabase updateVacationRecord 실패:', error);
-        throw error;
-      }
-    } else {
-      // 마지막 기록 찾기 (시간 순서)
-      const lastRecord = vacationRecords
-        .filter(record => 
-          record.employeeId === employeeId && 
-          record.date === date
-        )
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    try {
+      const newRecord = await dataService.updateTimeRecord('vacation', employeeId, date, totalMinutes);
       
-      // 정책: 00:00 상태에서 00:00 입력만 의미 없음
-      if (totalMinutes === 0 && (!lastRecord || lastRecord.totalMinutes === 0)) {
-        return; // 이미 00:00인 상태에서 00:00 입력은 의미 없음
+      if (newRecord) {
+        setVacationRecords(prev => [...prev, newRecord]);
       }
       
-      let description;
-      if (totalMinutes === 0) {
-        description = '삭제'; // 기존 시간을 00:00으로 변경 = 삭제
-      } else if (lastRecord && lastRecord.totalMinutes > 0) {
-        description = '수정'; // 마지막이 의미있는 기록이면 수정
-      } else {
-        description = '생성'; // 삭제 후 재입력 또는 처음 입력 = 생성
-      }
-      
-      const newRecord = {
-        id: Date.now() + Math.random(),
-        employeeId,
-        date,
-        totalMinutes,
-        description,
-        createdAt: new Date().toISOString()
-      };
-      
-      const updated = [...vacationRecords, newRecord];
-      setVacationRecords(updated);
-      storageManager.save('vacation-records', updated);
+      dataCalculator.invalidateRelatedCaches(employeeId, date);
+      return newRecord;
+    } catch (error) {
+      console.error('Failed to update vacation record:', error);
+      throw error;
     }
-    
-    dataCalculator.invalidateRelatedCaches(employeeId, date);
-  }, [useSupabase, vacationRecords]);
+  }, [dataService]);
 
   const bulkUpdateOvertimeRecords = useCallback(async (updates) => {
-    if (useSupabase) {
-      try {
-        for (const update of updates) {
-          await supabaseOvertimeAPI.upsert(update.employeeId, update.date, update.totalMinutes);
-        }
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const overtimeData = await supabaseOvertimeAPI.getByMonth(currentMonth);
-        setOvertimeRecords(overtimeData || []);
-      } catch (error) {
-        console.error('Supabase bulkUpdateOvertimeRecords 실패:', error);
-        throw error;
-      }
-    } else {
-      const newRecords = updates.map(update => ({
-        id: Date.now() + Math.random(),
-        employeeId: update.employeeId,
-        date: update.date,
-        totalMinutes: update.totalMinutes,
-        description: '생성', // 대량 업데이트는 생성으로 처리
-        createdAt: new Date().toISOString()
-      }));
-      
-      const updated = [...overtimeRecords, ...newRecords];
-      setOvertimeRecords(updated);
-      storageManager.save('overtime-records', updated);
+    try {
+      const newRecords = await dataService.bulkUpdateTimeRecords('overtime', updates);
+      setOvertimeRecords(prev => [...prev, ...newRecords]);
+      dataCalculator.clearCache();
+      return newRecords;
+    } catch (error) {
+      console.error('Failed to bulk update overtime records:', error);
+      throw error;
     }
-    
-    dataCalculator.clearCache();
-  }, [useSupabase, overtimeRecords]);
+  }, [dataService]);
 
   const bulkUpdateVacationRecords = useCallback(async (updates) => {
-    if (useSupabase) {
-      try {
-        for (const update of updates) {
-          await supabaseVacationAPI.upsert(update.employeeId, update.date, update.totalMinutes);
-        }
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const vacationData = await supabaseVacationAPI.getByMonth(currentMonth);
-        setVacationRecords(vacationData || []);
-      } catch (error) {
-        console.error('Supabase bulkUpdateVacationRecords 실패:', error);
-        throw error;
-      }
-    } else {
-      const newRecords = updates.map(update => ({
-        id: Date.now() + Math.random(),
-        employeeId: update.employeeId,
-        date: update.date,
-        totalMinutes: update.totalMinutes,
-        description: '생성', // 대량 업데이트는 생성으로 처리
-        createdAt: new Date().toISOString()
-      }));
-      
-      const updated = [...vacationRecords, ...newRecords];
-      setVacationRecords(updated);
-      storageManager.save('vacation-records', updated);
+    try {
+      const newRecords = await dataService.bulkUpdateTimeRecords('vacation', updates);
+      setVacationRecords(prev => [...prev, ...newRecords]);
+      dataCalculator.clearCache();
+      return newRecords;
+    } catch (error) {
+      console.error('Failed to bulk update vacation records:', error);
+      throw error;
     }
-    
-    dataCalculator.clearCache();
-  }, [useSupabase, vacationRecords]);
+  }, [dataService]);
 
-  // 직원 이름 조회 함수 (히스토리에서 사용)
-  const getEmployeeNameFromRecord = useCallback((record) => {
-    if (record.employeeName) {
-      // 직원 변경 기록에서는 employeeName 필드 사용
-      return record.employeeName;
-    }
-    
-    // 초과근무/휴가 기록에서는 employeeId로 조회
-    const employee = employees.find(emp => emp.id === record.employeeId);
-    return employee ? employee.name : '알 수 없는 직원';
-  }, [employees]);
+  // ========== 히스토리 및 유틸리티 ==========
 
-  // Dashboard에서 사용하는 기능들 (기존과 동일)
+  const getEmployeeNameFromRecord = useCallback(async (record) => {
+    return await dataService.getEmployeeNameFromRecord(record);
+  }, [dataService]);
+
+  // ========== Dashboard 지원 기능들 ==========
+
   const getAllEmployeesWithRecords = useMemo(() => {
     return employees.map(employee => ({
       ...employee,
@@ -371,39 +236,71 @@ const useOvertimeData = () => {
     return dataCalculator.getDailyData(employeeId, date, type, overtimeRecords, vacationRecords);
   }, [overtimeRecords, vacationRecords]);
 
-  const getMonthlyStats = useCallback((employeeId) => {
-    const settings = storageManager.loadSettings();
+  const getMonthlyStats = useCallback(async (employeeId) => {
+    const settings = await dataService.getSettings();
     const selectedMonth = new Date().toISOString().slice(0, 7);
     return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, settings.multiplier);
-  }, [overtimeRecords, vacationRecords]);
+  }, [dataService, overtimeRecords, vacationRecords]);
 
   const updateDailyTime = useCallback(async (type, employeeId, date, totalMinutes) => {
     if (type === 'overtime') {
-      await updateOvertimeRecord(employeeId, date, totalMinutes);
+      return await updateOvertimeRecord(employeeId, date, totalMinutes);
     } else {
-      await updateVacationRecord(employeeId, date, totalMinutes);
+      return await updateVacationRecord(employeeId, date, totalMinutes);
     }
   }, [updateOvertimeRecord, updateVacationRecord]);
 
+  // ========== 설정 관리 ==========
+
+  const [multiplier, setMultiplier] = useState(1.0);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await dataService.getSettings();
+        setMultiplier(settings.multiplier || 1.0);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    
+    if (!isLoading) {
+      loadSettings();
+    }
+  }, [dataService, isLoading]);
+
   return {
+    // 상태
     employees,
     overtimeRecords,
     vacationRecords,
     employeeChangeRecords,
+    isLoading,
+    error,
+    multiplier,
+
+    // 직원 관리
     addEmployee,
     updateEmployee,
     deleteEmployee,
+
+    // 시간 기록 관리
     updateOvertimeRecord,
     updateVacationRecord,
     bulkUpdateOvertimeRecords,
     bulkUpdateVacationRecords,
+
+    // Dashboard 지원
     getAllEmployeesWithRecords,
     getDailyData,
     getMonthlyStats,
     updateDailyTime,
-    getEmployeeNameFromRecord, // 추가된 함수
-    multiplier: storageManager.loadSettings().multiplier || 1.0,
-    useSupabase // 모드 확인용
+
+    // 유틸리티
+    getEmployeeNameFromRecord,
+
+    // 캐시 관리
+    clearCache: () => dataService.clearCache()
   };
 };
 
@@ -420,6 +317,41 @@ export const OvertimeProvider = ({ children }) => {
     setSelectedMonth,
     ...overtimeData
   }), [selectedMonth, overtimeData]);
+
+  // 로딩 상태 표시
+  if (overtimeData.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">데이터를 로드하는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태 표시
+  if (overtimeData.error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-red-800 mb-2">데이터 로드 실패</h3>
+          <p className="text-red-600 mb-4">{overtimeData.error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <OvertimeContext.Provider value={value}>
