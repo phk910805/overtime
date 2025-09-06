@@ -309,7 +309,8 @@ export class SupabaseAdapter extends StorageAdapter {
     try {
       const { data, error } = await this.supabase
         .from(this.tables.settings)
-        .select('*')
+        .select('multiplier')
+        .eq('key', 'app_settings')
         .limit(1)
         .single();
 
@@ -319,8 +320,10 @@ export class SupabaseAdapter extends StorageAdapter {
 
       return data ? { multiplier: data.multiplier } : { multiplier: 1.0 };
     } catch (error) {
-      console.warn('Settings not found, using defaults:', error);
-      return { multiplier: 1.0 };
+      console.warn('Supabase settings error, using localStorage fallback:', error.message);
+      // localStorage 폴백
+      const localSettings = localStorage.getItem('overtime-settings');
+      return localSettings ? JSON.parse(localSettings) : { multiplier: 1.0 };
     }
   }
 
@@ -328,15 +331,23 @@ export class SupabaseAdapter extends StorageAdapter {
     try {
       const { data, error } = await this.supabase
         .from(this.tables.settings)
-        .upsert({ multiplier: settings.multiplier })
-        .select()
+        .upsert({ 
+          key: 'app_settings',
+          multiplier: settings.multiplier,
+          value: { multiplier: settings.multiplier },
+          updated_at: new Date().toISOString()
+        })
+        .select('multiplier')
         .single();
 
       if (error) throw error;
 
       return { multiplier: data.multiplier };
     } catch (error) {
-      this._handleError(error, 'saveSettings');
+      console.warn('Supabase settings save failed, using localStorage fallback:', error.message);
+      // localStorage 폴백
+      localStorage.setItem('overtime-settings', JSON.stringify(settings));
+      return settings;
     }
   }
 
