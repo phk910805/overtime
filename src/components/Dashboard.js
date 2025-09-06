@@ -278,8 +278,11 @@ const Dashboard = memo(() => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {getAllEmployeesWithRecords.map((employee) => {
                   const stats = getMonthlyStats(employee.id);
+                  console.log(`직원 ${employee.name}:`, stats); // 디버깅 로그
+                  console.log('multiplier:', multiplier); // 배수 확인
                   // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
                   const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
+                  console.log('계산 결과:', adjustedRemaining); // 계산 결과 확인
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
