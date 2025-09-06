@@ -112,35 +112,47 @@ export const holidayUtils = {
 
   // API에서 공휴일 데이터 가져오기
   async fetchFromAPI(year) {
-    console.log(`Fetching holidays for ${year} from API...`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Fetching holidays for ${year} from API...`);
+    }
     
     try {
       const response = await fetch(`https://holidays.hyunbin.page/${year}.json`);
       
       if (response.ok) {
         const holidays = await response.json();
-        console.log(`API response received for ${year}:`, holidays);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`API response received for ${year}:`, holidays);
+        }
         return holidays;
       } else {
-        console.warn(`API request failed: ${response.status} ${response.statusText}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`API request failed: ${response.status} ${response.statusText}`);
+        }
         return null;
       }
     } catch (error) {
-      console.warn('API fetch failed:', error.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('API fetch failed:', error.message);
+      }
       return null;
     }
   },
 
   // 정적 데이터에서 가져오기
   getStaticHolidays(year) {
-    console.log(`Using static holiday data for ${year}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Using static holiday data for ${year}`);
+    }
     return this.staticHolidays[year] || {};
   },
 
   // 공휴일 데이터 가져오기 (통합 함수)
   async fetchHolidays(year) {
     if (this.holidayCache.has(year)) {
-      console.log(`Using cached holiday data for ${year}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Using cached holiday data for ${year}`);
+      }
       return this.holidayCache.get(year);
     }
 
@@ -153,13 +165,17 @@ export const holidayUtils = {
       if (apiData) {
         holidays = apiData;
       } else {
-        console.warn(`API failed, falling back to static data for ${year}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`API failed, falling back to static data for ${year}`);
+        }
         holidays = this.getStaticHolidays(year);
       }
     }
 
     this.holidayCache.set(year, holidays);
-    console.log(`Holiday data loaded for ${year}:`, holidays);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Holiday data loaded for ${year}:`, holidays);
+    }
     
     return holidays;
   },
@@ -183,7 +199,9 @@ export const holidayUtils = {
 
   clearCache() {
     this.holidayCache.clear();
-    console.log('Holiday cache cleared');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Holiday cache cleared');
+    }
   },
 
   getSupportedYears() {

@@ -41,7 +41,9 @@ class StorageManager {
     });
     
     this.lastCleanup = now;
-    console.log(`Cache cleanup: removed ${expiredKeys.length} expired entries`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Cache cleanup: removed ${expiredKeys.length} expired entries`);
+    }
   }
 
   _optimizeCache() {
@@ -94,7 +96,9 @@ class StorageManager {
       
       return true;
     } catch (error) {
-      console.error('Failed to save to storage:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save to storage:', error);
+      }
       return false;
     }
   }
@@ -132,7 +136,9 @@ class StorageManager {
       
       return data;
     } catch (error) {
-      console.error('Failed to load from storage:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to load from storage:', error);
+      }
       return defaultValue;
     }
   }
@@ -238,7 +244,7 @@ class DataCalculator {
     });
     
     this.lastOptimization = now;
-    if (totalRemoved > 0) {
+    if (totalRemoved > 0 && process.env.NODE_ENV === 'development') {
       console.log(`Cache optimization: removed ${totalRemoved} expired/old entries`);
     }
   }
@@ -405,7 +411,7 @@ class DataCalculator {
       cache.delete(key);
     });
     
-    if (keysToDelete.length > 0) {
+    if (keysToDelete.length > 0 && process.env.NODE_ENV === 'development') {
       console.log(`Invalidated ${keysToDelete.length} cache entries`);
     }
   }

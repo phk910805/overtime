@@ -53,10 +53,14 @@ let isInitialized = false;
 const initializeDataLayer = () => {
   if (isInitialized) return;
   
-  console.log('Initializing data layer: localStorage');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Initializing data layer: localStorage');
+  }
   createStorageAdapter({ type: 'localStorage' });
   isInitialized = true;
-  console.log('Data layer initialized successfully');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Data layer initialized successfully');
+  }
 };
 
 // ========== CUSTOM HOOKS ==========
@@ -97,7 +101,9 @@ const useOvertimeData = () => {
         setVacationRecords(monthlyRecords.vacationRecords || []);
 
       } catch (error) {
-        console.error('Failed to load data:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load data:', error);
+        }
         setError(error.message);
       } finally {
         setIsLoading(false);
@@ -121,7 +127,9 @@ const useOvertimeData = () => {
       dataCalculator.invalidateRelatedCaches();
       return newEmployee;
     } catch (error) {
-      console.error('Failed to add employee:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to add employee:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -138,7 +146,9 @@ const useOvertimeData = () => {
       dataCalculator.invalidateRelatedCaches(id);
       return updatedEmployee;
     } catch (error) {
-      console.error('Failed to update employee:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update employee:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -155,7 +165,9 @@ const useOvertimeData = () => {
       dataCalculator.invalidateRelatedCaches(id);
       return deletedEmployee;
     } catch (error) {
-      console.error('Failed to delete employee:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to delete employee:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -173,7 +185,9 @@ const useOvertimeData = () => {
       dataCalculator.invalidateRelatedCaches(employeeId, date);
       return newRecord;
     } catch (error) {
-      console.error('Failed to update overtime record:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update overtime record:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -189,7 +203,9 @@ const useOvertimeData = () => {
       dataCalculator.invalidateRelatedCaches(employeeId, date);
       return newRecord;
     } catch (error) {
-      console.error('Failed to update vacation record:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update vacation record:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -201,7 +217,9 @@ const useOvertimeData = () => {
       dataCalculator.clearCache();
       return newRecords;
     } catch (error) {
-      console.error('Failed to bulk update overtime records:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to bulk update overtime records:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -213,7 +231,9 @@ const useOvertimeData = () => {
       dataCalculator.clearCache();
       return newRecords;
     } catch (error) {
-      console.error('Failed to bulk update vacation records:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to bulk update vacation records:', error);
+      }
       throw error;
     }
   }, [dataService]);
@@ -261,7 +281,9 @@ const useOvertimeData = () => {
         const settings = await dataService.getSettings();
         setMultiplier(settings.multiplier || 1.0);
       } catch (error) {
-        console.error('Failed to load settings:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load settings:', error);
+        }
       }
     };
     
@@ -278,7 +300,9 @@ const useOvertimeData = () => {
       }
       return true;
     } catch (error) {
-      console.error('Failed to update settings:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update settings:', error);
+      }
       throw error;
     }
   }, [dataService]);

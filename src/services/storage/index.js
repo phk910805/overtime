@@ -42,7 +42,9 @@ export class StorageAdapterFactory {
         throw new Error(`Unsupported storage type: ${type}`);
     }
 
-    console.log(`Storage adapter initialized: ${type}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Storage adapter initialized: ${type}`);
+    }
     return this.adapter;
   }
 
