@@ -192,25 +192,26 @@ const useOvertimeData = () => {
         throw error;
       }
     } else {
-      // 정책 1: 00:00인 경우 히스토리에 기록하지 않음
-      if (totalMinutes === 0) {
-        return; // 아무 의미 없는 행동이므로 로그 안남
-      }
-      
-      // 정책 2: 마지막 의미있는 기록(0이 아닌) 찾기
-      const lastMeaningfulRecord = overtimeRecords
+      // 마지막 기록 찾기 (시간 순서)
+      const lastRecord = overtimeRecords
         .filter(record => 
           record.employeeId === employeeId && 
-          record.date === date &&
-          record.totalMinutes > 0
+          record.date === date
         )
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
       
+      // 정책: 00:00 상태에서 00:00 입력만 의미 없음
+      if (totalMinutes === 0 && (!lastRecord || lastRecord.totalMinutes === 0)) {
+        return; // 이미 00:00인 상태에서 00:00 입력은 의미 없음
+      }
+      
       let description;
-      if (lastMeaningfulRecord) {
-        description = '수정'; // 의미있는 기록이 있으면 수정
+      if (totalMinutes === 0) {
+        description = '삭제'; // 기존 시간을 00:00으로 변경 = 삭제
+      } else if (lastRecord && lastRecord.totalMinutes > 0) {
+        description = '수정'; // 마지막이 의미있는 기록이면 수정
       } else {
-        description = '생성'; // 삭제 후 재입력도 생성
+        description = '생성'; // 삭제 후 재입력 또는 처음 입력 = 생성
       }
       
       const newRecord = {
@@ -245,18 +246,26 @@ const useOvertimeData = () => {
         throw error;
       }
     } else {
-      // 기존 기록이 있는지 확인하여 동작 타입 결정
-      const existingRecord = vacationRecords.find(record => 
-        record.employeeId === employeeId && record.date === date
-      );
+      // 마지막 기록 찾기 (시간 순서)
+      const lastRecord = vacationRecords
+        .filter(record => 
+          record.employeeId === employeeId && 
+          record.date === date
+        )
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      
+      // 정책: 00:00 상태에서 00:00 입력만 의미 없음
+      if (totalMinutes === 0 && (!lastRecord || lastRecord.totalMinutes === 0)) {
+        return; // 이미 00:00인 상태에서 00:00 입력은 의미 없음
+      }
       
       let description;
       if (totalMinutes === 0) {
-        description = '삭제';
-      } else if (existingRecord) {
-        description = '수정';
+        description = '삭제'; // 기존 시간을 00:00으로 변경 = 삭제
+      } else if (lastRecord && lastRecord.totalMinutes > 0) {
+        description = '수정'; // 마지막이 의미있는 기록이면 수정
       } else {
-        description = '생성';
+        description = '생성'; // 삭제 후 재입력 또는 처음 입력 = 생성
       }
       
       const newRecord = {
@@ -264,7 +273,7 @@ const useOvertimeData = () => {
         employeeId,
         date,
         totalMinutes,
-        description, // 동작 타입 추가
+        description,
         createdAt: new Date().toISOString()
       };
       
