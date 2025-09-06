@@ -204,12 +204,11 @@ export class SupabaseAdapter extends StorageAdapter {
         return null;
       }
 
-      // Supabase에 저장
+      // Supabase에 저장 (스키마에 없는 description 제외)
       const supabaseRecord = {
         employee_id: employeeId,
         date: date,
         total_minutes: totalMinutes,
-        description: historyRecord.description,
         created_at: historyRecord.createdAt
       };
 

@@ -236,11 +236,11 @@ const useOvertimeData = () => {
     return dataCalculator.getDailyData(employeeId, date, type, overtimeRecords, vacationRecords);
   }, [overtimeRecords, vacationRecords]);
 
-  const getMonthlyStats = useCallback(async (employeeId) => {
-    const settings = await dataService.getSettings();
+  const getMonthlyStats = useCallback((employeeId) => {
     const selectedMonth = new Date().toISOString().slice(0, 7);
-    return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, settings.multiplier);
-  }, [dataService, overtimeRecords, vacationRecords]);
+    const safeMultiplier = multiplier || 1.0; // 기본값 보장
+    return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, safeMultiplier);
+  }, [overtimeRecords, vacationRecords, multiplier]);
 
   const updateDailyTime = useCallback(async (type, employeeId, date, totalMinutes) => {
     if (type === 'overtime') {
