@@ -294,7 +294,12 @@ const Dashboard = memo(() => {
                         )}
                       </td>
                       <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
-                        +{timeUtils.formatTime(stats.totalOvertime)}
+                        +{(() => {
+                          console.log('formatTime 입력:', stats.totalOvertime);
+                          const result = timeUtils.formatTime(stats.totalOvertime);
+                          console.log('formatTime 결과:', result);
+                          return result;
+                        })()}
                       </td>
                       <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         -{timeUtils.formatTime(stats.totalVacation)}
