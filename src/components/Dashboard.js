@@ -278,6 +278,8 @@ const Dashboard = memo(() => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {getAllEmployeesWithRecords.map((employee) => {
                   const stats = getMonthlyStats(employee.id);
+                  // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
+                  const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
@@ -294,9 +296,9 @@ const Dashboard = memo(() => {
                       <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         -{timeUtils.formatTime(stats.totalVacation)}
                       </td>
-                      <td className={`px-3 py-4 text-sm border-r border-gray-200 ${stats.remaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
-                        {stats.remaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(stats.remaining))}
-                        {stats.remaining < 0 && '(초과)'}
+                      <td className={`px-3 py-4 text-sm border-r border-gray-200 ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                        {adjustedRemaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(adjustedRemaining))}
+                        {adjustedRemaining < 0 && '(초과)'}
                       </td>
                       <td className={`px-2 py-2 text-center text-xs relative h-20 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
