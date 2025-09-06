@@ -238,9 +238,9 @@ const useOvertimeData = () => {
 
   const getMonthlyStats = useCallback((employeeId) => {
     const selectedMonth = new Date().toISOString().slice(0, 7);
-    const safeMultiplier = multiplier || 1.0; // 기본값 보장
+    const safeMultiplier = 1.0; // 기본값 사용, Dashboard에서 multiplier 적용
     return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, safeMultiplier);
-  }, [overtimeRecords, vacationRecords, multiplier]);
+  }, [overtimeRecords, vacationRecords]);
 
   const updateDailyTime = useCallback(async (type, employeeId, date, totalMinutes) => {
     if (type === 'overtime') {
