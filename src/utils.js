@@ -1,4 +1,5 @@
 import React from 'react';
+import { TimeUtils as KoreanTimeUtils } from './utils/timeUtils.js';
 
 export const timeUtils = {
   formatTime: (totalMinutes) => {

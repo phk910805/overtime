@@ -1,5 +1,6 @@
 import { StorageAdapter } from './StorageAdapter.js';
 import HistoryPolicy from '../historyPolicy.js';
+import { TimeUtils } from '../../utils/timeUtils.js';
 
 /**
  * Supabase 기반 스토리지 어댑터
@@ -45,7 +46,7 @@ export class SupabaseAdapter extends StorageAdapter {
     try {
       const newEmployee = {
         name: employeeData.name.trim(),
-        created_at: new Date().toISOString()
+        created_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
       };
 
       const { data, error } = await this.supabase
@@ -100,7 +101,7 @@ export class SupabaseAdapter extends StorageAdapter {
       // 소프트 삭제
       const { data, error } = await this.supabase
         .from(this.tables.employees)
-        .update({ deleted_at: new Date().toISOString() })
+        .update({ deleted_at: TimeUtils.getKoreanTimeAsUTC() }) // 한국시간 기준 UTC 사용
         .eq('id', id)
         .select()
         .single();
@@ -336,7 +337,7 @@ export class SupabaseAdapter extends StorageAdapter {
           key: 'app_settings',
           multiplier: settings.multiplier,
           value: { multiplier: settings.multiplier },
-          updated_at: new Date().toISOString()
+          updated_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
         }, {
           onConflict: 'key'
         })

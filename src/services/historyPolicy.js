@@ -3,6 +3,8 @@
  * 환경에 관계없이 일관된 히스토리 로직 적용
  */
 
+import { TimeUtils } from '../utils/timeUtils.js';
+
 export class HistoryPolicy {
   /**
    * 시간 기록 히스토리 정책 적용
@@ -45,7 +47,7 @@ export class HistoryPolicy {
       date,
       totalMinutes,
       description,
-      createdAt: new Date().toISOString()
+      createdAt: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
     };
   }
 
@@ -62,7 +64,7 @@ export class HistoryPolicy {
       employeeId,
       action,
       employeeName,
-      createdAt: new Date().toISOString()
+      createdAt: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
     };
   }
 
@@ -78,7 +80,7 @@ export class HistoryPolicy {
       date: update.date,
       totalMinutes: update.totalMinutes,
       description: '생성', // 대량 업데이트는 생성으로 처리
-      createdAt: new Date().toISOString()
+      createdAt: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
     }));
   }
 
