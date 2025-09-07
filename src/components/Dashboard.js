@@ -6,6 +6,23 @@ import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 
+// 스타일 상수
+const STYLES = {
+  HEADER_PADDING: '6px 8px 2px 8px',
+  LEFT_HEADER_CLASSES: 'text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap',
+  CENTER_HEADER_CLASSES: 'text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16',
+  DATE_HEADER_CLASSES: 'text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-300',
+  COLORS: {
+    DEFAULT: '#6b7280', // text-gray-500
+    WEEKEND_HOLIDAY: '#7c3aed' // text-violet-600
+  }
+};
+
+// 헬퍼 함수
+const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-50';
+const getDateTextColor = (isHoliday, isWeekend) => 
+  (isHoliday || isWeekend) ? STYLES.COLORS.WEEKEND_HOLIDAY : STYLES.COLORS.DEFAULT;
+
 const HeaderCell = memo(({ children, alignment = "start" }) => (
   <div className={`flex flex-col items-${alignment} justify-center h-full`}>
     <div className="flex-shrink-0">
@@ -310,27 +327,27 @@ const Dashboard = memo(() => {
             <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING}}>
                     <HeaderCell>
                       이름
                     </HeaderCell>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING}}>
                     <HeaderCell>
                       초과시간
                     </HeaderCell>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING}}>
                     <HeaderCell>
                       사용시간
                     </HeaderCell>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING}}>
                     <HeaderCell>
                       잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                     </HeaderCell>
                   </th>
-                  <th className="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING}}>
                     <HeaderCell alignment="center">
                       구분
                     </HeaderCell>
@@ -344,7 +361,7 @@ const Dashboard = memo(() => {
                   const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
-                      <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         {employee.name}
                         {!employee.isActive && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
@@ -352,17 +369,17 @@ const Dashboard = memo(() => {
                           </span>
                         )}
                       </td>
-                      <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
                       </td>
-                      <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         -{timeUtils.formatTime(stats.totalVacation)}
                       </td>
-                      <td className={`px-3 py-4 text-sm border-r border-gray-300 ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm border-r border-gray-300 ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${getEmployeeBgClass(employee.isActive)}`}>
                         {adjustedRemaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(adjustedRemaining))}
                         {adjustedRemaining < 0 && '(초과)'}
                       </td>
-                      <td className={`px-2 py-2 text-center text-xs relative h-20 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-2 py-2 text-center text-xs relative h-20 ${getEmployeeBgClass(employee.isActive)}`}>
                         <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
                         <div className="flex flex-col h-full">
                           <div className="h-10 flex items-center justify-center">
@@ -390,14 +407,11 @@ const Dashboard = memo(() => {
                     const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeekIndex];
                     const dateString = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
                     const isHolidayDate = holidayUtils.isHoliday(dateString, holidays);
-                    
-                    let textColorValue = '#6b7280'; // text-gray-500 기본값
-                    if (isHolidayDate || dayOfWeekIndex === 0 || dayOfWeekIndex === 6) {
-                      textColorValue = '#7c3aed'; // text-violet-600
-                    }
+                    const isWeekend = dayOfWeekIndex === 0 || dayOfWeekIndex === 6;
+                    const textColorValue = getDateTextColor(isHolidayDate, isWeekend);
                     
                     return (
-                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-300" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
+                      <th key={day} className={STYLES.DATE_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, color: textColorValue}}>
                         <DateHeaderCell holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}>
                           {day.toString().padStart(2, '0')}({dayOfWeek})
                         </DateHeaderCell>
@@ -416,7 +430,7 @@ const Dashboard = memo(() => {
                         const vacationMinutes = getDailyData(employee.id, date, 'vacation');
                         
                         return (
-                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative h-20 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative h-20 ${getEmployeeBgClass(employee.isActive)}`}>
                             <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
                             <div className="flex flex-col items-center justify-start h-full">
                               <div className="flex-1 flex items-center justify-center py-1">
