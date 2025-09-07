@@ -287,10 +287,10 @@ const Dashboard = memo(() => {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="flex">
           <div className="flex-shrink-0 border-r-2 border-gray-300">
-            <table className="divide-y divide-gray-200">
+            <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
                     <div className="flex flex-col items-start justify-center h-full">
                       <div className="flex-shrink-0">
                         이름
@@ -300,7 +300,7 @@ const Dashboard = memo(() => {
                       </div>
                     </div>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
                     <div className="flex flex-col items-start justify-center h-full">
                       <div className="flex-shrink-0">
                         초과시간
@@ -310,7 +310,7 @@ const Dashboard = memo(() => {
                       </div>
                     </div>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
                     <div className="flex flex-col items-start justify-center h-full">
                       <div className="flex-shrink-0">
                         사용시간
@@ -320,7 +320,7 @@ const Dashboard = memo(() => {
                       </div>
                     </div>
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
                     <div className="flex flex-col items-start justify-center h-full">
                       <div className="flex-shrink-0">
                         잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
@@ -342,14 +342,14 @@ const Dashboard = memo(() => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-300">
                 {getAllEmployeesWithRecords.map((employee) => {
                   const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
                   // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
                   const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
-                      <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         {employee.name}
                         {!employee.isActive && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
@@ -357,13 +357,13 @@ const Dashboard = memo(() => {
                           </span>
                         )}
                       </td>
-                      <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
                       </td>
-                      <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-200 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm text-green-600 border-r border-gray-300 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         -{timeUtils.formatTime(stats.totalVacation)}
                       </td>
-                      <td className={`px-3 py-4 text-sm border-r border-gray-200 ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-3 py-4 text-sm border-r border-gray-300 ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'} ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                         {adjustedRemaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(adjustedRemaining))}
                         {adjustedRemaining < 0 && '(초과)'}
                       </td>
@@ -386,7 +386,7 @@ const Dashboard = memo(() => {
           </div>
 
           <div className="flex-1 overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
                   {daysArray.map((day) => {
@@ -402,7 +402,7 @@ const Dashboard = memo(() => {
                     }
                     
                     return (
-                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-200" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
+                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-300" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
@@ -416,7 +416,7 @@ const Dashboard = memo(() => {
                   })}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-300">
                 {getAllEmployeesWithRecords.map((employee) => {
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
