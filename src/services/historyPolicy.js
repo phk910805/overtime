@@ -30,6 +30,11 @@ export class HistoryPolicy {
       return null; // 히스토리에 기록하지 않음
     }
 
+    // 정책 2: 동일한 값 입력은 의미 없음 (2번 옵션 적용)
+    if (lastRecord && lastRecord.totalMinutes === totalMinutes) {
+      return null; // 동일한 값이므로 히스토리에 기록하지 않음
+    }
+
     // 동작 타입 결정
     let description;
     if (totalMinutes === 0) {
