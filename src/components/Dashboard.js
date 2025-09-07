@@ -288,7 +288,7 @@ const Dashboard = memo(() => {
         <div className="flex">
           <div className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-300">
                 <tr>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
                     <div className="flex flex-col items-start justify-center h-full">
@@ -387,7 +387,7 @@ const Dashboard = memo(() => {
 
           <div className="flex-1 overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-300">
                 <tr>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
@@ -402,7 +402,7 @@ const Dashboard = memo(() => {
                     }
                     
                     return (
-                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-50 border-r border-gray-200" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
+                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-300 border-r border-gray-200" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
