@@ -290,20 +290,55 @@ const Dashboard = memo(() => {
             <table className="divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left text-sm font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
-                    이름
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
+                    <div className="flex flex-col items-start justify-center h-full">
+                      <div className="flex-shrink-0">
+                        이름
+                      </div>
+                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+                        {/* 빈 공간 */}
+                      </div>
+                    </div>
                   </th>
-                  <th className="text-left text-sm font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
-                    초과시간
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
+                    <div className="flex flex-col items-start justify-center h-full">
+                      <div className="flex-shrink-0">
+                        초과시간
+                      </div>
+                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+                        {/* 빈 공간 */}
+                      </div>
+                    </div>
                   </th>
-                  <th className="text-left text-sm font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
-                    사용시간
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
+                    <div className="flex flex-col items-start justify-center h-full">
+                      <div className="flex-shrink-0">
+                        사용시간
+                      </div>
+                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+                        {/* 빈 공간 */}
+                      </div>
+                    </div>
                   </th>
-                  <th className="text-left text-sm font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
-                    잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
+                    <div className="flex flex-col items-start justify-center h-full">
+                      <div className="flex-shrink-0">
+                        잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
+                      </div>
+                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+                        {/* 빈 공간 */}
+                      </div>
+                    </div>
                   </th>
-                  <th className="text-center text-sm font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '4px 8px'}}>
-                    구분
+                  <th className="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '4px 8px'}}>
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="flex-shrink-0">
+                        구분
+                      </div>
+                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+                        {/* 빈 공간 */}
+                      </div>
+                    </div>
                   </th>
                 </tr>
               </thead>
