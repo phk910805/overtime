@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils } from '../utils';
+import TimeInputValidator from '../utils/timeInputValidator.js';
 
 // ========== MODAL COMPONENTS ==========
 const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
@@ -25,7 +26,7 @@ const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
   );
 });
 
-const Toast = memo(({ message, show, onClose }) => {
+const Toast = memo(({ message, show, onClose, type = 'error' }) => {
   useEffect(() => {
     if (show) {
       const timer = setTimeout(onClose, 3000);
@@ -35,9 +36,23 @@ const Toast = memo(({ message, show, onClose }) => {
 
   if (!show) return null;
 
+  const getToastConfig = () => {
+    switch (type) {
+      case 'success':
+        return { bgColor: 'bg-green-500', textColor: 'text-white' };
+      case 'warning':
+        return { bgColor: 'bg-orange-500', textColor: 'text-white' };
+      case 'error':
+      default:
+        return { bgColor: 'bg-red-500', textColor: 'text-white' };
+    }
+  };
+
+  const config = getToastConfig();
+
   return (
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="bg-red-500 text-white px-4 py-2 rounded-md shadow-lg">
+      <div className={`${config.bgColor} ${config.textColor} px-4 py-2 rounded-md shadow-lg`}>
         {message}
       </div>
     </div>
@@ -63,7 +78,7 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
   });
 
   const [previewData, setPreviewData] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
 
   const initialEndDate = useMemo(() => 
     selectedMonth + '-' + dateUtils.getDaysInMonth(selectedMonth).toString().padStart(2, '0'),
@@ -82,8 +97,8 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
     }
   }, [show, selectedMonth, initialEndDate]);
 
-  const showToast = useCallback((message) => {
-    setToast({ show: true, message });
+  const showToast = useCallback((message, type = 'error') => {
+    setToast({ show: true, message, type });
   }, []);
 
   const hideToast = useCallback(() => {
@@ -94,6 +109,29 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
     setSettings(prev => ({ ...prev, [field]: value }));
     setPreviewData(null);
   }, []);
+
+  // 시간 입력 전용 핸들러 추가
+  const handleTimeInputChange = useCallback((field, value, type) => {
+    const validation = TimeInputValidator.validateInput(value, type);
+    
+    if (validation.isValid) {
+      setSettings(prev => ({ ...prev, [field]: validation.filteredValue }));
+      setPreviewData(null);
+      
+      // 자동 보정 메시지 표시
+      if (validation.autoCorrect && validation.message) {
+        showToast(validation.message, 'success');
+      }
+    } else {
+      // 입력 오류 시 필터링된 값으로 설정
+      setSettings(prev => ({ ...prev, [field]: validation.filteredValue }));
+      setPreviewData(null);
+      
+      if (validation.message) {
+        showToast(validation.message, 'warning');
+      }
+    }
+  }, [showToast]);
 
   const getTargetEmployees = useCallback(() => {
     const allEmployees = getAllEmployeesWithRecords.filter(emp => emp.isActive);
@@ -125,14 +163,26 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
       return;
     }
 
+    // 시간 입력 최종 검증
     let overtimeMinutes = 0;
     let vacationMinutes = 0;
 
     if (settings.timeType === 'overtime' || settings.timeType === 'both') {
-      overtimeMinutes = timeUtils.convertTimeToMinutes(settings.overtimeHours, settings.overtimeMinutes);
+      const overtimeValidation = TimeInputValidator.validateFinalTime(settings.overtimeHours, settings.overtimeMinutes);
+      if (!overtimeValidation.isValid) {
+        showToast('초과시간: ' + overtimeValidation.message);
+        return;
+      }
+      overtimeMinutes = overtimeValidation.totalMinutes;
     }
+    
     if (settings.timeType === 'vacation' || settings.timeType === 'both') {
-      vacationMinutes = timeUtils.convertTimeToMinutes(settings.vacationHours, settings.vacationMinutes);
+      const vacationValidation = TimeInputValidator.validateFinalTime(settings.vacationHours, settings.vacationMinutes);
+      if (!vacationValidation.isValid) {
+        showToast('사용시간: ' + vacationValidation.message);
+        return;
+      }
+      vacationMinutes = vacationValidation.totalMinutes;
     }
 
     if (overtimeMinutes === 0 && vacationMinutes === 0) {
@@ -222,8 +272,27 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
     const targetEmployees = getTargetEmployees();
     const targetDates = getTargetDates();
     
-    const overtimeMinutes = timeUtils.convertTimeToMinutes(settings.overtimeHours, settings.overtimeMinutes);
-    const vacationMinutes = timeUtils.convertTimeToMinutes(settings.vacationHours, settings.vacationMinutes);
+    // 시간 입력 최종 검증
+    let overtimeMinutes = 0;
+    let vacationMinutes = 0;
+
+    if (settings.timeType === 'overtime' || settings.timeType === 'both') {
+      const overtimeValidation = TimeInputValidator.validateFinalTime(settings.overtimeHours, settings.overtimeMinutes);
+      if (!overtimeValidation.isValid) {
+        showToast('초과시간: ' + overtimeValidation.message);
+        return;
+      }
+      overtimeMinutes = overtimeValidation.totalMinutes;
+    }
+    
+    if (settings.timeType === 'vacation' || settings.timeType === 'both') {
+      const vacationValidation = TimeInputValidator.validateFinalTime(settings.vacationHours, settings.vacationMinutes);
+      if (!vacationValidation.isValid) {
+        showToast('사용시간: ' + vacationValidation.message);
+        return;
+      }
+      vacationMinutes = vacationValidation.totalMinutes;
+    }
 
     targetEmployees.forEach(employee => {
       targetDates.forEach(date => {
@@ -255,7 +324,7 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
 
   return (
     <>
-      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} type={toast.type} />
       <Modal show={show} onClose={handleClose} title="일괄 시간 설정" size="lg">
         <div className="space-y-4 mb-6">
           <div>
@@ -400,23 +469,21 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
                 <div className="flex items-center ml-6">
                   <span className="w-16 text-sm text-blue-600">초과시간:</span>
                   <input
-                    type="number"
+                    type="text"
                     placeholder="시간"
                     value={settings.overtimeHours}
-                    onChange={(e) => handleSettingChange('overtimeHours', e.target.value)}
+                    onChange={(e) => handleTimeInputChange('overtimeHours', e.target.value, 'hours')}
                     className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
-                    min="0"
-                    max="23"
+                    maxLength={2}
                   />
                   <span className="mx-2">:</span>
                   <input
-                    type="number"
+                    type="text"
                     placeholder="분"
                     value={settings.overtimeMinutes}
-                    onChange={(e) => handleSettingChange('overtimeMinutes', e.target.value)}
+                    onChange={(e) => handleTimeInputChange('overtimeMinutes', e.target.value, 'minutes')}
                     className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
-                    min="0"
-                    max="59"
+                    maxLength={2}
                   />
                 </div>
               )}
@@ -425,23 +492,21 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
                 <div className="flex items-center ml-6">
                   <span className="w-16 text-sm text-green-600">사용시간:</span>
                   <input
-                    type="number"
+                    type="text"
                     placeholder="시간"
                     value={settings.vacationHours}
-                    onChange={(e) => handleSettingChange('vacationHours', e.target.value)}
+                    onChange={(e) => handleTimeInputChange('vacationHours', e.target.value, 'hours')}
                     className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
-                    min="0"
-                    max="23"
+                    maxLength={2}
                   />
                   <span className="mx-2">:</span>
                   <input
-                    type="number"
+                    type="text"
                     placeholder="분"
                     value={settings.vacationMinutes}
-                    onChange={(e) => handleSettingChange('vacationMinutes', e.target.value)}
+                    onChange={(e) => handleTimeInputChange('vacationMinutes', e.target.value, 'minutes')}
                     className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
-                    min="0"
-                    max="59"
+                    maxLength={2}
                   />
                 </div>
               )}
