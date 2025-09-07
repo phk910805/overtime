@@ -6,6 +6,26 @@ import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 
+const HeaderCell = memo(({ children, alignment = "start" }) => (
+  <div className={`flex flex-col items-${alignment} justify-center h-full`}>
+    <div className="flex-shrink-0">
+      {children}
+    </div>
+    <div className="h-4" />
+  </div>
+));
+
+const DateHeaderCell = memo(({ children, holidayName = '' }) => (
+  <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex-shrink-0">
+      {children}
+    </div>
+    <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
+      {holidayName}
+    </div>
+  </div>
+));
+
 const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:00", color = "blue" }) => {
   const colorClass = color === "green" ? "text-green-600" : "text-blue-600";
   const prefix = color === "green" ? "-" : "+";
@@ -291,52 +311,29 @@ const Dashboard = memo(() => {
               <thead className="bg-gray-200">
                 <tr>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
-                    <div className="flex flex-col items-start justify-center h-full">
-                      <div className="flex-shrink-0">
-                        이름
-                      </div>
-                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                      </div>
-                    </div>
+                    <HeaderCell>
+                      이름
+                    </HeaderCell>
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
-                    <div className="flex flex-col items-start justify-center h-full">
-                      <div className="flex-shrink-0">
-                        초과시간
-                      </div>
-                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                      </div>
-                    </div>
+                    <HeaderCell>
+                      초과시간
+                    </HeaderCell>
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
-                    <div className="flex flex-col items-start justify-center h-full">
-                      <div className="flex-shrink-0">
-                        사용시간
-                      </div>
-                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                        {/* 빈 공간 */}
-                      </div>
-                    </div>
+                    <HeaderCell>
+                      사용시간
+                    </HeaderCell>
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap" style={{padding: '6px 8px 2px 8px'}}>
-                    <div className="flex flex-col items-start justify-center h-full">
-                      <div className="flex-shrink-0">
-                        잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
-                      </div>
-                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                        {/* 빈 공간 */}
-                      </div>
-                    </div>
+                    <HeaderCell>
+                      잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
+                    </HeaderCell>
                   </th>
                   <th className="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '6px 8px 2px 8px'}}>
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <div className="flex-shrink-0">
-                        구분
-                      </div>
-                      <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                        {/* 빈 공간 */}
-                      </div>
-                    </div>
+                    <HeaderCell alignment="center">
+                      구분
+                    </HeaderCell>
                   </th>
                 </tr>
               </thead>
@@ -401,14 +398,9 @@ const Dashboard = memo(() => {
                     
                     return (
                       <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-300" style={{padding: '6px 8px 2px 8px', color: textColorValue}}>
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <div className="flex-shrink-0">
-                            {day.toString().padStart(2, '0')}({dayOfWeek})
-                          </div>
-                          <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                            {isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}
-                          </div>
-                        </div>
+                        <DateHeaderCell holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}>
+                          {day.toString().padStart(2, '0')}({dayOfWeek})
+                        </DateHeaderCell>
                       </th>
                     );
                   })}
