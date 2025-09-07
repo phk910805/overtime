@@ -367,7 +367,7 @@ const Dashboard = memo(() => {
                     }
                     
                     return (
-                      <th key={day} className={`px-2 py-3 text-center text-xs font-medium ${textColor} uppercase tracking-wider w-16 bg-gray-50`}>
+                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-50 border-r border-gray-200" style={{padding: '4px 8px', color: textColor}}>
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
