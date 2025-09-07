@@ -187,6 +187,19 @@ export class SupabaseAdapter extends StorageAdapter {
     const tableName = type === 'overtime' ? this.tables.overtimeRecords : this.tables.vacationRecords;
 
     try {
+      // 직원 정보 조회 (이름 포함)
+      const { data: employeeData, error: employeeError } = await this.supabase
+        .from(this.tables.employees)
+        .select('name')
+        .eq('id', employeeId)
+        .single();
+
+      if (employeeError) {
+        console.warn(`직원 정보 조회 실패 (ID: ${employeeId}):`, employeeError);
+      }
+
+      const employeeName = employeeData?.name || '알 수 없는 직원';
+
       // 기존 기록들 조회 (히스토리 정책 적용을 위해)
       const existingRecords = await this[type === 'overtime' ? 'getOvertimeRecords' : 'getVacationRecords']({
         employeeId
@@ -205,12 +218,13 @@ export class SupabaseAdapter extends StorageAdapter {
         return null;
       }
 
-      // Supabase에 저장 (description 포함)
+      // Supabase에 저장 (employee_name 포함)
       const supabaseRecord = {
         employee_id: employeeId,
         date: date,
         total_minutes: totalMinutes,
-        description: historyRecord.description || null, // description 추가
+        employee_name: employeeName, // 직원 이름 추가
+        description: historyRecord.description || null,
         created_at: historyRecord.createdAt
       };
 
@@ -235,11 +249,29 @@ export class SupabaseAdapter extends StorageAdapter {
       // 대량 업데이트 히스토리 생성
       const historyRecords = HistoryPolicy.createBulkRecords(updates);
       
-      // Supabase 형식으로 변환
+      // 직원 이름 조회 (대량 업데이트에 사용된 모든 직원 ID)
+      const employeeIds = [...new Set(historyRecords.map(record => record.employeeId))];
+      const { data: employeesData, error: employeesError } = await this.supabase
+        .from(this.tables.employees)
+        .select('id, name')
+        .in('id', employeeIds);
+
+      if (employeesError) {
+        console.warn('직원 정보 대량 조회 실패:', employeesError);
+      }
+
+      // 직원 ID -> 이름 매핑
+      const employeeNameMap = {};
+      (employeesData || []).forEach(emp => {
+        employeeNameMap[emp.id] = emp.name;
+      });
+      
+      // Supabase 형식으로 변환 (employee_name 포함)
       const supabaseRecords = historyRecords.map(record => ({
         employee_id: record.employeeId,
         date: record.date,
         total_minutes: record.totalMinutes,
+        employee_name: employeeNameMap[record.employeeId] || '알 수 없는 직원', // 직원 이름 추가
         description: record.description,
         created_at: record.createdAt
       }));
@@ -382,6 +414,7 @@ export class SupabaseAdapter extends StorageAdapter {
     return {
       id: supabaseData.id,
       employeeId: supabaseData.employee_id,
+      employeeName: supabaseData.employee_name, // 직원 이름 추가
       date: supabaseData.date,
       totalMinutes: supabaseData.total_minutes,
       description: supabaseData.description,

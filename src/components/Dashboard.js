@@ -355,7 +355,7 @@ const Dashboard = memo(() => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
-                {getAllEmployeesWithRecords.map((employee) => {
+                {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
                   const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
                   // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
                   const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
@@ -421,7 +421,7 @@ const Dashboard = memo(() => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
-                {getAllEmployeesWithRecords.map((employee) => {
+                {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       {daysArray.map((day) => {

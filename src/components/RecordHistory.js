@@ -14,12 +14,12 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, employees, curren
 
   // 직원 이름 조회 함수 (동기적 처리)
   const getEmployeeNameFromRecord = useCallback((record) => {
+    // 1순위: 기록에 직원 이름이 저장되어 있는 경우 (새로운 방식 + 직원 변경 기록)
     if (record.employeeName) {
-      // 직원 변경 기록에서는 employeeName 필드 사용
       return record.employeeName;
     }
     
-    // 초과근무/휴가 기록에서는 employeeId로 조회
+    // 2순위: 초과근무/휴가 기록에서 employeeId로 조회 (호환성 유지)
     const employee = employees.find(emp => emp.id === record.employeeId);
     return employee ? employee.name : '알 수 없는 직원';
   }, [employees]);
@@ -164,9 +164,11 @@ const RecordHistory = memo(() => {
 
   const sortRecords = useCallback((records, sortConfig, employees) => {
     const getEmployeeNameFromRecord = (record) => {
+      // 1순위: 기록에 직원 이름이 저장되어 있는 경우 (새로운 방식 + 직원 변경 기록)
       if (record.employeeName) {
         return record.employeeName;
       }
+      // 2순위: 초과근무/휴가 기록에서 employeeId로 조회 (호환성 유지)
       const employee = employees.find(emp => emp.id === record.employeeId);
       return employee ? employee.name : '알 수 없는 직원';
     };

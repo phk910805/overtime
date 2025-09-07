@@ -238,12 +238,64 @@ const useOvertimeData = () => {
     return await dataService.getEmployeeNameFromRecord(record);
   }, [dataService]);
 
-  const getAllEmployeesWithRecords = useMemo(() => {
-    return employees.map(employee => ({
+  const getAllEmployeesWithRecords = useCallback((currentSelectedMonth) => {
+    // 활성 직원들
+    const activeEmployees = employees.map(employee => ({
       ...employee,
       isActive: true
     }));
-  }, [employees]);
+
+    // 선택된 월의 데이터만 필터링
+    const [year, month] = currentSelectedMonth.split('-');
+    const monthlyOvertimeRecords = overtimeRecords.filter(record => {
+      if (!record.date) return false;
+      const recordDate = new Date(record.date);
+      return recordDate.getFullYear() === parseInt(year) && 
+             (recordDate.getMonth() + 1).toString().padStart(2, '0') === month;
+    });
+    
+    const monthlyVacationRecords = vacationRecords.filter(record => {
+      if (!record.date) return false;
+      const recordDate = new Date(record.date);
+      return recordDate.getFullYear() === parseInt(year) && 
+             (recordDate.getMonth() + 1).toString().padStart(2, '0') === month;
+    });
+
+    // 삭제된 직원 중 해당 월에 데이터가 있는 직원들만 추출
+    const deletedEmployeesWithData = [];
+    
+    // 해당 월 초과근무 기록에서 삭제된 직원 찾기 (시간이 0보다 큰 경우만)
+    monthlyOvertimeRecords.forEach(record => {
+      if (record.employeeName && record.totalMinutes > 0 && !activeEmployees.find(emp => emp.id === record.employeeId)) {
+        if (!deletedEmployeesWithData.find(emp => emp.id === record.employeeId)) {
+          deletedEmployeesWithData.push({
+            id: record.employeeId,
+            name: record.employeeName,
+            createdAt: record.createdAt,
+            isActive: false
+          });
+        }
+      }
+    });
+
+    // 해당 월 휴가 기록에서도 삭제된 직원 찾기 (시간이 0보다 큰 경우만)
+    monthlyVacationRecords.forEach(record => {
+      if (record.employeeName && record.totalMinutes > 0 && !activeEmployees.find(emp => emp.id === record.employeeId)) {
+        if (!deletedEmployeesWithData.find(emp => emp.id === record.employeeId)) {
+          deletedEmployeesWithData.push({
+            id: record.employeeId,
+            name: record.employeeName,
+            createdAt: record.createdAt,
+            isActive: false
+          });
+        }
+      }
+    });
+
+    // 활성 직원 + 해당 월에 데이터가 있는 삭제된 직원 결합
+    return [...activeEmployees, ...deletedEmployeesWithData];
+  }, [employees, overtimeRecords, vacationRecords]);
+
 
   const getDailyData = useCallback((employeeId, date, type) => {
     return dataCalculator.getDailyData(employeeId, date, type, overtimeRecords, vacationRecords);
