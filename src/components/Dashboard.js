@@ -361,13 +361,13 @@ const Dashboard = memo(() => {
                     const dateString = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
                     const isHolidayDate = holidayUtils.isHoliday(dateString, holidays);
                     
-                    let textColor = 'text-gray-500';
+                    let textColorValue = '#6b7280'; // text-gray-500 기본값
                     if (isHolidayDate || dayOfWeekIndex === 0 || dayOfWeekIndex === 6) {
-                      textColor = 'text-violet-600';
+                      textColorValue = '#7c3aed'; // text-violet-600
                     }
                     
                     return (
-                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-50 border-r border-gray-200" style={{padding: '4px 8px', color: textColor}}>
+                      <th key={day} className="text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-50 border-r border-gray-200" style={{padding: '4px 8px', color: textColorValue}}>
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
