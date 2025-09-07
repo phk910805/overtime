@@ -290,16 +290,16 @@ const Dashboard = memo(() => {
             <table className="divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 16px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
                     이름
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 12px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
                     초과시간
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 12px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
                     사용시간
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 12px'}}>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 8px'}}>
                     잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                   </th>
                   <th className="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '4px 8px'}}>
