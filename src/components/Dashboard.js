@@ -289,8 +289,8 @@ const Dashboard = memo(() => {
           <div className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr className="h-20">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 16px'}}>
                     이름
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 12px'}}>
@@ -302,7 +302,7 @@ const Dashboard = memo(() => {
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap" style={{padding: '4px 12px'}}>
                     잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                   </th>
-                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                  <th className="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16" style={{padding: '4px 8px'}}>
                     구분
                   </th>
                 </tr>
@@ -353,7 +353,7 @@ const Dashboard = memo(() => {
           <div className="flex-1 overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr className="h-20">
+                <tr>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
