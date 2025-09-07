@@ -298,13 +298,13 @@ const Dashboard = memo(() => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     이름
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     초과시간
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     사용시간
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                   </th>
                   <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
@@ -377,11 +377,9 @@ const Dashboard = memo(() => {
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
                           </div>
-                          {isHolidayDate && (
-                            <div className="text-[10px] text-gray-400 normal-case leading-tight mt-0.5">
-                              {holidayUtils.getHolidayName(dateString, holidays)}
-                            </div>
-                          )}
+                          <div className="text-[10px] text-gray-400 normal-case leading-tight mt-0.5 min-h-[12px]">
+                            {isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}
+                          </div>
                         </div>
                       </th>
                     );
