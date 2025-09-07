@@ -4,6 +4,7 @@ import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils, holidayUtils, validators } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
+import TimeInputValidator from '../utils/timeInputValidator.js';
 
 const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:00", color = "blue" }) => {
   const colorClass = color === "green" ? "text-green-600" : "text-blue-600";
@@ -39,6 +40,7 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
+  const [validationMessage, setValidationMessage] = useState('');
   const hoursRef = useRef(null);
   const minutesRef = useRef(null);
 
@@ -66,33 +68,68 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   }, []);
 
   const handleSave = useCallback(() => {
-    const finalHours = parseInt(hours) || 0;
-    const finalMinutes = parseInt(minutes) || 0;
-    if (finalHours === 24 && finalMinutes > 0) {
-      showToast('24시간을 초과할 수 없습니다');
+    // 최종 검증
+    const validation = TimeInputValidator.validateFinalTime(hours, minutes);
+    
+    if (!validation.isValid) {
+      showToast(validation.message);
+      // 문제가 있는 필드에 포커스
+      if (validation.focus === 'hours' && hoursRef.current) {
+        hoursRef.current.focus();
+      } else if (validation.focus === 'minutes' && minutesRef.current) {
+        minutesRef.current.focus();
+      }
       return;
     }
-    const totalMinutes = finalHours * 60 + finalMinutes;
-    onSave(totalMinutes);
+
+    onSave(validation.totalMinutes);
     onClose();
   }, [hours, minutes, onSave, onClose, showToast]);
 
   const handleHoursChange = useCallback((e) => {
-    const inputValue = e.target.value.replace(/[^0-9]/g, '');
-    if (inputValue.length <= 2) {
-      setHours(inputValue);
-      if (inputValue.length === 2 && minutesRef.current) {
-        setTimeout(() => minutesRef.current.focus(), 0);
+    const inputValue = e.target.value;
+    const validation = TimeInputValidator.validateInput(inputValue, 'hours');
+    
+    if (validation.isValid) {
+      setHours(validation.filteredValue);
+      setValidationMessage('');
+      
+      // 자동 보정 메시지 표시
+      if (validation.autoCorrect && validation.message) {
+        showToast(validation.message, 'success');
+      }
+      
+      // 2자리 완성 시 다음 필드로 이동
+      if (TimeInputValidator.shouldMoveToNext(validation.filteredValue, 'hours') && minutesRef.current) {
+        setTimeout(() => {
+          minutesRef.current.focus();
+          minutesRef.current.select();
+        }, 0);
+      }
+    } else {
+      setHours(validation.filteredValue);
+      setValidationMessage(validation.message || '');
+      if (validation.message) {
+        showToast(validation.message, 'warning');
       }
     }
-  }, []);
+  }, [showToast]);
 
   const handleMinutesChange = useCallback((e) => {
-    const inputValue = e.target.value.replace(/[^0-9]/g, '');
-    if (inputValue.length <= 2) {
-      setMinutes(inputValue);
+    const inputValue = e.target.value;
+    const validation = TimeInputValidator.validateInput(inputValue, 'minutes');
+    
+    if (validation.isValid) {
+      setMinutes(validation.filteredValue);
+      setValidationMessage('');
+    } else {
+      setMinutes(validation.filteredValue);
+      setValidationMessage(validation.message || '');
+      if (validation.message) {
+        showToast(validation.message, 'warning');
+      }
     }
-  }, []);
+  }, [showToast]);
 
   if (!show) return null;
 
