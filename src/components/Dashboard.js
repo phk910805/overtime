@@ -289,7 +289,7 @@ const Dashboard = memo(() => {
           <div className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr style={{height: "80px"}}>
+                <tr className="h-20">
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     이름
                   </th>
@@ -353,7 +353,7 @@ const Dashboard = memo(() => {
           <div className="flex-1 overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr style={{height: "80px"}}>
+                <tr className="h-20">
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
@@ -372,7 +372,7 @@ const Dashboard = memo(() => {
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
                           </div>
-                          <div className="text-[10px] text-gray-400 normal-case leading-tight mt-0.5 h-4">
+                          <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
                             {isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}
                           </div>
                         </div>
@@ -391,7 +391,7 @@ const Dashboard = memo(() => {
                         const vacationMinutes = getDailyData(employee.id, date, 'vacation');
                         
                         return (
-                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`} style={{height: '80px'}}>
+                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative h-20 ${employee.isActive ? 'bg-white' : 'bg-gray-50'}`}>
                             <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
                             <div className="flex flex-col items-center justify-start h-full">
                               <div className="flex-1 flex items-center justify-center py-1">
