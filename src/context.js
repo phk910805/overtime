@@ -94,12 +94,11 @@ const useOvertimeData = () => {
 
         setEmployees(employeesData || []);
         setEmployeeChangeRecords(employeeChangesData || []);
-        // 현재 월 시간 기록 로드
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const monthlyRecords = await dataService.getMonthlyRecords(currentMonth);
         
-        setOvertimeRecords(monthlyRecords.overtimeRecords || []);
-        setVacationRecords(monthlyRecords.vacationRecords || []);
+        // 전체 데이터 로드 (모든 월의 데이터)
+        const allRecords = await dataService.getAllRecords();
+        setOvertimeRecords(allRecords.overtimeRecords || []);
+        setVacationRecords(allRecords.vacationRecords || []);
 
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
@@ -250,10 +249,8 @@ const useOvertimeData = () => {
     return dataCalculator.getDailyData(employeeId, date, type, overtimeRecords, vacationRecords);
   }, [overtimeRecords, vacationRecords]);
 
-  const getMonthlyStats = useCallback((employeeId) => {
-    const selectedMonth = new Date().toISOString().slice(0, 7);
-    const safeMultiplier = 1.0; // 기본값 사용, Dashboard에서 multiplier 적용
-    return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, safeMultiplier);
+  const getMonthlyStats = useCallback((employeeId, selectedMonth, multiplier = 1.0) => {
+    return dataCalculator.getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, multiplier);
   }, [overtimeRecords, vacationRecords]);
 
   const updateDailyTime = useCallback(async (type, employeeId, date, totalMinutes) => {

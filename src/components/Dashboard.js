@@ -277,7 +277,7 @@ const Dashboard = memo(() => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {getAllEmployeesWithRecords.map((employee) => {
-                  const stats = getMonthlyStats(employee.id);
+                  const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
                   // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
                   const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
                   return (

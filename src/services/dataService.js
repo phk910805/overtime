@@ -12,6 +12,22 @@ export class DataService {
   }
 
   /**
+   * 전체 데이터 조회 (모든 월의 데이터)
+   * 대시보드에서 월별 전환 시 사용
+   */
+  async getAllRecords() {
+    const [overtimeRecords, vacationRecords] = await Promise.all([
+      this.getOvertimeRecords(), // 필터 없이 전체 데이터
+      this.getVacationRecords()  // 필터 없이 전체 데이터
+    ]);
+
+    return {
+      overtimeRecords,
+      vacationRecords
+    };
+  }
+
+  /**
    * 스토리지 어댑터 설정
    */
   setStorageAdapter(adapter) {
