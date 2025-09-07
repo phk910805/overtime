@@ -296,7 +296,6 @@ const Dashboard = memo(() => {
                         이름
                       </div>
                       <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                        {/* 빈 공간 */}
                       </div>
                     </div>
                   </th>
@@ -306,7 +305,6 @@ const Dashboard = memo(() => {
                         초과시간
                       </div>
                       <div className="text-[8px] text-gray-400 normal-case leading-tight mt-0.5 h-4 whitespace-nowrap overflow-hidden">
-                        {/* 빈 공간 */}
                       </div>
                     </div>
                   </th>
