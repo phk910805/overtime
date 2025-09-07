@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { useOvertimeContext } from '../context';
-import { timeUtils, dateUtils, holidayUtils, validators } from '../utils';
+import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
 import TimeInputValidator from '../utils/timeInputValidator.js';
@@ -40,7 +40,6 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
-  const [validationMessage, setValidationMessage] = useState('');
   const hoursRef = useRef(null);
   const minutesRef = useRef(null);
 
@@ -92,7 +91,6 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
     
     if (validation.isValid) {
       setHours(validation.filteredValue);
-      setValidationMessage('');
       
       // 자동 보정 메시지 표시
       if (validation.autoCorrect && validation.message) {
@@ -108,7 +106,6 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
       }
     } else {
       setHours(validation.filteredValue);
-      setValidationMessage(validation.message || '');
       if (validation.message) {
         showToast(validation.message, 'warning');
       }
@@ -121,10 +118,8 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
     
     if (validation.isValid) {
       setMinutes(validation.filteredValue);
-      setValidationMessage('');
     } else {
       setMinutes(validation.filteredValue);
-      setValidationMessage(validation.message || '');
       if (validation.message) {
         showToast(validation.message, 'warning');
       }
@@ -298,13 +293,13 @@ const Dashboard = memo(() => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     이름
                   </th>
-                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     초과시간
                   </th>
-                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     사용시간
                   </th>
-                  <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
+                  <th className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-max whitespace-nowrap">
                     잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                   </th>
                   <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
@@ -377,7 +372,7 @@ const Dashboard = memo(() => {
                           <div className="flex-shrink-0">
                             {day.toString().padStart(2, '0')}({dayOfWeek})
                           </div>
-                          <div className="text-[10px] text-gray-400 normal-case leading-tight mt-0.5 min-h-[12px]">
+                          <div className="text-[10px] text-gray-400 normal-case leading-tight mt-0.5 h-4">
                             {isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}
                           </div>
                         </div>
