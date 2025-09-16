@@ -134,10 +134,10 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
   }, [showToast]);
 
   const getTargetEmployees = useCallback(() => {
-    const allEmployees = getAllEmployeesWithRecords.filter(emp => emp.isActive);
+    const allEmployees = getAllEmployeesWithRecords(selectedMonth).filter(emp => emp.isActive);
     return settings.rangeType === 'all' ? allEmployees : 
            allEmployees.filter(emp => settings.selectedEmployees.includes(emp.id.toString()));
-  }, [settings.rangeType, settings.selectedEmployees, getAllEmployeesWithRecords]);
+  }, [settings.rangeType, settings.selectedEmployees, getAllEmployeesWithRecords, selectedMonth]);
 
   const getTargetDates = useCallback(() => {
     if (settings.dateType === 'single') {
