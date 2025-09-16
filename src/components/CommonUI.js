@@ -351,31 +351,35 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
   // 현재 페이지 그룹 계산 (1-5, 6-10, 11-15...)
   const currentGroup = Math.ceil(currentPage / 5);
   const startPage = (currentGroup - 1) * 5 + 1;
-  const endPage = Math.min(startPage + 4, totalPages);
   
-  // 페이지 번호 배열 생성
+  // 항상 5개의 페이지 번호 표시 (1,2,3,4,5 또는 6,7,8,9,10 등)
   const getPageNumbers = useCallback(() => {
     const pages = [];
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
+    for (let i = 0; i < 5; i++) {
+      const pageNumber = startPage + i;
+      pages.push({
+        number: pageNumber,
+        isActive: pageNumber <= totalPages,
+        isCurrent: pageNumber === currentPage
+      });
     }
     return pages;
-  }, [startPage, endPage]);
+  }, [startPage, totalPages, currentPage]);
 
-  // 버튼 활성화 상태
+  // 버튼 활성화 상태 - 그룹 단위 이동
+  const isFirstGroup = currentGroup === 1; // 1페이지가 포함된 그룹인지
+  const isLastGroup = startPage + 4 >= totalPages; // 마지막 페이지가 포함된 그룹인지
   const canGoToPrevGroup = currentGroup > 1;
-  const canGoToNextGroup = currentGroup < Math.ceil(totalPages / 5);
-  const canGoToFirst = currentPage > 1;
-  const canGoToLast = currentPage < totalPages;
+  const canGoToNextGroup = !isLastGroup;
+  const canGoToFirstGroup = !isFirstGroup;
+  const canGoToLastGroup = !isLastGroup;
 
-  // 네비게이션 핸들러
-  const goToFirstPage = useCallback(() => {
-    onPageChange(1);
-  }, [onPageChange]);
-
-  const goToLastPage = useCallback(() => {
-    onPageChange(totalPages);
-  }, [onPageChange, totalPages]);
+  // 네비게이션 핸들러 - 그룹 단위 이동
+  const goToFirstGroup = useCallback(() => {
+    if (canGoToFirstGroup) {
+      onPageChange(1); // 첫 번째 그룹의 첫 페이지로
+    }
+  }, [canGoToFirstGroup, onPageChange]);
 
   const goToPrevGroup = useCallback(() => {
     if (canGoToPrevGroup) {
@@ -387,9 +391,24 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
   const goToNextGroup = useCallback(() => {
     if (canGoToNextGroup) {
       const nextGroupStart = currentGroup * 5 + 1;
-      onPageChange(Math.min(nextGroupStart, totalPages));
+      onPageChange(nextGroupStart);
     }
-  }, [canGoToNextGroup, currentGroup, totalPages, onPageChange]);
+  }, [canGoToNextGroup, currentGroup, onPageChange]);
+
+  const goToLastGroup = useCallback(() => {
+    if (canGoToLastGroup) {
+      // 마지막 그룹의 첫 페이지 계산
+      const lastGroupNumber = Math.ceil(totalPages / 5);
+      const lastGroupStart = (lastGroupNumber - 1) * 5 + 1;
+      onPageChange(lastGroupStart);
+    }
+  }, [canGoToLastGroup, totalPages, onPageChange]);
+
+  const handlePageClick = useCallback((pageNumber, isActive) => {
+    if (isActive && pageNumber !== currentPage) {
+      onPageChange(pageNumber);
+    }
+  }, [currentPage, onPageChange]);
 
   if (totalItems === 0) return null;
 
@@ -403,12 +422,16 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {/* 처음으로 */}
+          {/* 첫 번째 그룹으로 */}
           <button
-            onClick={goToFirstPage}
-            disabled={!canGoToFirst}
-            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="처음으로"
+            onClick={goToFirstGroup}
+            disabled={!canGoToFirstGroup}
+            className={`px-2 py-1 text-sm transition-colors ${
+              canGoToFirstGroup
+                ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title="첫 번째 그룹 (1-5페이지)"
           >
             &lt;&lt;
           </button>
@@ -417,25 +440,37 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
           <button
             onClick={goToPrevGroup}
             disabled={!canGoToPrevGroup}
-            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="이전 5개"
+            className={`px-2 py-1 text-sm transition-colors ${
+              canGoToPrevGroup
+                ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title={
+              canGoToPrevGroup 
+                ? `이전 그룹 (${(currentGroup - 2) * 5 + 1}-${(currentGroup - 2) * 5 + 5}페이지)`
+                : '이전 그룹'
+            }
           >
             &lt;
           </button>
           
-          {/* 페이지 번호들 */}
+          {/* 페이지 번호들 - 항상 5개 표시 */}
           <div className="flex items-center space-x-1 min-w-[200px] justify-center">
             {getPageNumbers().map((page) => (
               <button
-                key={page}
-                onClick={() => onPageChange(page)}
-                className={`px-3 py-1 text-sm rounded ${
-                  page === currentPage
-                    ? 'bg-blue-100 text-blue-600 font-medium'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                key={page.number}
+                onClick={() => handlePageClick(page.number, page.isActive)}
+                disabled={!page.isActive}
+                className={`px-3 py-1 text-sm rounded transition-colors ${
+                  page.isCurrent
+                    ? 'bg-blue-100 text-blue-600 font-medium cursor-default'
+                    : page.isActive
+                      ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 cursor-pointer'
+                      : 'text-gray-300 cursor-not-allowed'
                 }`}
+                title={!page.isActive ? '존재하지 않는 페이지' : `${page.number}페이지로 이동`}
               >
-                {page}
+                {page.number}
               </button>
             ))}
           </div>
@@ -444,18 +479,34 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
           <button
             onClick={goToNextGroup}
             disabled={!canGoToNextGroup}
-            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="다음 5개"
+            className={`px-2 py-1 text-sm transition-colors ${
+              canGoToNextGroup
+                ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title={
+              canGoToNextGroup 
+                ? `다음 그룹 (${currentGroup * 5 + 1}-${currentGroup * 5 + 5}페이지)`
+                : '다음 그룹'
+            }
           >
             &gt;
           </button>
           
-          {/* 마지막으로 */}
+          {/* 마지막 그룹으로 */}
           <button
-            onClick={goToLastPage}
-            disabled={!canGoToLast}
-            className="px-2 py-1 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="마지막으로"
+            onClick={goToLastGroup}
+            disabled={!canGoToLastGroup}
+            className={`px-2 py-1 text-sm transition-colors ${
+              canGoToLastGroup
+                ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title={
+              canGoToLastGroup 
+                ? `마지막 그룹 (${Math.ceil(totalPages / 5) * 5 - 4}-${totalPages}페이지)`
+                : '마지막 그룹'
+            }
           >
             &gt;&gt;
           </button>
