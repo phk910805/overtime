@@ -33,11 +33,11 @@ const HeaderCell = memo(({ children, alignment = "start" }) => (
 ));
 
 const DateHeaderCell = memo(({ children, holidayName = '' }) => (
-  <div className="flex flex-col items-center justify-center" style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden' }}>
-    <div className="flex-shrink-0 text-center">
+  <div className="flex flex-col items-center justify-center" style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden', padding: '2px 0' }}>
+    <div className="flex-shrink-0 text-center" style={{ marginBottom: '1px' }}>
       {children}
     </div>
-    <div className="text-[8px] text-gray-600 normal-case leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '60px', marginBottom: '1px' }}>
+    <div className="text-[8px] text-gray-500 normal-case leading-none whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '60px', height: '10px' }}>
       {holidayName}
     </div>
   </div>
