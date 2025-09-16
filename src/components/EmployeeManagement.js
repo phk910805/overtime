@@ -95,9 +95,9 @@ const EmployeeManagement = memo(() => {
           id: `emp-update-${changeRecord.id}`,
           type: 'employee',
           action: '수정',
-          employeeName: changeRecord.newName,
+          employeeName: changeRecord.employeeName,
           createdAt: changeRecord.createdAt,
-          details: `직원명 "${changeRecord.oldName}" -> "${changeRecord.newName}" 변경`
+          details: `직원명 "${changeRecord.oldName || '알 수 없음'}" -> "${changeRecord.employeeName}" 변경` // ✅ 올바른 필드 사용
         });
       } else if (changeRecord.action === '삭제') {
         records.push({

@@ -73,6 +73,22 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async updateEmployee(id, employeeData) {
     try {
+      // 디버깅용 로그 추가
+      console.log('🔍 updateEmployee called with:', { id, employeeData });
+      
+      // 이전 직원 정보 조회 (old_name을 위해)
+      const { data: currentEmployee, error: fetchError } = await this.supabase
+        .from(this.tables.employees)
+        .select('name')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError) {
+        console.warn('이전 직원 정보 조회 실패:', fetchError);
+      }
+      
+      const oldName = currentEmployee?.name || '알 수 없는 이름';
+      
       const { data, error } = await this.supabase
         .from(this.tables.employees)
         .update({ name: employeeData.name.trim() })
@@ -82,12 +98,20 @@ export class SupabaseAdapter extends StorageAdapter {
 
       if (error) throw error;
 
-      // 직원 변경 이력 기록
+      // 디버깅용 로그 추가
+      console.log('📝 Employee updated in DB:', data);
+
+      // 직원 변경 이력 기록 (이전 이름 포함)
       const changeRecord = HistoryPolicy.createEmployeeChangeRecord(
         id, 
         '수정', 
-        employeeData.name.trim()
+        employeeData.name.trim(),
+        oldName // 이전 이름 추가
       );
+      
+      // 디버깅용 로그 추가
+      console.log('📋 Change record to save:', changeRecord);
+      
       await this.saveEmployeeChangeRecord(changeRecord);
 
       return this._convertSupabaseEmployee(data);
@@ -320,6 +344,7 @@ export class SupabaseAdapter extends StorageAdapter {
         employee_id: record.employeeId,
         action: record.action,
         employee_name: record.employeeName,
+        old_name: record.oldName || null, // old_name 필드 추가
         created_at: record.createdAt
       };
 
@@ -428,6 +453,7 @@ export class SupabaseAdapter extends StorageAdapter {
       employeeId: supabaseData.employee_id,
       action: supabaseData.action,
       employeeName: supabaseData.employee_name,
+      oldName: supabaseData.old_name, // old_name 필드 추가
       createdAt: supabaseData.created_at
     };
   }

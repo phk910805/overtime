@@ -61,16 +61,29 @@ export class HistoryPolicy {
    * @param {number} employeeId - 직원 ID
    * @param {string} action - 동작 ('생성', '수정', '삭제')
    * @param {string} employeeName - 직원명
+   * @param {string} oldName - 이전 직원명 (수정 시만 사용)
    * @returns {Object} - 히스토리 기록
    */
-  static createEmployeeChangeRecord(employeeId, action, employeeName) {
-    return {
+  static createEmployeeChangeRecord(employeeId, action, employeeName, oldName = null) {
+    // 디버깅용 로그 추가
+    console.log('🎯 HistoryPolicy.createEmployeeChangeRecord called with:', {
+      employeeId, 
+      action, 
+      employeeName,
+      oldName
+    });
+    
+    const record = {
       id: Date.now() + Math.random(),
       employeeId,
       action,
       employeeName,
+      oldName, // 이전 이름 추가
       createdAt: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
     };
+    
+    console.log('📋 Created history record:', record);
+    return record;
   }
 
   /**
