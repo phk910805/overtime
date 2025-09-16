@@ -24,11 +24,11 @@ const getDateTextColor = (isHoliday, isWeekend) =>
   (isHoliday || isWeekend) ? STYLES.COLORS.WEEKEND_HOLIDAY : STYLES.COLORS.DEFAULT;
 
 const HeaderCell = memo(({ children, alignment = "start" }) => (
-  <div className={`flex flex-col items-${alignment} justify-center`} style={{ minHeight: '32px' }}>
+  <div className={`flex flex-col items-${alignment} justify-center`} style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden' }}>
     <div className="flex-shrink-0">
       {children}
     </div>
-    <div className="h-4" />
+    <div className="h-2" />
   </div>
 ));
 
@@ -37,7 +37,7 @@ const DateHeaderCell = memo(({ children, holidayName = '' }) => (
     <div className="flex-shrink-0 text-center">
       {children}
     </div>
-    <div className="text-[7px] text-gray-400 normal-case leading-none mt-0.5 h-2 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '60px' }}>
+    <div className="text-[8px] text-gray-600 normal-case leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '60px', marginBottom: '1px' }}>
       {holidayName}
     </div>
   </div>
@@ -327,27 +327,27 @@ const Dashboard = memo(() => {
             <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                     <HeaderCell>
                       이름
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                     <HeaderCell>
                       초과시간
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                     <HeaderCell>
                       사용시간
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                     <HeaderCell>
                       잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px'}}>
+                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                     <HeaderCell alignment="center">
                       구분
                     </HeaderCell>
@@ -411,7 +411,7 @@ const Dashboard = memo(() => {
                     const textColorValue = getDateTextColor(isHolidayDate, isWeekend);
                     
                     return (
-                      <th key={day} className={STYLES.DATE_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, color: textColorValue, minHeight: '32px'}}>
+                      <th key={day} className={STYLES.DATE_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, color: textColorValue, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
                         <DateHeaderCell holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}>
                           {day.toString().padStart(2, '0')}({dayOfWeek})
                         </DateHeaderCell>
