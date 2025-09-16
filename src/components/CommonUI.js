@@ -384,9 +384,10 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
   const goToPrevGroup = useCallback(() => {
     if (canGoToPrevGroup) {
       const prevGroupStart = (currentGroup - 2) * 5 + 1;
-      onPageChange(prevGroupStart);
+      const prevGroupEnd = Math.min(prevGroupStart + 4, totalPages);
+      onPageChange(prevGroupEnd); // 이전 그룹의 마지막 페이지로
     }
-  }, [canGoToPrevGroup, currentGroup, onPageChange]);
+  }, [canGoToPrevGroup, currentGroup, onPageChange, totalPages]);
 
   const goToNextGroup = useCallback(() => {
     if (canGoToNextGroup) {
