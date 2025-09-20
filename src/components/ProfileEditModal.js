@@ -27,16 +27,29 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     confirmPassword: ''
   });
   
+  // 초기값 저장 (변경사항 감지용)
+  const [initialData, setInitialData] = useState({
+    fullName: '',
+    email: ''
+  });
+  
   const authService = getAuthService();
 
   // 사용자 정보 로드
   useEffect(() => {
     if (user && isOpen) {
-      setFormData(prev => ({
-        ...prev,
+      const userData = {
         fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         email: user.email || ''
+      };
+      
+      setFormData(prev => ({
+        ...prev,
+        ...userData
       }));
+      
+      // 초기값 저장
+      setInitialData(userData);
     }
   }, [user, isOpen]);
 
@@ -109,6 +122,17 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     }
   };
 
+  // 변경사항 감지 함수
+  const hasChanges = () => {
+    // 이름 변경 확인
+    const nameChanged = formData.fullName.trim() !== initialData.fullName;
+    
+    // 비밀번호 변경 확인 (현재 비밀번호 검증되고 새 비밀번호 있음)
+    const passwordChanged = currentPasswordVerified && formData.newPassword;
+    
+    return nameChanged || passwordChanged;
+  };
+  
   // 폼 유효성 검사
   const validateForm = () => {
     if (!formData.fullName.trim()) {
@@ -147,6 +171,11 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     
     if (!validateForm()) return;
+
+    // 변경사항이 없으면 아무러 메시지 없이 종료
+    if (!hasChanges()) {
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -293,7 +322,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
                       onKeyPress={handleCurrentPasswordKeyPress}
                       placeholder=""
                       disabled={currentPasswordVerified}
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                     />
                   </div>
                   {!currentPasswordVerified && formData.currentPassword && (
