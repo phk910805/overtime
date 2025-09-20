@@ -1,16 +1,31 @@
 import React, { useState, useCallback, memo } from 'react';
-import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings, Lock } from 'lucide-react';
 import { OvertimeProvider, useOvertimeContext } from './context';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
 import SettingsModal from './components/SettingsModal';
+import LoginModal from './components/auth/LoginModal';
+import UserMenu from './components/auth/UserMenu';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { selectedMonth, setSelectedMonth } = useOvertimeContext();
+  const { 
+    selectedMonth, 
+    setSelectedMonth,
+    // 🔐 인증 관련
+    currentUser,
+    isAuthEnabled,
+    signIn,
+    signOut,
+    isAuthenticated,
+    isAdmin
+  } = useOvertimeContext();
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
+  // 🔐 로그인 모달 상태
+  const [showLogin, setShowLogin] = useState(false);
 
   const changeMonth = useCallback((direction) => {
     const currentDate = new Date(selectedMonth + '-01');
@@ -69,6 +84,27 @@ const OvertimeManagementApp = memo(() => {
                   <Settings className="w-5 h-5" />
                 </button>
               </div>
+              
+              {/* 🔐 인증 관련 UI */}
+              {isAuthEnabled && (
+                <div className="flex items-center space-x-2">
+                  {isAuthenticated() ? (
+                    <UserMenu 
+                      user={currentUser}
+                      onLogout={signOut}
+                      onSettings={() => setShowSettings(true)}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setShowLogin(true)}
+                      className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>로그인</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -132,6 +168,15 @@ const OvertimeManagementApp = memo(() => {
         show={showSettings}
         onClose={() => setShowSettings(false)}
       />
+      
+      {/* 🔐 로그인 모달 */}
+      {isAuthEnabled && (
+        <LoginModal
+          show={showLogin}
+          onClose={() => setShowLogin(false)}
+          onLogin={signIn}
+        />
+      )}
     </div>
   );
 });

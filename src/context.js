@@ -4,6 +4,7 @@ import { getDataService } from './services/dataService.js';
 import { dataCalculator } from './dataManager';
 import { getConfig } from './services/config.js';
 import { createClient } from '@supabase/supabase-js';
+import { createAuthService } from './services/authService.js';
 
 const OvertimeContext = createContext();
 
@@ -75,7 +76,56 @@ const useOvertimeData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // 🔐 인증 관련 상태
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authService, setAuthService] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
   const dataService = getDataService();
+
+  // 🔐 인증 서비스 초기화
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        setIsAuthLoading(true);
+        
+        const config = getConfig();
+        const storageConfig = config.getStorageConfig();
+        
+        if (storageConfig.type === 'supabase') {
+          const supabaseConfig = config.getSupabaseConfig();
+          const validation = config.validate();
+          
+          if (validation.isValid) {
+            const supabaseClient = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+            const authSvc = createAuthService(supabaseClient);
+            setAuthService(authSvc);
+            
+            // 현재 세션 확인
+            const session = await authSvc.getCurrentSession();
+            if (session?.user) {
+              setCurrentUser(authSvc.getCurrentUser());
+            }
+            
+            // 인증 상태 변경 리스너 등록
+            authSvc.onAuthStateChange((event, session, user) => {
+              setCurrentUser(user);
+            });
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔐 Auth service initialized');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('인증 서비스 초기화 실패:', error);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+    
+    initializeAuth();
+  }, []);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -105,13 +155,33 @@ const useOvertimeData = () => {
           console.error('Failed to load data:', error);
         }
         setError(error.message);
-      } finally {
-        setIsLoading(false);
-      }
     };
 
     loadData();
   }, [dataService]);
+
+  // 🔐 인증 관련 함수들
+  const signIn = useCallback(async (email, password) => {
+    if (!authService) throw new Error('인증 서비스가 초기화되지 않았습니다.');
+    return await authService.signIn(email, password);
+  }, [authService]);
+
+  const signOut = useCallback(async () => {
+    if (!authService) return;
+    return await authService.signOut();
+  }, [authService]);
+
+  const isAuthenticated = useCallback(() => {
+    return authService?.isAuthenticated() || false;
+  }, [authService]);
+
+  const isAdmin = useCallback(() => {
+    return authService?.isAdmin() || false;
+  }, [authService]);
+
+  const canAccessSalaryInfo = useCallback(() => {
+    return authService?.canAccessSalaryInfo() || false;
+  }, [authService]);
 
   const addEmployee = useCallback(async (name) => {
     try {
@@ -378,7 +448,7 @@ const useOvertimeData = () => {
   }, [dataService]);
 
   return {
-    // 상태
+    // 기존 상태
     employees,
     overtimeRecords,
     vacationRecords,
@@ -387,29 +457,38 @@ const useOvertimeData = () => {
     error,
     multiplier,
 
-    // 직원 관리
+    // 🔐 인증 관련 상태
+    currentUser,
+    isAuthLoading,
+    isAuthEnabled: !!authService,
+
+    // 기존 직원 관리
     addEmployee,
     updateEmployee,
     deleteEmployee,
 
-    // 시간 기록 관리
+    // 기존 시간 기록 관리
     updateOvertimeRecord,
     updateVacationRecord,
     bulkUpdateOvertimeRecords,
     bulkUpdateVacationRecords,
 
-    // Dashboard 지원
+    // 기존 Dashboard 지원
     getAllEmployeesWithRecords,
     getDailyData,
     getMonthlyStats,
     updateDailyTime,
 
-    // 유틸리티
+    // 🔐 인증 관련 함수
+    signIn,
+    signOut,
+    isAuthenticated,
+    isAdmin,
+    canAccessSalaryInfo,
+
+    // 기존 유틸리티
     getEmployeeNameFromRecord,
-
-    // 설정 관리
     updateSettings,
-
     clearCache: () => dataService.clearCache()
   };
 };
