@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Clock, Mail, Lock, User, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../hooks/useAuth';
 
 const LoginForm = () => {
   const [isLogin, setIsLogin] = useState(true);

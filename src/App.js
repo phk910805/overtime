@@ -136,13 +136,9 @@ const OvertimeManagementApp = memo(() => {
   );
 });
 
-// Root App with Provider
+// Root App without Provider (now managed by AuthApp)
 const App = () => {
-  return (
-    <OvertimeProvider>
-      <OvertimeManagementApp />
-    </OvertimeProvider>
-  );
+  return <OvertimeManagementApp />;
 };
 
 export default App;

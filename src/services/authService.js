@@ -105,6 +105,12 @@ export class AuthService {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       
+      // 'Auth session missing!' 는 정상적인 비로그인 상태
+      if (error && error.message === 'Auth session missing!') {
+        this.currentUser = null;
+        return null;
+      }
+      
       if (error) throw error;
       
       this.currentUser = user;
@@ -112,6 +118,7 @@ export class AuthService {
 
     } catch (error) {
       console.error('❌ 사용자 정보 가져오기 실패:', error.message);
+      this.currentUser = null;
       return null;
     }
   }
@@ -122,6 +129,11 @@ export class AuthService {
   async getCurrentSession() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
+      
+      // 'Auth session missing!' 는 정상적인 비로그인 상태
+      if (error && error.message === 'Auth session missing!') {
+        return null;
+      }
       
       if (error) throw error;
       
