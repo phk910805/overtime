@@ -158,7 +158,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       }
       // TODO: 새 비밀번호가 기존과 동일한지 검증 (추후 구현)
       // if (formData.newPassword === 기존비밀번호) {
-      //   setError('New password should be different from the old password.');
+      //   setError('새 비밀번호는 기존 비밀번호와 달라야 합니다.');
       //   return false;
       // }
     }
@@ -171,11 +171,6 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     
     if (!validateForm()) return;
-
-    // 변경사항이 없으면 아무러 메시지 없이 종료
-    if (!hasChanges()) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -406,7 +401,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
             <div className="flex space-x-3 pt-4">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={!hasChanges() || loading}
                 className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
