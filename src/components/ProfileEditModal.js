@@ -116,12 +116,10 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       return false;
     }
 
-    // 비밀번호 변경을 시도하는 경우
-    if (formData.currentPassword || formData.newPassword || formData.confirmPassword) {
-      if (!currentPasswordVerified) {
-        setError('현재 비밀번호를 먼저 확인해주세요.');
-        return false;
-      }
+    // 비밀번호 변경을 시도하는 경우에만 비밀번호 검증
+    const isPasswordChangeAttempt = currentPasswordVerified && (formData.newPassword || formData.confirmPassword);
+    
+    if (isPasswordChangeAttempt) {
       if (!formData.newPassword) {
         setError('새 비밀번호를 입력해주세요.');
         return false;
@@ -134,6 +132,11 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
         setError('새 비밀번호가 일치하지 않습니다.');
         return false;
       }
+      // TODO: 새 비밀번호가 기존과 동일한지 검증 (추후 구현)
+      // if (formData.newPassword === 기존비밀번호) {
+      //   setError('New password should be different from the old password.');
+      //   return false;
+      // }
     }
 
     return true;
@@ -152,8 +155,9 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     try {
       // 이름 변경은 항상 처리 (TODO: 실제 프로필 업데이트 API)
       
-      // 비밀번호 변경이 있는 경우
-      if (currentPasswordVerified && formData.newPassword) {
+      // 비밀번호 변경이 있는 경우에만 처리
+      const isPasswordChange = currentPasswordVerified && formData.newPassword;
+      if (isPasswordChange) {
         const result = await authService.updatePassword(formData.newPassword);
         if (!result.success) {
           setError(result.error || '비밀번호 변경에 실패했습니다.');

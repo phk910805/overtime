@@ -12,7 +12,7 @@ const PasswordField = ({
   value,
   onChange,
   onKeyPress,
-  placeholder,
+  placeholder = '',
   className = '',
   disabled = false,
   required = false,
