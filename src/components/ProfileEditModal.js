@@ -4,14 +4,20 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Save, X, AlertCircle } from 'lucide-react';
+import { User, Mail, Save, X, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { getAuthService } from '../services/authService';
+import PasswordField from './PasswordField';
 
 const ProfileEditModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  
+  // 비밀번호 검증 관련 상태
+  const [currentPasswordVerified, setCurrentPasswordVerified] = useState(false);
+  const [passwordVerifying, setPasswordVerifying] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -20,6 +26,8 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     newPassword: '',
     confirmPassword: ''
   });
+  
+  const authService = getAuthService();
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -37,6 +45,8 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     if (!isOpen) {
       setError('');
       setMessage('');
+      setCurrentPasswordVerified(false);
+      setPasswordVerifying(false);
       setFormData(prev => ({
         ...prev,
         currentPassword: '',
@@ -56,6 +66,47 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     // 입력 시 메시지 클리어
     if (error) setError('');
     if (message) setMessage('');
+    
+    // 현재 비밀번호가 변경되면 검증 상태 초기화
+    if (name === 'currentPassword' && currentPasswordVerified) {
+      setCurrentPasswordVerified(false);
+    }
+  };
+
+  // 현재 비밀번호 검증
+  const verifyCurrentPassword = async () => {
+    if (!formData.currentPassword) {
+      setError('현재 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setPasswordVerifying(true);
+    setError('');
+
+    try {
+      const isValid = await authService.verifyCurrentPassword(formData.currentPassword);
+      
+      if (isValid) {
+        setCurrentPasswordVerified(true);
+        setMessage('현재 비밀번호가 확인되었습니다.');
+      } else {
+        setError('비밀번호를 정확히 입력해 주세요.');
+        setCurrentPasswordVerified(false);
+      }
+    } catch (error) {
+      setError('비밀번호 검증 중 오류가 발생했습니다.');
+      setCurrentPasswordVerified(false);
+    } finally {
+      setPasswordVerifying(false);
+    }
+  };
+
+  // 현재 비밀번호 필드에서 Enter 키 처리
+  const handleCurrentPasswordKeyPress = (e) => {
+    if (e.key === 'Enter' && formData.currentPassword && !currentPasswordVerified) {
+      e.preventDefault();
+      verifyCurrentPassword();
+    }
   };
 
   // 폼 유효성 검사
@@ -65,10 +116,10 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       return false;
     }
 
-    // 비밀번호 변경 시 유효성 검사
-    if (formData.newPassword || formData.confirmPassword || formData.currentPassword) {
-      if (!formData.currentPassword) {
-        setError('현재 비밀번호를 입력해주세요.');
+    // 비밀번호 변경을 시도하는 경우
+    if (formData.currentPassword || formData.newPassword || formData.confirmPassword) {
+      if (!currentPasswordVerified) {
+        setError('현재 비밀번호를 먼저 확인해주세요.');
         return false;
       }
       if (!formData.newPassword) {
@@ -99,9 +150,16 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     setMessage('');
 
     try {
-      // TODO: 실제 프로필 업데이트 API 호출
-      // 현재는 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 이름 변경은 항상 처리 (TODO: 실제 프로필 업데이트 API)
+      
+      // 비밀번호 변경이 있는 경우
+      if (currentPasswordVerified && formData.newPassword) {
+        const result = await authService.updatePassword(formData.newPassword);
+        if (!result.success) {
+          setError(result.error || '비밀번호 변경에 실패했습니다.');
+          return;
+        }
+      }
       
       setMessage('프로필이 성공적으로 업데이트되었습니다.');
       
@@ -112,6 +170,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
         newPassword: '',
         confirmPassword: ''
       }));
+      setCurrentPasswordVerified(false);
 
       // 2초 후 모달 닫기
       setTimeout(() => {
@@ -212,64 +271,87 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
 
             {/* 구분선 */}
             <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">비밀번호 변경 (선택사항)</h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">비밀번호 변경하기</h4>
               
               {/* 현재 비밀번호 */}
               <div className="mb-3">
                 <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
                   현재 비밀번호
                 </label>
-                <div className="relative">
-                  <input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type="password"
-                    value={formData.currentPassword}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="현재 비밀번호"
-                  />
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <PasswordField
+                      id="currentPassword"
+                      name="currentPassword"
+                      value={formData.currentPassword}
+                      onChange={handleInputChange}
+                      onKeyPress={handleCurrentPasswordKeyPress}
+                      placeholder="현재 비밀번호"
+                      disabled={currentPasswordVerified}
+                      autoComplete="current-password"
+                    />
+                  </div>
+                  {!currentPasswordVerified && formData.currentPassword && (
+                    <button
+                      type="button"
+                      onClick={verifyCurrentPassword}
+                      disabled={passwordVerifying}
+                      className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {passwordVerifying ? '확인 중...' : '확인'}
+                    </button>
+                  )}
+                  {currentPasswordVerified && (
+                    <div className="flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm rounded-md">
+                      ✓ 확인됨
+                    </div>
+                  )}
                 </div>
+                
+                {/* 비밀번호 찾기 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => alert('비밀번호 찾기 기능은 추후 개발됩니다.')}
+                  className="text-xs text-blue-600 hover:text-blue-700 mt-2 underline"
+                >
+                  비밀번호 찾기
+                </button>
               </div>
 
-              {/* 새 비밀번호 */}
-              <div className="mb-3">
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  새 비밀번호
-                </label>
-                <div className="relative">
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    value={formData.newPassword}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="새 비밀번호 (6자리 이상)"
-                  />
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                </div>
-              </div>
+              {/* 새 비밀번호 필드들 (조건부 노출) */}
+              {currentPasswordVerified && (
+                <>
+                  {/* 새 비밀번호 */}
+                  <div className="mb-3">
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      새 비밀번호
+                    </label>
+                    <PasswordField
+                      id="newPassword"
+                      name="newPassword"
+                      value={formData.newPassword}
+                      onChange={handleInputChange}
+                      placeholder="새 비밀번호 (6자리 이상)"
+                      autoComplete="new-password"
+                    />
+                  </div>
 
-              {/* 비밀번호 확인 */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  새 비밀번호 확인
-                </label>
-                <div className="relative">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="새 비밀번호 재입력"
-                  />
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                </div>
-              </div>
+                  {/* 새 비밀번호 확인 */}
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      새 비밀번호 확인
+                    </label>
+                    <PasswordField
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="새 비밀번호 재입력"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* 메시지 영역 */}

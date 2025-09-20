@@ -212,6 +212,58 @@ export class AuthService {
     const role = this.getUserRole();
     return role === 'admin' || role === 'manager';
   }
+
+  /**
+   * 현재 비밀번호 검증
+   * @param {string} password - 검증할 비밀번호
+   * @returns {Promise<boolean>} - 검증 성공 여부
+   */
+  async verifyCurrentPassword(password) {
+    try {
+      if (!this.currentUser?.email) {
+        throw new Error('사용자 정보가 없습니다.');
+      }
+
+      // 현재 사용자 이메일과 입력된 비밀번호로 로그인 시도
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: this.currentUser.email,
+        password: password
+      });
+
+      if (error) {
+        // 비밀번호가 틀린 경우
+        console.log('비밀번호 검증 실패:', error.message);
+        return false;
+      }
+
+      console.log('✅ 현재 비밀번호 검증 성공');
+      return true;
+    } catch (error) {
+      console.error('비밀번호 검증 중 오류:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * 비밀번호 변경
+   * @param {string} newPassword - 새 비밀번호
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async updatePassword(newPassword) {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      console.log('✅ 비밀번호 변경 성공');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ 비밀번호 변경 실패:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // 싱글톤 인스턴스 생성
