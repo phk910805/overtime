@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from './LoginForm';
+import ProfileDropdown from './ProfileDropdown';
+import LoginButton from './LoginButton';
 
 const AuthWrapper = ({ children }) => {
   const { user, loading, initialized, signIn, signOut, signUp } = useAuth();
@@ -82,19 +84,6 @@ const AuthWrapper = ({ children }) => {
   return (
     <>
       {children}
-      
-      {/* 사용자 정보 및 로그아웃 버튼 (임시) */}
-      <div className="fixed top-4 right-4 bg-white shadow-md rounded-lg p-3 border">
-        <div className="text-sm text-gray-600">
-          로그인: {user.email}
-        </div>
-        <button
-          onClick={signOut}
-          className="mt-2 text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-        >
-          로그아웃
-        </button>
-      </div>
     </>
   );
 };

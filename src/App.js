@@ -1,14 +1,18 @@
 import React, { useState, useCallback, memo } from 'react';
 import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { OvertimeProvider, useOvertimeContext } from './context';
+import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
 import SettingsModal from './components/SettingsModal';
+import ProfileDropdown from './components/ProfileDropdown';
+import LoginButton from './components/LoginButton';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
   const { selectedMonth, setSelectedMonth } = useOvertimeContext();
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
 
@@ -69,6 +73,17 @@ const OvertimeManagementApp = memo(() => {
                   <Settings className="w-5 h-5" />
                 </button>
               </div>
+              
+              {/* 사용자 프로필 또는 로그인 버튼 */}
+              {user ? (
+                <ProfileDropdown 
+                  user={user} 
+                  onSignOut={signOut}
+                  onProfileEdit={() => console.log('프로필 편집 클릭')}
+                />
+              ) : (
+                <LoginButton onClick={() => console.log('로그인 버튼 클릭')} />
+              )}
             </div>
           </div>
         </div>
