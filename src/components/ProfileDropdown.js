@@ -5,9 +5,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Edit, ChevronDown } from 'lucide-react';
+import ProfileEditModal from './ProfileEditModal';
 
 const ProfileDropdown = ({ user, onSignOut, onProfileEdit }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const dropdownRef = useRef(null);
 
   // 사용자 이름에서 이니셜 생성
@@ -49,15 +51,10 @@ const ProfileDropdown = ({ user, onSignOut, onProfileEdit }) => {
     }
   };
 
-  // 프로필 편집 처리 (향후 구현)
+  // 프로필 편집 처리
   const handleProfileEdit = () => {
     setIsOpen(false);
-    if (onProfileEdit) {
-      onProfileEdit();
-    } else {
-      // 임시: 알림만 표시
-      alert('프로필 편집 기능은 다음 단계에서 구현됩니다.');
-    }
+    setShowProfileModal(true);
   };
 
   // 사용자 정보 추출
@@ -136,6 +133,12 @@ const ProfileDropdown = ({ user, onSignOut, onProfileEdit }) => {
           </div>
         </div>
       )}
+      
+      {/* 프로필 편집 모달 */}
+      <ProfileEditModal 
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 };
