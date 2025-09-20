@@ -233,7 +233,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
           <form onSubmit={handleSave} className="p-6 space-y-4">
             {/* 이름 */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 이름
               </label>
               <div className="relative">
@@ -252,7 +252,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
 
             {/* 이메일 (읽기 전용) */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 이메일
               </label>
               <div className="relative">
@@ -262,7 +262,8 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
                   type="email"
                   value={formData.email}
                   readOnly
-                  className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                  tabIndex={-1}
+                  className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 focus:border-gray-300"
                 />
                 <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
               </div>
@@ -275,7 +276,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
               
               {/* 현재 비밀번호 */}
               <div className="mb-3">
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   현재 비밀번호
                 </label>
                 <div className="flex space-x-2">
@@ -286,7 +287,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
                       value={formData.currentPassword}
                       onChange={handleInputChange}
                       onKeyPress={handleCurrentPasswordKeyPress}
-                      placeholder="현재 비밀번호"
+                      placeholder=""
                       disabled={currentPasswordVerified}
                       autoComplete="current-password"
                     />
@@ -323,7 +324,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
                 <>
                   {/* 새 비밀번호 */}
                   <div className="mb-3">
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       새 비밀번호
                     </label>
                     <PasswordField
@@ -338,7 +339,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
 
                   {/* 새 비밀번호 확인 */}
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       새 비밀번호 확인
                     </label>
                     <PasswordField
