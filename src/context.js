@@ -155,6 +155,9 @@ const useOvertimeData = () => {
           console.error('Failed to load data:', error);
         }
         setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();

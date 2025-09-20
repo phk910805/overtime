@@ -52,12 +52,20 @@ export class AuthService {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // 권한 오류나 데이터 없음은 정상 상황으로 처리
+        if (error.code === '42501' || error.code === 'PGRST116') {
+          console.warn('사용자 프로필 없음 또는 권한 없음:', error.code);
+          return null;
+        }
+        throw error;
+      }
       
       this.currentUser = data;
       return data;
     } catch (error) {
       console.error('사용자 프로필 로드 실패:', error);
+      // 오류 발생 시에도 앱이 중단되지 않도록
       return null;
     }
   }
