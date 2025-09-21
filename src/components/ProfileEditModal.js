@@ -426,7 +426,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
         onClose={hideToast}
         type={toast.type}
         duration={3000}
-        position="top-center"
+        position="bottom-center"
       />
     </div>
   );

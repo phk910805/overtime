@@ -51,7 +51,7 @@ const Toast = memo(({ message, show, onClose, type = 'error' }) => {
   const config = getToastConfig();
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
       <div className={`${config.bgColor} ${config.textColor} px-4 py-2 rounded-md shadow-lg`}>
         {message}
       </div>

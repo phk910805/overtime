@@ -105,7 +105,7 @@ export const EmptyState = memo(({ message, colSpan }) => {
 });
 
 // ========== ENHANCED TOAST COMPONENT ==========
-export const Toast = memo(({ message, show, onClose, type = 'success', duration = 3000, position = 'top-center' }) => {
+export const Toast = memo(({ message, show, onClose, type = 'success', duration = 3000, position = 'bottom-center' }) => {
   useEffect(() => {
     if (show && duration > 0) {
       const timer = setTimeout(onClose, duration);
