@@ -255,7 +255,22 @@ export class AuthService {
         password: newPassword
       });
 
-      if (error) throw error;
+      if (error) {
+        // Supabase 영어 에러 메시지를 한글로 변환
+        let koreanError = error.message;
+        
+        if (error.message.includes('New password should be different from the old password')) {
+          koreanError = '새 비밀번호는 기존 비밀번호와 달라야 합니다.';
+        } else if (error.message.includes('Password should be at least')) {
+          koreanError = '비밀번호는 6자리 이상이어야 합니다.';
+        } else if (error.message.includes('Unable to validate email address')) {
+          koreanError = '이메일 주소를 확인할 수 없습니다.';
+        } else if (error.message.includes('Password is too weak')) {
+          koreanError = '비밀번호가 너무 약합니다.';
+        }
+        
+        throw new Error(koreanError);
+      }
 
       console.log('✅ 비밀번호 변경 성공');
       return { success: true };
