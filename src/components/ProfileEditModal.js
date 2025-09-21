@@ -4,16 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Save, X, AlertCircle } from 'lucide-react';
+import { User, Mail, Save, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getAuthService } from '../services/authService';
 import PasswordField from './PasswordField';
+import { Toast } from './CommonUI';
 
 const ProfileEditModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
   // 비밀번호 검증 관련 상태
   const [currentPasswordVerified, setCurrentPasswordVerified] = useState(false);
@@ -34,6 +34,15 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
   });
   
   const authService = getAuthService();
+
+  // Toast 헬퍼 함수
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast({ show: false, message: '', type: 'success' });
+  };
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -56,8 +65,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
   // 모달이 닫힐 때 폼 초기화
   useEffect(() => {
     if (!isOpen) {
-      setError('');
-      setMessage('');
+      hideToast();
       setCurrentPasswordVerified(false);
       setPasswordVerifying(false);
       setFormData(prev => ({
@@ -76,9 +84,8 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: value
     }));
-    // 입력 시 메시지 클리어
-    if (error) setError('');
-    if (message) setMessage('');
+    // 입력 시 토스트 메시지 클리어
+    if (toast.show) hideToast();
     
     // 현재 비밀번호가 변경되면 검증 상태 초기화
     if (name === 'currentPassword' && currentPasswordVerified) {
@@ -89,25 +96,25 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
   // 현재 비밀번호 검증
   const verifyCurrentPassword = async () => {
     if (!formData.currentPassword) {
-      setError('현재 비밀번호를 입력해주세요.');
+      showToast('현재 비밀번호를 입력해주세요.', 'error');
       return;
     }
 
     setPasswordVerifying(true);
-    setError('');
+    hideToast();
 
     try {
       const isValid = await authService.verifyCurrentPassword(formData.currentPassword);
       
       if (isValid) {
         setCurrentPasswordVerified(true);
-        setMessage('현재 비밀번호가 확인되었습니다.');
+        showToast('현재 비밀번호가 확인되었습니다.', 'success');
       } else {
-        setError('비밀번호를 정확히 입력해 주세요.');
+        showToast('비밀번호를 정확히 입력해 주세요.', 'error');
         setCurrentPasswordVerified(false);
       }
     } catch (error) {
-      setError('비밀번호 검증 중 오류가 발생했습니다.');
+      showToast('비밀번호 검증 중 오류가 발생했습니다.', 'error');
       setCurrentPasswordVerified(false);
     } finally {
       setPasswordVerifying(false);
@@ -136,7 +143,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
   // 폼 유효성 검사
   const validateForm = () => {
     if (!formData.fullName.trim()) {
-      setError('이름을 입력해주세요.');
+      showToast('이름을 입력해주세요.', 'error');
       return false;
     }
 
@@ -145,20 +152,20 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     
     if (isPasswordChangeAttempt) {
       if (!formData.newPassword) {
-        setError('새 비밀번호를 입력해주세요.');
+        showToast('새 비밀번호를 입력해주세요.', 'error');
         return false;
       }
       if (formData.newPassword.length < 6) {
-        setError('새 비밀번호는 6자리 이상이어야 합니다.');
+        showToast('새 비밀번호는 6자리 이상이어야 합니다.', 'error');
         return false;
       }
       if (formData.newPassword !== formData.confirmPassword) {
-        setError('새 비밀번호가 일치하지 않습니다.');
+        showToast('새 비밀번호가 일치하지 않습니다.', 'error');
         return false;
       }
       // TODO: 새 비밀번호가 기존과 동일한지 검증 (추후 구현)
       // if (formData.newPassword === 기존비밀번호) {
-      //   setError('새 비밀번호는 기존 비밀번호와 달라야 합니다.');
+      //   showToast('새 비밀번호는 기존 비밀번호와 달라야 합니다.', 'error');
       //   return false;
       // }
     }
@@ -173,8 +180,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     if (!validateForm()) return;
 
     setLoading(true);
-    setError('');
-    setMessage('');
+    hideToast();
 
     try {
       // 이름 변경은 항상 처리 (TODO: 실제 프로필 업데이트 API)
@@ -184,12 +190,12 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       if (isPasswordChange) {
         const result = await authService.updatePassword(formData.newPassword);
         if (!result.success) {
-          setError(result.error || '비밀번호 변경에 실패했습니다.');
+          showToast(result.error || '비밀번호 변경에 실패했습니다.', 'error');
           return;
         }
       }
       
-      setMessage('프로필이 성공적으로 업데이트되었습니다.');
+      showToast('프로필이 성공적으로 업데이트되었습니다.', 'success');
       
       // 비밀번호 필드 초기화
       setFormData(prev => ({
@@ -207,7 +213,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
 
     } catch (error) {
       console.error('프로필 업데이트 에러:', error);
-      setError('프로필 업데이트에 실패했습니다.');
+      showToast('프로필 업데이트에 실패했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -383,20 +389,6 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {/* 메시지 영역 */}
-            {error && (
-              <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                <AlertCircle className="w-4 h-4" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {message && (
-              <div className="text-green-600 text-sm bg-green-50 p-3 rounded-md">
-                {message}
-              </div>
-            )}
-
             {/* 버튼 영역 */}
             <div className="flex space-x-3 pt-4">
               <button
@@ -426,6 +418,16 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
           </form>
         </div>
       </div>
+      
+      {/* Toast */}
+      <Toast 
+        message={toast.message} 
+        show={toast.show} 
+        onClose={hideToast}
+        type={toast.type}
+        duration={3000}
+        position="top-center"
+      />
     </div>
   );
 };
