@@ -279,6 +279,34 @@ export class AuthService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * 사용자 프로필 업데이트
+   * @param {object} profileData - 업데이트할 프로필 데이터
+   * @param {string} profileData.fullName - 사용자 이름
+   * @returns {Promise<{success: boolean, error?: string, user?: object}>}
+   */
+  async updateProfile(profileData) {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: profileData.fullName
+        }
+      });
+
+      if (error) throw error;
+
+      // 내부 상태 업데이트
+      this.currentUser = data.user;
+      this.notifyListeners('USER_UPDATED', data.user);
+
+      console.log('✅ 프로필 업데이트 성공');
+      return { success: true, user: data.user };
+    } catch (error) {
+      console.error('❌ 프로필 업데이트 실패:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // 싱글톤 인스턴스 생성

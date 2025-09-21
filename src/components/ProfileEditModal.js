@@ -183,7 +183,18 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     hideToast();
 
     try {
-      // 이름 변경은 항상 처리 (TODO: 실제 프로필 업데이트 API)
+      // 이름 변경 처리
+      const nameChanged = formData.fullName.trim() !== initialData.fullName;
+      if (nameChanged) {
+        const profileResult = await authService.updateProfile({
+          fullName: formData.fullName.trim()
+        });
+        
+        if (!profileResult.success) {
+          showToast(profileResult.error || '프로필 업데이트에 실패했습니다.', 'error');
+          return;
+        }
+      }
       
       // 비밀번호 변경이 있는 경우에만 처리
       const isPasswordChange = currentPasswordVerified && formData.newPassword;
@@ -196,6 +207,12 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
       }
       
       showToast('프로필이 성공적으로 업데이트되었습니다.', 'success');
+      
+      // 새로운 사용자 정보로 초기값 업데이트
+      setInitialData({
+        fullName: formData.fullName.trim(),
+        email: formData.email
+      });
       
       // 비밀번호 필드 초기화
       setFormData(prev => ({
