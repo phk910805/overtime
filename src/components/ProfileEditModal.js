@@ -131,21 +131,17 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
 
   // 변경사항 감지 함수
   const hasChanges = () => {
-    // 이름 변경 확인
-    const nameChanged = formData.fullName.trim() !== initialData.fullName;
+    // 이름은 변경 불가능하므로 제외
     
     // 비밀번호 변경 확인 (현재 비밀번호 검증되고 새 비밀번호 있음)
     const passwordChanged = currentPasswordVerified && formData.newPassword;
     
-    return nameChanged || passwordChanged;
+    return passwordChanged;
   };
   
   // 폼 유효성 검사
   const validateForm = () => {
-    if (!formData.fullName.trim()) {
-      showToast('이름을 입력해주세요.', 'error');
-      return false;
-    }
+    // 이름은 변경 불가능하므로 검증 제외
 
     // 비밀번호 변경을 시도하는 경우에만 비밀번호 검증
     const isPasswordChangeAttempt = currentPasswordVerified && (formData.newPassword || formData.confirmPassword);
@@ -183,19 +179,6 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     hideToast();
 
     try {
-      // 이름 변경 처리
-      const nameChanged = formData.fullName.trim() !== initialData.fullName;
-      if (nameChanged) {
-        const profileResult = await authService.updateProfile({
-          fullName: formData.fullName.trim()
-        });
-        
-        if (!profileResult.success) {
-          showToast(profileResult.error || '프로필 업데이트에 실패했습니다.', 'error');
-          return;
-        }
-      }
-      
       // 비밀번호 변경이 있는 경우에만 처리
       const isPasswordChange = currentPasswordVerified && formData.newPassword;
       if (isPasswordChange) {
@@ -204,29 +187,23 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
           showToast(result.error || '비밀번호 변경에 실패했습니다.', 'error');
           return;
         }
-      }
-      
-      showToast('프로필이 성공적으로 업데이트되었습니다.', 'success');
-      
-      // 새로운 사용자 정보로 초기값 업데이트
-      setInitialData({
-        fullName: formData.fullName.trim(),
-        email: formData.email
-      });
-      
-      // 비밀번호 필드 초기화
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }));
-      setCurrentPasswordVerified(false);
+        
+        showToast('비밀번호가 성공적으로 변경되었습니다.', 'success');
+        
+        // 비밀번호 필드 초기화
+        setFormData(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        }));
+        setCurrentPasswordVerified(false);
 
-      // 2초 후 모달 닫기
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+        // 2초 후 모달 닫기
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      }
 
     } catch (error) {
       console.error('프로필 업데이트 에러:', error);
@@ -293,12 +270,13 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
                   name="fullName"
                   type="text"
                   value={formData.fullName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="이름을 입력하세요"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 focus:border-gray-300"
                 />
                 <User className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
               </div>
+              <p className="text-xs text-gray-500 mt-1">이름은 변경할 수 없습니다.</p>
             </div>
 
             {/* 이메일 (읽기 전용) */}
