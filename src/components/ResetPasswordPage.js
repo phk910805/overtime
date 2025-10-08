@@ -1,5 +1,5 @@
 /**
- * ResetPasswordPage.js
+ * ResetPasswordPage.js v2.0 - verifyOtp
  * 비밀번호 재설정 페이지 (이메일 링크에서 접근)
  */
 
@@ -19,54 +19,62 @@ const ResetPasswordPage = ({ onComplete }) => {
 
   // 컴포넌트 마운트 시 URL에서 토큰 확인
   useEffect(() => {
+    console.log('🚀 ResetPasswordPage v2.0 - verifyOtp 버전 로드됨');
     handlePasswordRecovery();
   }, []);
 
   const handlePasswordRecovery = async () => {
     try {
-      // URL hash에서 모든 파라미터 추출
+      // URL hash에서 파라미터 추출
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
+      const token = params.get('access_token');
       const type = params.get('type');
 
-      console.log('🔍 토큰 확인:', { 
-        accessToken: accessToken?.substring(0, 10) + '...', 
-        refreshToken: refreshToken ? refreshToken.substring(0, 10) + '...' : 'none',
-        type 
+      console.log('🔍 [v2.0] 토큰 확인:', { 
+        hasToken: !!token,
+        type,
+        tokenPreview: token?.substring(0, 10) + '...'
       });
 
-      if (!accessToken || type !== 'recovery') {
+      if (!token || type !== 'recovery') {
         console.error('❌ 유효하지 않은 토큰 또는 타입');
         setIsValidToken(false);
         setError('유효하지 않은 재설정 링크입니다.');
         return;
       }
 
-      // Supabase 세션 설정 시도
-      const { data, error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || accessToken
+      console.log('📞 verifyOtp 호출 시작...');
+      
+      // verifyOtp를 사용하여 recovery 토큰 검증 및 세션 생성
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'recovery'
       });
 
-      if (sessionError) {
-        console.error('❌ 세션 생성 실패:', sessionError);
+      if (verifyError) {
+        console.error('❌ 토큰 검증 실패:', verifyError);
+        setIsValidToken(false);
         
-        // 세션 생성 실패해도 토큰이 있으면 직접 비밀번호 변경 가능
-        // Supabase recovery 토큰은 특별하게 처리됨
-        console.log('⚠️ 세션 없이 recovery 모드로 진행');
-        setIsValidToken(true);
+        let errorMessage = '재설정 링크가 만료되었거나 유효하지 않습니다.';
+        if (verifyError.message.includes('expired')) {
+          errorMessage = '재설정 링크가 만료되었습니다. 다시 요청해주세요.';
+        } else if (verifyError.message.includes('invalid')) {
+          errorMessage = '유효하지 않은 재설정 링크입니다.';
+        }
+        
+        setError(errorMessage);
         return;
       }
 
       if (data.session) {
-        console.log('✅ 세션 생성 완료');
+        console.log('✅ [v2.0] 세션 생성 완료!');
         setIsValidToken(true);
       } else {
-        console.log('⚠️ 세션 없이 recovery 모드로 진행');
-        setIsValidToken(true);
+        console.error('❌ 세션이 생성되지 않음');
+        setIsValidToken(false);
+        setError('세션 생성에 실패했습니다. 다시 시도해주세요.');
       }
 
     } catch (error) {
@@ -112,7 +120,18 @@ const ResetPasswordPage = ({ onComplete }) => {
     setError('');
 
     try {
-      // updateUser는 현재 세션이 있어야 작동
+      console.log('🔄 비밀번호 변경 시도...');
+      
+      // 현재 세션 확인
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('세션이 만료되었습니다. 재설정 링크를 다시 요청해주세요.');
+      }
+
+      console.log('✅ 세션 확인 완료, updateUser 호출...');
+
+      // updateUser로 비밀번호 변경
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -133,7 +152,7 @@ const ResetPasswordPage = ({ onComplete }) => {
         throw new Error(koreanError);
       }
 
-      console.log('✅ 비밀번호 재설정 성공');
+      console.log('✅ 비밀번호 재설정 성공!');
       setSuccess(true);
 
       // 3초 후 로그아웃 & 로그인 화면으로
@@ -169,7 +188,7 @@ const ResetPasswordPage = ({ onComplete }) => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">재설정 링크 확인 중...</p>
+          <p className="mt-4 text-gray-600">재설정 링크 확인 중... (v2.0)</p>
         </div>
       </div>
     );
@@ -258,7 +277,7 @@ const ResetPasswordPage = ({ onComplete }) => {
           <Clock className="w-12 h-12 text-blue-600" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          새 비밀번호 설정
+          새 비밀번호 설정 (v2.0)
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           안전한 비밀번호를 입력해주세요
