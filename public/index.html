@@ -13,6 +13,28 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>초과근무시간 관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GitHub Pages SPA 라우팅 지원 -->
+    <script>
+      // Single Page Apps for GitHub Pages
+      // https://github.com/rafgraph/spa-github-pages
+      (function(l) {
+        if (l.search) {
+          var q = {};
+          l.search.slice(1).split('&').forEach(function(v) {
+            var a = v.split('=');
+            q[a[0]] = a.slice(1).join('=').replace(/~and~/g, '&');
+          });
+          if (q.p !== undefined) {
+            window.history.replaceState(null, null,
+              l.pathname.slice(0, -10) + (q.p || '') +
+              (q.q ? ('?' + q.q) : '') +
+              l.hash
+            );
+          }
+        }
+      }(window.location))
+    </script>
   </head>
   <body>
     <noscript>이 애플리케이션을 실행하려면 JavaScript가 필요합니다.</noscript>

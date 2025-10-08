@@ -261,6 +261,38 @@ export class AuthService {
   }
 
   /**
+   * 비밀번호 재설정 이메일 전송
+   * @param {string} email - 재설정 이메일을 받을 주소
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async sendPasswordResetEmail(email) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${this.getRedirectURL()}/reset-password`
+      });
+
+      if (error) {
+        // Supabase 영어 에러 메시지를 한글로 변환
+        let koreanError = error.message;
+        
+        if (error.message.includes('Invalid email')) {
+          koreanError = '올바른 이메일 형식을 입력해주세요.';
+        } else if (error.message.includes('Email rate limit exceeded')) {
+          koreanError = '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.';
+        }
+        
+        throw new Error(koreanError);
+      }
+
+      console.log('✅ 비밀번호 재설정 이메일 전송 성공:', email);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ 비밀번호 재설정 이메일 전송 실패:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * 비밀번호 변경
    * @param {string} newPassword - 새 비밀번호
    * @returns {Promise<{success: boolean, error?: string}>}

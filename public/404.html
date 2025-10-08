@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>초과 근무시간 관리</title>
+  <script>
+    // Single Page Apps for GitHub Pages
+    // https://github.com/rafgraph/spa-github-pages
+    
+    // Store the redirect path before replacing the URL
+    sessionStorage.redirect = location.href;
+    
+    var pathSegmentsToKeep = 1; // For /overtime/
+    
+    var l = window.location;
+    
+    // Redirect to index.html with the path encoded in the query string
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/index.html?p=/' +
+      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
+  </script>
+</head>
+<body>
+  <!-- GitHub Pages SPA 리다이렉트 처리 중... -->
+</body>
+</html>

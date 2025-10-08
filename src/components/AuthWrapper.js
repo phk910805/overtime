@@ -1,18 +1,44 @@
 /**
  * 인증 래퍼 컴포넌트
- * 로그인 상태에 따라 로그인 폼 또는 메인 앱을 표시
+ * 로그인 상태 및 URL 라우팅에 따라 적절한 화면 표시
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from './LoginForm';
-import ProfileDropdown from './ProfileDropdown';
-import LoginButton from './LoginButton';
+import ResetPasswordPage from './ResetPasswordPage';
 
 const AuthWrapper = ({ children }) => {
-  const { user, loading, initialized, signIn, signOut, signUp } = useAuth();
+  const { user, loading, initialized, signIn, signUp } = useAuth();
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [currentRoute, setCurrentRoute] = useState('login');
+
+  // URL 변경 감지
+  useEffect(() => {
+    const checkRoute = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      
+      // /reset-password 또는 hash에 reset-password나 access_token이 있는 경우
+      if (path.includes('reset-password') || hash.includes('reset-password') || hash.includes('access_token')) {
+        setCurrentRoute('reset-password');
+      } else {
+        setCurrentRoute('login');
+      }
+    };
+
+    checkRoute();
+    
+    // URL 변경 감지
+    window.addEventListener('popstate', checkRoute);
+    window.addEventListener('hashchange', checkRoute);
+    
+    return () => {
+      window.removeEventListener('popstate', checkRoute);
+      window.removeEventListener('hashchange', checkRoute);
+    };
+  }, []);
 
   // 로그인 처리
   const handleLogin = async (email, password) => {
@@ -56,6 +82,13 @@ const AuthWrapper = ({ children }) => {
     }
   };
 
+  // 비밀번호 재설정 완료 후 처리
+  const handleResetComplete = () => {
+    setCurrentRoute('login');
+    // URL 정리
+    window.history.pushState({}, '', '/overtime/');
+  };
+
   // 로딩 중
   if (loading || !initialized) {
     return (
@@ -66,6 +99,11 @@ const AuthWrapper = ({ children }) => {
         </div>
       </div>
     );
+  }
+
+  // 비밀번호 재설정 페이지 (로그인 여부 무관)
+  if (currentRoute === 'reset-password') {
+    return <ResetPasswordPage onComplete={handleResetComplete} />;
   }
 
   // 로그인되지 않은 상태
