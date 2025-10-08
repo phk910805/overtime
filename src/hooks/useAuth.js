@@ -68,6 +68,9 @@ export function useAuth() {
     setLoading(true);
     try {
       const result = await authService.signUp(email, password, userData);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       return result;
     } finally {
       setLoading(false);
@@ -79,6 +82,9 @@ export function useAuth() {
     setLoading(true);
     try {
       const result = await authService.signIn(email, password);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       return result;
     } finally {
       setLoading(false);

@@ -35,8 +35,10 @@ export class AuthService {
         options: {
           emailRedirectTo: this.getRedirectURL(),
           data: {
-            full_name: userData.fullName || '',
-            role: userData.role || 'employee'
+            full_name: userData.full_name || '',
+            company_name: userData.company_name || '',
+            business_number: userData.business_number || '',
+            role: userData.role || 'admin'
           }
         }
       });
@@ -48,7 +50,21 @@ export class AuthService {
 
     } catch (error) {
       console.error('❌ 회원가입 실패:', error.message);
-      return { success: false, error: error.message };
+      
+      // Supabase 영어 에러 메시지를 한글로 변환
+      let koreanError = error.message;
+      
+      if (error.message === 'User already registered') {
+        koreanError = '이미 가입된 이메일입니다.';
+      } else if (error.message.includes('Invalid email')) {
+        koreanError = '올바른 이메일 주소를 입력해주세요.';
+      } else if (error.message.includes('Password should be at least')) {
+        koreanError = '비밀번호는 6자리 이상이어야 합니다.';
+      } else if (error.message.includes('Signup is disabled')) {
+        koreanError = '회원가입이 비활성화되어 있습니다.';
+      }
+      
+      return { success: false, error: koreanError };
     }
   }
 
