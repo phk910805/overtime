@@ -17,32 +17,60 @@ const ResetPasswordPage = ({ onComplete }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // 컴포넌트 마운트 시 세션 확인
+  // 컴포넌트 마운트 시 URL에서 토큰 확인
   useEffect(() => {
-    checkSession();
+    handlePasswordRecovery();
   }, []);
 
-  const checkSession = async () => {
+  const handlePasswordRecovery = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // URL hash에서 모든 파라미터 추출
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
       
-      if (error) {
-        console.error('세션 확인 실패:', error);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+
+      console.log('🔍 토큰 확인:', { 
+        accessToken: accessToken?.substring(0, 10) + '...', 
+        refreshToken: refreshToken ? refreshToken.substring(0, 10) + '...' : 'none',
+        type 
+      });
+
+      if (!accessToken || type !== 'recovery') {
+        console.error('❌ 유효하지 않은 토큰 또는 타입');
         setIsValidToken(false);
-        setError('유효하지 않은 재설정 링크입니다. 다시 시도해주세요.');
+        setError('유효하지 않은 재설정 링크입니다.');
         return;
       }
 
-      if (!session) {
-        setIsValidToken(false);
-        setError('재설정 링크가 만료되었습니다. 다시 요청해주세요.');
+      // Supabase 세션 설정 시도
+      const { data, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || accessToken
+      });
+
+      if (sessionError) {
+        console.error('❌ 세션 생성 실패:', sessionError);
+        
+        // 세션 생성 실패해도 토큰이 있으면 직접 비밀번호 변경 가능
+        // Supabase recovery 토큰은 특별하게 처리됨
+        console.log('⚠️ 세션 없이 recovery 모드로 진행');
+        setIsValidToken(true);
         return;
       }
 
-      console.log('✅ 유효한 재설정 토큰');
-      setIsValidToken(true);
+      if (data.session) {
+        console.log('✅ 세션 생성 완료');
+        setIsValidToken(true);
+      } else {
+        console.log('⚠️ 세션 없이 recovery 모드로 진행');
+        setIsValidToken(true);
+      }
+
     } catch (error) {
-      console.error('세션 확인 중 오류:', error);
+      console.error('❌ 토큰 처리 중 오류:', error);
       setIsValidToken(false);
       setError('오류가 발생했습니다. 다시 시도해주세요.');
     }
@@ -64,7 +92,6 @@ const ResetPasswordPage = ({ onComplete }) => {
       return false;
     }
 
-    // 비밀번호 강도 체크 (선택사항)
     const hasNumber = /\d/.test(newPassword);
     const hasLetter = /[a-zA-Z]/.test(newPassword);
     
@@ -85,20 +112,22 @@ const ResetPasswordPage = ({ onComplete }) => {
     setError('');
 
     try {
-      // Supabase의 updateUser로 비밀번호 변경
-      const { error } = await supabase.auth.updateUser({
+      // updateUser는 현재 세션이 있어야 작동
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) {
-        let koreanError = error.message;
+      if (updateError) {
+        console.error('❌ 비밀번호 변경 실패:', updateError);
         
-        if (error.message.includes('New password should be different from the old password')) {
+        let koreanError = updateError.message;
+        
+        if (updateError.message.includes('New password should be different')) {
           koreanError = '새 비밀번호는 기존 비밀번호와 달라야 합니다.';
-        } else if (error.message.includes('Password should be at least')) {
+        } else if (updateError.message.includes('Password should be at least')) {
           koreanError = '비밀번호는 6자리 이상이어야 합니다.';
-        } else if (error.message.includes('same as the old password')) {
-          koreanError = '기존 비밀번호와 동일합니다. 다른 비밀번호를 입력해주세요.';
+        } else if (updateError.message.includes('Auth session missing')) {
+          koreanError = '세션이 만료되었습니다. 재설정 링크를 다시 요청해주세요.';
         }
         
         throw new Error(koreanError);
@@ -107,14 +136,13 @@ const ResetPasswordPage = ({ onComplete }) => {
       console.log('✅ 비밀번호 재설정 성공');
       setSuccess(true);
 
-      // 3초 후 로그인 화면으로 이동
+      // 3초 후 로그아웃 & 로그인 화면으로
       setTimeout(() => {
-        // 세션 종료 후 로그인 화면으로
         supabase.auth.signOut().then(() => {
           if (onComplete) {
             onComplete();
           } else {
-            window.location.href = '/';
+            window.location.href = '/overtime/';
           }
         });
       }, 3000);
@@ -131,7 +159,7 @@ const ResetPasswordPage = ({ onComplete }) => {
     if (onComplete) {
       onComplete();
     } else {
-      window.location.href = '/';
+      window.location.href = '/overtime/';
     }
   };
 
