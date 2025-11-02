@@ -145,7 +145,11 @@ const RecordHistory = memo(() => {
   } = useOvertimeContext();
   
   const [activeHistoryTab, setActiveHistoryTab] = useState('snapshot');
-  const [historySelectedMonth, setHistorySelectedMonth] = useState(contextSelectedMonth);
+  // 히스토리는 기본적으로 지난달부터 시작 (2025-10)
+  const [historySelectedMonth, setHistorySelectedMonth] = useState(() => {
+    // 현재가 2025-11이므로, 지난달은 2025-10
+    return '2025-10';
+  });
   
   // 히스토리 탭에서만 사용할 월 선택 핸들러
   const handleMonthChange = useCallback((newMonth) => {
@@ -239,7 +243,8 @@ const RecordHistory = memo(() => {
         <MonthSelector
           selectedMonth={historySelectedMonth}
           onMonthChange={handleMonthChange}
-          maxMonth={new Date().toISOString().slice(0, 7)}
+          minMonth="2025-01"  // 시스템 사용 시작 월
+          maxMonth="2025-10"  // 현재 월(2025-11) - 1 = 2025-10까지만 선택 가능
         />
       </div>
 
