@@ -402,6 +402,12 @@ const Dashboard = memo(() => {
             <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
+                  {/* 이월 열 추가 */}
+                  <th className={`${STYLES.CENTER_HEADER_CLASSES} border-r border-gray-300`} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                    <HeaderCell alignment="center">
+                      이월
+                    </HeaderCell>
+                  </th>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
@@ -423,8 +429,36 @@ const Dashboard = memo(() => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
                 {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
+                  // TODO: 실제 이월 데이터 가져오기 (현재는 더미 데이터)
+                  const carryoverOvertime = 0; // 이월된 초과근무 시간
+                  const carryoverVacation = 0; // 이월된 사용 시간
+                  
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
+                      {/* 이월 열 - 첫 번째 셀 */}
+                      <td className={`px-2 py-2 text-center text-xs align-top relative h-20 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
+                        <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
+                        <div className="flex flex-col items-center justify-start h-full">
+                          {/* 이월 초과 (상단) */}
+                          <div className="flex-1 flex items-center justify-center py-1">
+                            <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
+                              <span className={carryoverOvertime > 0 ? "text-blue-600" : "text-gray-400"}>
+                                {carryoverOvertime > 0 ? `+${timeUtils.formatTime(carryoverOvertime)}` : '00:00'}
+                              </span>
+                            </div>
+                          </div>
+                          {/* 이월 사용 (하단) */}
+                          <div className="flex-1 flex items-center justify-center py-1">
+                            <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
+                              <span className={carryoverVacation > 0 ? "text-green-600" : "text-gray-400"}>
+                                {carryoverVacation > 0 ? `-${timeUtils.formatTime(carryoverVacation)}` : '00:00'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {/* 기존 날짜별 데이터 셀들 */}
                       {daysArray.map((day) => {
                         const date = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
                         const dailyMinutes = getDailyData(employee.id, date, 'overtime');
