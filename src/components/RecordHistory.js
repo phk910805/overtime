@@ -1,8 +1,9 @@
 import React, { useState, useCallback, memo, useMemo } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Clock, FileText } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, useSortingPaging } from '../utils';
 import { SortableHeader, TableHeader, EmptyState, Pagination } from './CommonUI';
+import Dashboard from './Dashboard';
 
 // ========== RECORD TABLE COMPONENT ==========
 const RecordTable = memo(({ records, type, sortConfig, onSort, employees, currentPage, itemsPerPage }) => {
@@ -141,7 +142,7 @@ const RecordHistory = memo(() => {
     selectedMonth
   } = useOvertimeContext();
   
-  const [activeHistoryTab, setActiveHistoryTab] = useState('overtime');
+  const [activeHistoryTab, setActiveHistoryTab] = useState('snapshot');
   
   const overtimeSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
   const vacationSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
@@ -222,11 +223,22 @@ const RecordHistory = memo(() => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">{selectedMonth} 기록 히스토리</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{selectedMonth} 히스토리</h2>
       </div>
 
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => handleTabChange('snapshot')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeHistoryTab === 'snapshot'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Calendar className="w-4 h-4 inline-block mr-1" />
+            과거 기록
+          </button>
           <button
             onClick={() => handleTabChange('overtime')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -235,6 +247,7 @@ const RecordHistory = memo(() => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
+            <Clock className="w-4 h-4 inline-block mr-1" />
             초과근무 기록 ({sortedOvertimeRecords.length})
           </button>
           <button
@@ -245,13 +258,27 @@ const RecordHistory = memo(() => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
+            <FileText className="w-4 h-4 inline-block mr-1" />
             휴가전환 기록 ({sortedVacationRecords.length})
           </button>
         </nav>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {activeHistoryTab === 'overtime' && (
+      {/* 과거 기록 탭 - 대시보드 스냅샷 */}
+      {activeHistoryTab === 'snapshot' && (
+        <div>
+          <Dashboard 
+            editable={false}
+            showReadOnlyBadge={true}
+            isHistoryMode={true}
+          />
+        </div>
+      )}
+
+      {/* 초과근무 및 휴가전환 기록 탭 */}
+      {(activeHistoryTab === 'overtime' || activeHistoryTab === 'vacation') && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {activeHistoryTab === 'overtime' && (
           <>
             <RecordTable
               records={sortedOvertimeRecords}
@@ -270,9 +297,9 @@ const RecordHistory = memo(() => {
               totalItems={sortedOvertimeRecords.length}
             />
           </>
-        )}
+          )}
 
-        {activeHistoryTab === 'vacation' && (
+          {activeHistoryTab === 'vacation' && (
           <>
             <RecordTable
               records={sortedVacationRecords}
@@ -291,8 +318,9 @@ const RecordHistory = memo(() => {
               totalItems={sortedVacationRecords.length}
             />
           </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });

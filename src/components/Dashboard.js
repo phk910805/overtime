@@ -48,10 +48,10 @@ const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:
   const prefix = color === "green" ? "-" : "+";
   const baseClasses = "w-16 h-8 rounded text-xs flex items-center justify-center";
   const dynamicClasses = disabled ? 
-    `${baseClasses} bg-gray-50 text-gray-400` : 
+    `${baseClasses} text-gray-500 cursor-not-allowed` : 
     `${baseClasses} cursor-pointer hover:bg-gray-100`;
   const displayText = value === 0 ? placeholder : `${prefix}${timeUtils.formatTimeInput(value)}`;
-  const textColor = value === 0 ? "text-gray-400" : colorClass;
+  const textColor = value === 0 ? "text-gray-500" : colorClass;
 
   if (disabled) {
     return (
@@ -232,7 +232,7 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   );
 });
 
-const Dashboard = memo(() => {
+const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryMode = false } = {}) => {
   const {
     selectedMonth,
     updateDailyTime,
@@ -309,17 +309,33 @@ const Dashboard = memo(() => {
         type={toast.type}
         duration={3000}
       />
+      {/* 읽기 전용 배지 */}
+      {showReadOnlyBadge && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-yellow-800 font-medium">
+              {isHistoryMode ? '과거 기록 - 읽기 전용' : '이전 월 데이터는 수정할 수 없습니다'}
+            </span>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">
           {selectedMonth} 월별 현황
         </h2>
-        <button
-          onClick={() => setShowBulkSetting(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>일괄 설정</span>
-        </button>
+        {editable && (
+          <button
+            onClick={() => setShowBulkSetting(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>일괄 설정</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -442,7 +458,7 @@ const Dashboard = memo(() => {
                           {/* 이월 초과 (상단) */}
                           <div className="flex-1 flex items-center justify-center py-1">
                             <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
-                              <span className={carryoverOvertime > 0 ? "text-blue-600" : "text-gray-400"}>
+                              <span className={carryoverOvertime > 0 ? "text-blue-600" : "text-gray-500"}>
                                 {carryoverOvertime > 0 ? `+${timeUtils.formatTime(carryoverOvertime)}` : '00:00'}
                               </span>
                             </div>
@@ -450,7 +466,7 @@ const Dashboard = memo(() => {
                           {/* 이월 사용 (하단) */}
                           <div className="flex-1 flex items-center justify-center py-1">
                             <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
-                              <span className={carryoverVacation > 0 ? "text-green-600" : "text-gray-400"}>
+                              <span className={carryoverVacation > 0 ? "text-green-600" : "text-gray-500"}>
                                 {carryoverVacation > 0 ? `-${timeUtils.formatTime(carryoverVacation)}` : '00:00'}
                               </span>
                             </div>
@@ -472,7 +488,7 @@ const Dashboard = memo(() => {
                                 <TimeDisplay 
                                   value={dailyMinutes}
                                   onClick={() => handleTimeInputClick(employee.id, day, dailyMinutes, 'overtime')}
-                                  disabled={!employee.isActive}
+                                  disabled={!employee.isActive || !editable}
                                   color="blue"
                                 />
                               </div>
@@ -480,7 +496,7 @@ const Dashboard = memo(() => {
                                 <TimeDisplay 
                                   value={vacationMinutes}
                                   onClick={() => handleTimeInputClick(employee.id, day, vacationMinutes, 'vacation')}
-                                  disabled={!employee.isActive}
+                                  disabled={!employee.isActive || !editable}
                                   placeholder="00:00"
                                   color="green"
                                 />
