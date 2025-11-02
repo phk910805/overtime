@@ -4,6 +4,7 @@ import { useOvertimeContext } from '../context';
 import { timeUtils, useSortingPaging } from '../utils';
 import { SortableHeader, TableHeader, EmptyState, Pagination } from './CommonUI';
 import Dashboard from './Dashboard';
+import MonthSelector from './MonthSelector';
 
 // ========== RECORD TABLE COMPONENT ==========
 const RecordTable = memo(({ records, type, sortConfig, onSort, employees, currentPage, itemsPerPage }) => {
@@ -139,10 +140,20 @@ const RecordHistory = memo(() => {
     employees,
     overtimeRecords,
     vacationRecords,
-    selectedMonth
+    selectedMonth: contextSelectedMonth,
+    setSelectedMonth
   } = useOvertimeContext();
   
   const [activeHistoryTab, setActiveHistoryTab] = useState('snapshot');
+  const [historySelectedMonth, setHistorySelectedMonth] = useState(contextSelectedMonth);
+  
+  // 히스토리 탭에서만 사용할 월 선택 핸들러
+  const handleMonthChange = useCallback((newMonth) => {
+    setHistorySelectedMonth(newMonth);
+  }, []);
+  
+  // 히스토리에서는 historySelectedMonth를 사용
+  const selectedMonth = historySelectedMonth;
   
   const overtimeSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
   const vacationSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
@@ -223,7 +234,13 @@ const RecordHistory = memo(() => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">{selectedMonth} 히스토리</h2>
+        <h2 className="text-2xl font-bold text-gray-900">히스토리</h2>
+        {/* 월 선택기를 히스토리 탭에 추가 */}
+        <MonthSelector
+          selectedMonth={historySelectedMonth}
+          onMonthChange={handleMonthChange}
+          maxMonth={new Date().toISOString().slice(0, 7)}
+        />
       </div>
 
       <div className="border-b border-gray-200">
@@ -271,6 +288,7 @@ const RecordHistory = memo(() => {
             editable={false}
             showReadOnlyBadge={true}
             isHistoryMode={true}
+            customMonth={historySelectedMonth}
           />
         </div>
       )}

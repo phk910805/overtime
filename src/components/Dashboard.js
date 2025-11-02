@@ -232,15 +232,17 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   );
 });
 
-const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryMode = false } = {}) => {
+const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryMode = false, customMonth = null } = {}) => {
   const {
-    selectedMonth,
     updateDailyTime,
     getAllEmployeesWithRecords,
     getDailyData,
     getMonthlyStats,
     multiplier
   } = useOvertimeContext();
+
+  // Dashboard는 customMonth가 제공되지 않으면 항상 현재 월을 사용
+  const selectedMonth = customMonth || new Date().toISOString().slice(0, 7);
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
   const [showBulkSetting, setShowBulkSetting] = useState(false);
