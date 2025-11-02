@@ -11,24 +11,9 @@ import LoginButton from './components/LoginButton';
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { selectedMonth, setSelectedMonth } = useOvertimeContext();
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
-
-  const changeMonth = useCallback((direction) => {
-    const currentDate = new Date(selectedMonth + '-01');
-    if (direction === 'prev') {
-      currentDate.setMonth(currentDate.getMonth() - 1);
-    } else if (direction === 'next') {
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-    setSelectedMonth(currentDate.toISOString().slice(0, 7));
-  }, [selectedMonth, setSelectedMonth]);
-
-  const handleMonthChange = useCallback((e) => {
-    setSelectedMonth(e.target.value);
-  }, [setSelectedMonth]);
 
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
@@ -44,35 +29,13 @@ const OvertimeManagementApp = memo(() => {
               <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => changeMonth('prev')}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                  title="이전 달"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={() => changeMonth('next')}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                  title="다음 달"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors ml-2"
-                  title="설정"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                title="설정"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
               
               {/* 사용자 프로필 또는 로그인 버튼 */}
               {user ? (
