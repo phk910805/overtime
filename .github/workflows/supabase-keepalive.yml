@@ -2,24 +2,34 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    # 매주 화요일, 금요일 오전 9시 (한국 시간 기준 UTC 0시)
-    - cron: '0 0 * * 2,5'
+    # 주 3회 실행 (월/수/금 오전 9시 KST = UTC 0시)
+    - cron: '0 0 * * 1,3,5'
   workflow_dispatch: # 수동 실행 가능
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase
+      - name: Keep Supabase Active with DB Query
         run: |
-          echo "🏓 Pinging Supabase..."
+          echo "🏓 Keeping Supabase active with real DB query..."
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          # 실제 데이터베이스 쿼리 실행
           response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X GET '${{ secrets.SUPABASE_URL }}/rest/v1/' \
+            -X GET '${{ secrets.SUPABASE_URL }}/rest/v1/overtime_records?limit=1' \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
           
-          if [ $response -eq 200 ] || [ $response -eq 401 ]; then
-            echo "✅ Supabase is alive! (HTTP $response)"
+          echo "HTTP Response: $response"
+          
+          if [ $response -eq 200 ]; then
+            echo "✅ Success! Database query executed successfully."
+          elif [ $response -eq 401 ]; then
+            echo "✅ Supabase is alive (auth required but reachable)."
           else
             echo "⚠️ Unexpected response: HTTP $response"
+            exit 1
           fi
+          
+          echo "🎉 Keep-alive ping completed!"
