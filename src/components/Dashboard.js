@@ -238,11 +238,13 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     getAllEmployeesWithRecords,
     getDailyData,
     getMonthlyStats,
-    multiplier
+    multiplier,
+    selectedMonth: contextSelectedMonth,
+    setSelectedMonth: contextSetSelectedMonth
   } = useOvertimeContext();
 
-  // Dashboard는 customMonth가 제공되지 않으면 항상 현재 월을 사용
-  const selectedMonth = customMonth || new Date().toISOString().slice(0, 7);
+  // Dashboard는 customMonth가 제공되지 않으면 context의 selectedMonth를 사용
+  const selectedMonth = customMonth || contextSelectedMonth || new Date().toISOString().slice(0, 7);
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
   const [showBulkSetting, setShowBulkSetting] = useState(false);
@@ -381,7 +383,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
-                        {employee.name}
+                        {employee.lastUpdatedName || employee.name}
                         {!employee.isActive && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
                             삭제

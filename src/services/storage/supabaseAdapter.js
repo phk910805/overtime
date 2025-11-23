@@ -42,6 +42,37 @@ export class SupabaseAdapter extends StorageAdapter {
     }
   }
 
+  // 월별 직원 조회 (삭제 상태를 월 기준으로 판단)
+  async getEmployeesForMonth(yearMonth) {
+    try {
+      // yearMonth 형식: "2025-11"
+      const targetDate = `${yearMonth}-01`;
+      
+      // Supabase 함수 호출
+      const { data, error } = await this.supabase
+        .rpc('get_employees_for_month', { target_date: targetDate });
+
+      if (error) throw error;
+      
+      // 활성 직원만 필터링 (is_active = true)
+      const activeEmployees = (data || [])
+        .filter(emp => emp.is_active)
+        .map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          createdAt: emp.created_at,
+          deletedAt: emp.deleted_at,
+          lastUpdatedName: emp.last_updated_name
+        }));
+      
+      return activeEmployees;
+    } catch (error) {
+      console.warn('월별 직원 조회 실패, 기본 조회로 폴백:', error);
+      // 폴백: 기본 getEmployees 사용
+      return this.getEmployees();
+    }
+  }
+
   async addEmployee(employeeData) {
     try {
       const newEmployee = {
@@ -122,6 +153,17 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async deleteEmployee(id) {
     try {
+      // 삭제 전 현재 직원 정보 조회 (last_updated_name을 위해)
+      const { data: currentEmployee, error: fetchError } = await this.supabase
+        .from(this.tables.employees)
+        .select('name, last_updated_name')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        console.warn('직원 정보 조회 실패:', fetchError);
+      }
+
       // 소프트 삭제
       const { data, error } = await this.supabase
         .from(this.tables.employees)
@@ -132,11 +174,12 @@ export class SupabaseAdapter extends StorageAdapter {
 
       if (error) throw error;
 
-      // 직원 변경 이력 기록
+      // 직원 변경 이력 기록 (last_updated_name 우선 사용)
+      const nameToRecord = currentEmployee?.last_updated_name || currentEmployee?.name || data.name;
       const changeRecord = HistoryPolicy.createEmployeeChangeRecord(
         id, 
         '삭제', 
-        data.name
+        nameToRecord
       );
       await this.saveEmployeeChangeRecord(changeRecord);
 
@@ -431,7 +474,9 @@ export class SupabaseAdapter extends StorageAdapter {
     return {
       id: supabaseData.id,
       name: supabaseData.name,
-      createdAt: supabaseData.created_at
+      createdAt: supabaseData.created_at,
+      deletedAt: supabaseData.deleted_at,
+      lastUpdatedName: supabaseData.last_updated_name
     };
   }
 

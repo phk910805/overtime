@@ -74,6 +74,10 @@ const useOvertimeData = () => {
   const [employeeChangeRecords, setEmployeeChangeRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   const dataService = getDataService();
 
@@ -86,11 +90,16 @@ const useOvertimeData = () => {
 
         // 데이터 계층 초기화
         await initializeDataLayer();
-        // 데이터 로드
-        const [employeesData, employeeChangesData] = await Promise.all([
-          dataService.getEmployees(),
-          dataService.getEmployeeChangeRecords()
-        ]);
+        
+        // 월별 직원 데이터 로드 (getEmployeesForMonth 지원 여부 확인)
+        let employeesData;
+        if (dataService.getEmployeesForMonth) {
+          employeesData = await dataService.getEmployeesForMonth(selectedMonth);
+        } else {
+          employeesData = await dataService.getEmployees();
+        }
+        
+        const employeeChangesData = await dataService.getEmployeeChangeRecords();
 
         setEmployees(employeesData || []);
         setEmployeeChangeRecords(employeeChangesData || []);
@@ -111,12 +120,19 @@ const useOvertimeData = () => {
     };
 
     loadData();
-  }, [dataService]);
+  }, [dataService, selectedMonth]);
 
   const addEmployee = useCallback(async (name) => {
     try {
       const newEmployee = await dataService.addEmployee(name);
-      setEmployees(prev => [...prev, newEmployee]);
+      
+      // 현재 월 기준으로 직원 목록 재조회
+      if (dataService.getEmployeesForMonth) {
+        const updatedEmployees = await dataService.getEmployeesForMonth(selectedMonth);
+        setEmployees(updatedEmployees);
+      } else {
+        setEmployees(prev => [...prev, newEmployee]);
+      }
       
       // 변경 이력 새로고침
       const updatedChanges = await dataService.getEmployeeChangeRecords();
@@ -130,12 +146,19 @@ const useOvertimeData = () => {
       }
       throw error;
     }
-  }, [dataService]);
+  }, [dataService, selectedMonth]);
 
   const updateEmployee = useCallback(async (id, newName) => {
     try {
       const updatedEmployee = await dataService.updateEmployee(id, newName);
-      setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));
+      
+      // 현재 월 기준으로 직원 목록 재조회 (수정 시에도 월별 필터 적용)
+      if (dataService.getEmployeesForMonth) {
+        const updatedEmployees = await dataService.getEmployeesForMonth(selectedMonth);
+        setEmployees(updatedEmployees);
+      } else {
+        setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));
+      }
       
       // 변경 이력 새로고침
       const updatedChanges = await dataService.getEmployeeChangeRecords();
@@ -149,12 +172,19 @@ const useOvertimeData = () => {
       }
       throw error;
     }
-  }, [dataService]);
+  }, [dataService, selectedMonth]);
 
   const deleteEmployee = useCallback(async (id) => {
     try {
       const deletedEmployee = await dataService.deleteEmployee(id);
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      
+      // 현재 월 기준으로 직원 목록 재조회
+      if (dataService.getEmployeesForMonth) {
+        const updatedEmployees = await dataService.getEmployeesForMonth(selectedMonth);
+        setEmployees(updatedEmployees);
+      } else {
+        setEmployees(prev => prev.filter(emp => emp.id !== id));
+      }
       
       // 변경 이력 새로고침
       const updatedChanges = await dataService.getEmployeeChangeRecords();
@@ -168,7 +198,7 @@ const useOvertimeData = () => {
       }
       throw error;
     }
-  }, [dataService]);
+  }, [dataService, selectedMonth]);
 
   const updateOvertimeRecord = useCallback(async (employeeId, date, totalMinutes) => {
     try {
@@ -293,17 +323,14 @@ const useOvertimeData = () => {
   };
 
   const getAllEmployeesWithRecords = useCallback((currentSelectedMonth) => {
-    // 활성 직원들 (생성월 이후에만 표시)
-    const activeEmployees = employees
-      .filter(employee => {
-        if (!isValidEmployeeDate(employee)) return true;
-        const employeeCreatedMonth = getEmployeeCreatedMonth(employee);
-        return employeeCreatedMonth <= currentSelectedMonth;
-      })
-      .map(employee => ({
-        ...employee,
-        isActive: true
-      }));
+    // 직원 목록은 이미 selectedMonth 기준으로 필터링되어 있음
+    // employees는 getEmployeesForMonth를 통해 해당 월에 활성인 직원만 포함
+    const activeEmployees = employees.map(employee => ({
+      ...employee,
+      isActive: true,
+      // Dashboard 표시용 이름: lastUpdatedName 우선 사용
+      displayName: employee.lastUpdatedName || employee.name
+    }));
 
     // 선택된 월의 데이터만 필터링
     const [year, month] = currentSelectedMonth.split('-');
@@ -311,6 +338,7 @@ const useOvertimeData = () => {
     const monthlyVacationRecords = filterRecordsByMonth(vacationRecords, year, month);
 
     // 삭제된 직원 중 해당 월에 데이터가 있는 직원들 추출
+    // (현재 월 기준 삭제 상태이지만 과거 월에는 있어야 하는 경우)
     const deletedFromOvertime = extractDeletedEmployeesFromRecords(monthlyOvertimeRecords, activeEmployees);
     const deletedFromVacation = extractDeletedEmployeesFromRecords(monthlyVacationRecords, activeEmployees);
     
@@ -386,6 +414,8 @@ const useOvertimeData = () => {
     isLoading,
     error,
     multiplier,
+    selectedMonth,
+    setSelectedMonth,
 
     // 직원 관리
     addEmployee,
@@ -415,17 +445,11 @@ const useOvertimeData = () => {
 };
 
 export const OvertimeProvider = ({ children }) => {
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    return new Date().toISOString().slice(0, 7);
-  });
-
   const overtimeData = useOvertimeData();
 
   const value = useMemo(() => ({
-    selectedMonth,
-    setSelectedMonth,
     ...overtimeData
-  }), [selectedMonth, overtimeData]);
+  }), [overtimeData]);
 
   // 로딩 상태 표시
   if (overtimeData.isLoading) {

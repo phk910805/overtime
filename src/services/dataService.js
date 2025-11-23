@@ -54,6 +54,22 @@ export class DataService {
   }
 
   /**
+   * 특정 월 기준으로 직원 조회 (삭제 상태를 월별로 판단)
+   * @param {string} yearMonth - YYYY-MM 형식
+   */
+  async getEmployeesForMonth(yearMonth) {
+    const adapter = this._getAdapter();
+    
+    // Supabase 어댑터인 경우 월별 조회 사용
+    if (adapter.getEmployeesForMonth) {
+      return await adapter.getEmployeesForMonth(yearMonth);
+    }
+    
+    // localStorage 등 다른 어댑터는 기본 조회 사용
+    return await this.getEmployees();
+  }
+
+  /**
    * 직원 추가
    * @param {string} name - 직원 이름
    */
