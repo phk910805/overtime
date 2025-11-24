@@ -376,6 +376,12 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }
   }, []);
 
+  const handleThumbDragEnd = useCallback((finalPercent) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.onThumbDragEnd(finalPercent);
+    }
+  }, []);
+
   const daysInMonth = React.useMemo(() => dateUtils.getDaysInMonth(selectedMonth), [selectedMonth]);
   const yearMonth = React.useMemo(() => selectedMonth.split('-'), [selectedMonth]);
   const daysArray = React.useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
@@ -604,6 +610,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         onScroll={handleScroll}
         onTrackClick={handleTrackClick}
         onThumbDrag={handleThumbDrag}
+        onThumbDragEnd={handleThumbDragEnd}
         leftWidth={leftTableWidth}
         showTooltip={showScrollTooltip}
         onCloseTooltip={handleCloseTooltip}

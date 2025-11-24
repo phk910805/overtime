@@ -11,19 +11,24 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 const SCROLL_AMOUNT = 300;
 
 // 스크롤 컨트롤 바 (분리된 컴포넌트)
-export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onThumbDrag, leftWidth = 340, showTooltip = false, onCloseTooltip }) => {
+export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onThumbDrag, onThumbDragEnd, leftWidth = 340, showTooltip = false, onCloseTooltip }) => {
   const { canScrollLeft, canScrollRight, scrollPercent, thumbWidth } = scrollState;
   const showScrollControls = canScrollLeft || canScrollRight;
   const trackRef = useRef(null);
   const isDraggingRef = useRef(false);
   const dragEndTimeRef = useRef(0); // 드래그 종료 시간
   const [localScrollPercent, setLocalScrollPercent] = useState(scrollPercent);
+  const localScrollPercentRef = useRef(scrollPercent); // ref로도 관리
   
-  // 드래그 종료 후 200ms 지나야 외부 scrollPercent 동기화
+  // 드래그 중이 아닐 때만 외부 scrollPercent와 동기화
+  // 드래그 직후에는 동기화하지 않음 (위치 점프 방지)
   useEffect(() => {
-    const timeSinceDragEnd = Date.now() - dragEndTimeRef.current;
-    if (!isDraggingRef.current && timeSinceDragEnd > 200) {
-      setLocalScrollPercent(scrollPercent);
+    if (!isDraggingRef.current) {
+      const timeSinceDragEnd = Date.now() - dragEndTimeRef.current;
+      // 드래그 종료 직후 500ms 동안은 동기화하지 않음
+      if (timeSinceDragEnd > 500) {
+        setLocalScrollPercent(scrollPercent);
+      }
     }
   }, [scrollPercent]);
 
@@ -54,6 +59,7 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
       
       // 로컬 상태 즉시 업데이트 (부드러운 프레임)
       setLocalScrollPercent(percent);
+      localScrollPercentRef.current = percent; // ref도 함께 업데이트
       
       if (onThumbDrag) {
         onThumbDrag(percent);
@@ -66,6 +72,12 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
         dragEndTimeRef.current = Date.now();
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        
+        // 드래그 종료 콜백 호출 (localScrollPercent를 동기화하기 전에)
+        if (onThumbDragEnd) {
+          // 현재 localScrollPercent 값을 전달하여 실제 스크롤 위치를 고정
+          onThumbDragEnd(localScrollPercentRef.current);
+        }
       }
     };
 
@@ -76,7 +88,7 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [thumbWidth, onThumbDrag]);
+  }, [thumbWidth, onThumbDrag, onThumbDragEnd]);
 
   if (!showScrollControls) return null;
 
@@ -161,6 +173,10 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
   const hasDraggedRef = useRef(false); // 클릭 vs 드래그 구분
   const DRAG_THRESHOLD = 5; // 드래그로 판정하는 최소 이동 거리 (px)
   
+  // thumb 드래그 상태 (ScrollControlBar에서 드래그 중일 때)
+  const isThumbDraggingRef = useRef(false);
+  const thumbDragEndTimeRef = useRef(0);
+  
   // 관성 스크롤용 상태
   const lastMoveTimeRef = useRef(0);
   const lastMoveXRef = useRef(0);
@@ -171,6 +187,12 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
   const checkScrollability = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
+    
+    // thumb 드래그 종료 직후 500ms 동안은 상태 업데이트 방지 (위치 점프 방지)
+    const timeSinceThumbDragEnd = Date.now() - thumbDragEndTimeRef.current;
+    if (isThumbDraggingRef.current || timeSinceThumbDragEnd < 500) {
+      return;
+    }
 
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const canScrollLeft = scrollLeft > 1;
@@ -201,13 +223,16 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
     if (el) {
       el.addEventListener('scroll', checkScrollability);
       window.addEventListener('resize', checkScrollability);
+      
+      return () => {
+        clearTimeout(initTimer);
+        el.removeEventListener('scroll', checkScrollability);
+        window.removeEventListener('resize', checkScrollability);
+      };
     }
 
     return () => {
       clearTimeout(initTimer);
-      if (el) {
-        el.removeEventListener('scroll', checkScrollability);
-      }
       window.removeEventListener('resize', checkScrollability);
     };
   }, [checkScrollability]);
@@ -311,13 +336,18 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       
+      // thumb 드래그 중이면 관성 스크롤 실행 안 함
+      if (isThumbDraggingRef.current) {
+        return;
+      }
+      
       // 관성 스크롤 시작
       if (hasDraggedRef.current && Math.abs(velocityRef.current) > 0.1) {
         const el = scrollRef.current;
         if (!el) return;
         
-        const friction = 0.9; // 마찰 계수 (0.9~0.98, 높을수록 오래 미끄러짐)
-        const minVelocity = 0.1; // 정지 임계값
+        const friction = 0.9;
+        const minVelocity = 0.1;
         
         const animate = () => {
           velocityRef.current *= friction;
@@ -327,9 +357,7 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
             return;
           }
           
-          // 속도 반대 방향으로 스크롤 (드래그 방향과 동일)
-          el.scrollLeft -= velocityRef.current * 16; // 16ms 기준
-          
+          el.scrollLeft -= velocityRef.current * 16;
           momentumAnimationRef.current = requestAnimationFrame(animate);
         };
         
@@ -365,12 +393,62 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
       const el = scrollRef.current;
       if (!el) return;
       
+      // thumb 드래그 중임을 표시
+      isThumbDraggingRef.current = true;
+      
       const { scrollWidth, clientWidth } = el;
       const maxScroll = scrollWidth - clientWidth;
       const newScrollLeft = Math.round((percent / 100) * maxScroll);
       
       // scrollTo 대신 scrollLeft 직접 설정 (브라우저 반올림 방지)
       el.scrollLeft = newScrollLeft;
+    },
+    // thumb 드래그 종료 시 호출
+    onThumbDragEnd: (finalPercent) => {
+      
+      // 기존 관성 애니메이션 중지
+      if (momentumAnimationRef.current) {
+        cancelAnimationFrame(momentumAnimationRef.current);
+        momentumAnimationRef.current = null;
+      }
+      
+      // velocity 초기화 (관성 스크롤 방지)
+      velocityRef.current = 0;
+      hasDraggedRef.current = false;
+      isDraggingRef.current = false;
+      
+      const el = scrollRef.current;
+      if (!el) return;
+      
+      // 드래그 종료 시 최종 percent로 스크롤 위치 확정
+      if (finalPercent !== undefined) {
+        const { scrollWidth, clientWidth } = el;
+        const maxScroll = scrollWidth - clientWidth;
+        const targetScrollLeft = Math.round((finalPercent / 100) * maxScroll);
+        
+        // 브라우저 관성 스크롤 방지: 스크롤 위치를 지속적으로 복원
+        let frameCount = 0;
+        const maxFrames = 10; // 약 160ms 동안 위치 고정
+        
+        const lockPosition = () => {
+          if (frameCount < maxFrames) {
+            el.scrollLeft = targetScrollLeft;
+            frameCount++;
+            requestAnimationFrame(lockPosition);
+          } else {
+            isThumbDraggingRef.current = false;
+            thumbDragEndTimeRef.current = Date.now();
+          }
+        };
+        
+        el.scrollLeft = targetScrollLeft;
+        requestAnimationFrame(lockPosition);
+      } else {
+        setTimeout(() => {
+          isThumbDraggingRef.current = false;
+          thumbDragEndTimeRef.current = Date.now();
+        }, 50);
+      }
     },
   }), [scroll, handleTrackClick, scrollState]);
 
