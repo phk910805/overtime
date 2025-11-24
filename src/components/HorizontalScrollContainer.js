@@ -9,10 +9,9 @@ import React, { useState, useRef, useEffect, useCallback, memo, forwardRef, useI
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const SCROLL_AMOUNT = 300;
-const TOOLTIP_STORAGE_KEY = 'hideScrollTip';
 
 // 스크롤 컨트롤 바 (분리된 컴포넌트)
-export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onThumbDrag, leftWidth = 340 }) => {
+export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onThumbDrag, leftWidth = 340, showTooltip = false, onCloseTooltip }) => {
   const { canScrollLeft, canScrollRight, scrollPercent, thumbWidth } = scrollState;
   const showScrollControls = canScrollLeft || canScrollRight;
   const trackRef = useRef(null);
@@ -95,7 +94,20 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
         </div>
 
         {/* 좌우 버튼 */}
-        <div className="flex-shrink-0 bg-gray-100 h-full flex items-center">
+        <div className="flex-shrink-0 bg-gray-100 h-full flex items-center relative">
+          {/* 툴팁 - 버튼 위에 표시 */}
+          {showTooltip && (
+            <div className="absolute bottom-full right-0 mb-1 bg-gray-500 text-white text-xs px-3 py-2 rounded shadow-lg flex items-center space-x-2 whitespace-nowrap z-30">
+              <span>Shift + 마우스 휠로 가로 스크롤을 할 수 있습니다.</span>
+              <button
+                onClick={onCloseTooltip}
+                className="hover:bg-gray-400 rounded p-0.5"
+                aria-label="닫기"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => onScroll('left')}
             disabled={!canScrollLeft}
@@ -121,13 +133,25 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
 // 메인 스크롤 컨테이너
 const HorizontalScrollContainer = forwardRef(({ children, className = '', onScrollStateChange }, ref) => {
   const scrollRef = useRef(null);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [scrollState, setScrollState] = useState({
     canScrollLeft: false,
     canScrollRight: false,
     scrollPercent: 0,
     thumbWidth: 20,
   });
+  
+  // 드래그 스크롤 상태
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false); // 클릭 vs 드래그 구분
+  const DRAG_THRESHOLD = 5; // 드래그로 판정하는 최소 이동 거리 (px)
+  
+  // 관성 스크롤용 상태
+  const lastMoveTimeRef = useRef(0);
+  const lastMoveXRef = useRef(0);
+  const velocityRef = useRef(0);
+  const momentumAnimationRef = useRef(null);
 
   // 스크롤 가능 여부 및 위치 체크
   const checkScrollability = useCallback(() => {
@@ -163,11 +187,6 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
     if (el) {
       el.addEventListener('scroll', checkScrollability);
       window.addEventListener('resize', checkScrollability);
-    }
-
-    const hideTip = localStorage.getItem(TOOLTIP_STORAGE_KEY);
-    if (!hideTip) {
-      setShowTooltip(true);
     }
 
     return () => {
@@ -212,10 +231,114 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
     el.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
   }, []);
 
-  // 툴팁 닫기
-  const closeTooltip = useCallback(() => {
-    setShowTooltip(false);
-    localStorage.setItem(TOOLTIP_STORAGE_KEY, 'true');
+  // 드래그 스크롤 핸들러
+  const handleMouseDown = useCallback((e) => {
+    // 버튼 클릭이면 무시
+    if (e.button !== 0) return;
+    
+    const el = scrollRef.current;
+    if (!el) return;
+    
+    // 기존 관성 애니메이션 중지
+    if (momentumAnimationRef.current) {
+      cancelAnimationFrame(momentumAnimationRef.current);
+      momentumAnimationRef.current = null;
+    }
+    
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartXRef.current = e.clientX;
+    dragStartScrollLeftRef.current = el.scrollLeft;
+    
+    // 속도 추적 초기화
+    lastMoveTimeRef.current = Date.now();
+    lastMoveXRef.current = e.clientX;
+    velocityRef.current = 0;
+    
+    // 텍스트 선택 방지
+    e.preventDefault();
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDraggingRef.current) return;
+    
+    const el = scrollRef.current;
+    if (!el) return;
+    
+    const deltaX = e.clientX - dragStartXRef.current;
+    const now = Date.now();
+    const dt = now - lastMoveTimeRef.current;
+    
+    // 드래그 임계값 체크
+    if (Math.abs(deltaX) > DRAG_THRESHOLD) {
+      hasDraggedRef.current = true;
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    }
+    
+    if (hasDraggedRef.current) {
+      // 속도 계산 (픽셀/밀리초)
+      if (dt > 0) {
+        const dx = e.clientX - lastMoveXRef.current;
+        velocityRef.current = dx / dt;
+      }
+      
+      lastMoveTimeRef.current = now;
+      lastMoveXRef.current = e.clientX;
+      
+      // 마우스 이동 반대 방향으로 스크롤 (자연스러운 느낌)
+      el.scrollLeft = dragStartScrollLeftRef.current - deltaX;
+    }
+  }, [DRAG_THRESHOLD]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // 관성 스크롤 시작
+      if (hasDraggedRef.current && Math.abs(velocityRef.current) > 0.1) {
+        const el = scrollRef.current;
+        if (!el) return;
+        
+        const friction = 0.9; // 마찰 계수 (0.9~0.98, 높을수록 오래 미끄러짐)
+        const minVelocity = 0.1; // 정지 임계값
+        
+        const animate = () => {
+          velocityRef.current *= friction;
+          
+          if (Math.abs(velocityRef.current) < minVelocity) {
+            momentumAnimationRef.current = null;
+            return;
+          }
+          
+          // 속도 반대 방향으로 스크롤 (드래그 방향과 동일)
+          el.scrollLeft -= velocityRef.current * 16; // 16ms 기준
+          
+          momentumAnimationRef.current = requestAnimationFrame(animate);
+        };
+        
+        momentumAnimationRef.current = requestAnimationFrame(animate);
+      }
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    // 컨테이너 밖으로 나가면 드래그 종료
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  }, []);
+
+  // 드래그 중 클릭 이벤트 방지
+  const handleClick = useCallback((e) => {
+    if (hasDraggedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
   }, []);
 
   // 부모에서 접근할 수 있도록 ref 노출
@@ -236,34 +359,22 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
     },
   }), [scroll, handleTrackClick, scrollState]);
 
-  const showScrollControls = scrollState.canScrollLeft || scrollState.canScrollRight;
-
   return (
     <div className={`relative ${className}`} style={{ minWidth: 0 }}>
-      {/* Shift + 휠 안내 툴팁 */}
-      {showTooltip && showScrollControls && (
-        <div className="absolute top-0 right-0 z-30">
-          <div className="bg-blue-600 text-white text-xs px-3 py-2 rounded-bl-lg shadow-lg flex items-center space-x-2">
-            <span>💡 Shift + 마우스 휠로 가로 스크롤</span>
-            <button
-              onClick={closeTooltip}
-              className="hover:bg-blue-700 rounded p-0.5"
-              aria-label="닫기"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 스크롤 컨테이너 */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto"
+        className="overflow-x-auto cursor-grab active:cursor-grabbing"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onClickCapture={handleClick}
       >
         <style>{`
           div[class*="overflow-x-auto"]::-webkit-scrollbar {

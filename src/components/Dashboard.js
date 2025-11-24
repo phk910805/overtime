@@ -24,6 +24,8 @@ const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-50';
 const getDateTextColor = (isHoliday, isWeekend) => 
   (isHoliday || isWeekend) ? STYLES.COLORS.WEEKEND_HOLIDAY : STYLES.COLORS.DEFAULT;
 
+const TOOLTIP_STORAGE_KEY = 'hideScrollTip';
+
 const HeaderCell = memo(({ children, alignment = "start" }) => (
   <div className={`flex flex-col items-${alignment} justify-center`} style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden' }}>
     <div className="flex-shrink-0">
@@ -268,6 +270,16 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     thumbWidth: 20,
   });
   const [leftTableWidth, setLeftTableWidth] = useState(0);
+  
+  // 툴팁 상태
+  const [showScrollTooltip, setShowScrollTooltip] = useState(() => {
+    return !localStorage.getItem(TOOLTIP_STORAGE_KEY);
+  });
+  
+  const handleCloseTooltip = useCallback(() => {
+    setShowScrollTooltip(false);
+    localStorage.setItem(TOOLTIP_STORAGE_KEY, 'true');
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -593,6 +605,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         onTrackClick={handleTrackClick}
         onThumbDrag={handleThumbDrag}
         leftWidth={leftTableWidth}
+        showTooltip={showScrollTooltip}
+        onCloseTooltip={handleCloseTooltip}
       />
 
       <TimeInputPopup
