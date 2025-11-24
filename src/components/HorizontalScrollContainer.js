@@ -16,6 +16,16 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
   const showScrollControls = canScrollLeft || canScrollRight;
   const trackRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const dragEndTimeRef = useRef(0); // 드래그 종료 시간
+  const [localScrollPercent, setLocalScrollPercent] = useState(scrollPercent);
+  
+  // 드래그 종료 후 200ms 지나야 외부 scrollPercent 동기화
+  useEffect(() => {
+    const timeSinceDragEnd = Date.now() - dragEndTimeRef.current;
+    if (!isDraggingRef.current && timeSinceDragEnd > 200) {
+      setLocalScrollPercent(scrollPercent);
+    }
+  }, [scrollPercent]);
 
   // 드래그 시작
   const handleThumbMouseDown = useCallback((e) => {
@@ -42,6 +52,9 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
       const adjustedX = mouseX - (thumbWidthPx / 2);
       const percent = Math.max(0, Math.min(100, (adjustedX / effectiveWidth) * 100));
       
+      // 로컬 상태 즉시 업데이트 (부드러운 프레임)
+      setLocalScrollPercent(percent);
+      
       if (onThumbDrag) {
         onThumbDrag(percent);
       }
@@ -50,6 +63,7 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
     const handleMouseUp = () => {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
+        dragEndTimeRef.current = Date.now();
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
       }
@@ -87,7 +101,7 @@ export const ScrollControlBar = memo(({ scrollState, onScroll, onTrackClick, onT
             className="absolute top-1/2 -translate-y-1/2 h-3 bg-gray-300 hover:bg-gray-400 active:bg-gray-400 rounded-full transition-colors cursor-grab active:cursor-grabbing"
             style={{
               width: `${thumbWidth}%`,
-              left: `${(100 - thumbWidth) * (scrollPercent / 100)}%`,
+              left: `${(100 - thumbWidth) * (localScrollPercent / 100)}%`,
             }}
             onMouseDown={handleThumbMouseDown}
           />
@@ -353,9 +367,10 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
       
       const { scrollWidth, clientWidth } = el;
       const maxScroll = scrollWidth - clientWidth;
-      const newScrollLeft = (percent / 100) * maxScroll;
+      const newScrollLeft = Math.round((percent / 100) * maxScroll);
       
-      el.scrollTo({ left: newScrollLeft });
+      // scrollTo 대신 scrollLeft 직접 설정 (브라우저 반올림 방지)
+      el.scrollLeft = newScrollLeft;
     },
   }), [scroll, handleTrackClick, scrollState]);
 
