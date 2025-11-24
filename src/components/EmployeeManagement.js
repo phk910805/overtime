@@ -66,7 +66,7 @@ const EmployeeManagement = memo(() => {
 
   const confirmDelete = useCallback(() => {
     if (employeeToDelete) {
-      deleteEmployee(employeeToDelete.id);
+      deleteEmployee(employeeToDelete.id, 'employees');  // 'employees' 탭 전달
     }
     setShowDeleteConfirm(false);
     setEmployeeToDelete(null);

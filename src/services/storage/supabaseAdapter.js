@@ -32,11 +32,14 @@ export class SupabaseAdapter extends StorageAdapter {
       const { data, error } = await this.supabase
         .from(this.tables.employees)
         .select('*')
-        .is('deleted_at', null)  // .eq('deleted_at', null) → .is('deleted_at', null)로 수정
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      // _convertSupabaseEmployee 메서드를 사용하여 변환
+      const converted = (data || []).map(emp => this._convertSupabaseEmployee(emp));
+      return converted;
     } catch (error) {
       this._handleError(error, 'getEmployees');
     }
@@ -54,7 +57,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
       if (error) throw error;
       
-      // 활성 직원만 필터링 (is_active = true)
+      // 활성 직원만 반환 (삭제된 직원은 overtime_records에서 가져옴)
       const activeEmployees = (data || [])
         .filter(emp => emp.is_active)
         .map(emp => ({
@@ -77,6 +80,7 @@ export class SupabaseAdapter extends StorageAdapter {
     try {
       const newEmployee = {
         name: employeeData.name.trim(),
+        last_updated_name: employeeData.name.trim(), // 생성 시 초기화
         created_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
       };
 

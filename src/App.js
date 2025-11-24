@@ -12,7 +12,23 @@ import LoginButton from './components/LoginButton';
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
   const { user, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    // sessionStorage에서 저장된 탭 확인
+    const savedTab = sessionStorage.getItem('activeTabAfterDelete');
+    if (savedTab) {
+      // 지금 바로 삭제하지 말고 나중에 삭제
+      return savedTab;
+    }
+    return 'dashboard';
+  });
+  
+  // useEffect로 sessionStorage 정리
+  React.useEffect(() => {
+    const savedTab = sessionStorage.getItem('activeTabAfterDelete');
+    if (savedTab) {
+      sessionStorage.removeItem('activeTabAfterDelete');
+    }
+  }, []);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleTabChange = useCallback((tab) => {
