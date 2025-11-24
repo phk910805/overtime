@@ -4,6 +4,7 @@ import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
+import HorizontalScrollContainer, { ScrollControlBar } from './HorizontalScrollContainer';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 
 // 스타일 상수
@@ -256,6 +257,17 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     value: 0,
     type: 'overtime'
   });
+  
+  // 가로 스크롤 상태 및 ref
+  const scrollContainerRef = useRef(null);
+  const leftTableRef = useRef(null);
+  const [scrollState, setScrollState] = useState({
+    canScrollLeft: false,
+    canScrollRight: false,
+    scrollPercent: 0,
+    thumbWidth: 20,
+  });
+  const [leftTableWidth, setLeftTableWidth] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -271,6 +283,39 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       isCancelled = true;
     };
   }, [selectedMonth]);
+
+  // 왼쪽 테이블 너비 측정
+  useEffect(() => {
+    const updateLeftTableWidth = () => {
+      if (leftTableRef.current) {
+        setLeftTableWidth(leftTableRef.current.offsetWidth);
+      }
+    };
+    
+    // 초기 측정 + 지연 측정 (렌더링 완료 후)
+    updateLeftTableWidth();
+    const timer = setTimeout(updateLeftTableWidth, 100);
+    const timer2 = setTimeout(updateLeftTableWidth, 300);
+    
+    window.addEventListener('resize', updateLeftTableWidth);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      window.removeEventListener('resize', updateLeftTableWidth);
+    };
+  }, [selectedMonth]); // selectedMonth 변경 시에도 재측정
+
+  // 직원 데이터 변경 시 너비 재측정
+  const employees = getAllEmployeesWithRecords(selectedMonth);
+  useEffect(() => {
+    if (leftTableRef.current) {
+      const timer = setTimeout(() => {
+        setLeftTableWidth(leftTableRef.current?.offsetWidth || 0);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [employees.length]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -299,6 +344,25 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     handleDailyTimeChange(currentTimeInput.employeeId, currentTimeInput.day, newValue, currentTimeInput.type);
     setShowTimeInputPopup(false);
   }, [currentTimeInput, handleDailyTimeChange]);
+
+  // 스크롤 핸들러
+  const handleScroll = useCallback((direction) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scroll(direction);
+    }
+  }, []);
+
+  const handleTrackClick = useCallback((e) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.handleTrackClick(e);
+    }
+  }, []);
+
+  const handleThumbDrag = useCallback((percent) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollToPercent(percent);
+    }
+  }, []);
 
   const daysInMonth = React.useMemo(() => dateUtils.getDaysInMonth(selectedMonth), [selectedMonth]);
   const yearMonth = React.useMemo(() => selectedMonth.split('-'), [selectedMonth]);
@@ -344,7 +408,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="flex">
-          <div className="flex-shrink-0 border-r-2 border-gray-300">
+          <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
@@ -376,7 +440,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
-                {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
+                {employees.map((employee) => {
                   const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
                   // dataManager에서 계산된 remaining 값 사용 (이미 반올림 적용됨)
                   const adjustedRemaining = stats.remaining;
@@ -418,7 +482,11 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             </table>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
+          <HorizontalScrollContainer 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-x-auto"
+            onScrollStateChange={setScrollState}
+          >
             <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr>
@@ -448,7 +516,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
-                {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
+                {employees.map((employee) => {
                   // TODO: 실제 이월 데이터 가져오기 (현재는 더미 데이터)
                   const carryoverOvertime = 0; // 이월된 초과근무 시간
                   const carryoverVacation = 0; // 이월된 사용 시간
@@ -514,9 +582,18 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                 })}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollContainer>
         </div>
       </div>
+
+      {/* 가로 스크롤 컨트롤 바 - overflow-hidden 바깥에 배치 */}
+      <ScrollControlBar 
+        scrollState={scrollState}
+        onScroll={handleScroll}
+        onTrackClick={handleTrackClick}
+        onThumbDrag={handleThumbDrag}
+        leftWidth={leftTableWidth}
+      />
 
       <TimeInputPopup
         show={showTimeInputPopup}
