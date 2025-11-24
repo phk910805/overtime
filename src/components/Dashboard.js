@@ -378,8 +378,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
               <tbody className="bg-white divide-y divide-gray-300">
                 {getAllEmployeesWithRecords(selectedMonth).map((employee) => {
                   const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
-                  // multiplier 적용: 초과시간 * 배수 - 사용시간 = 잠여시간
-                  const adjustedRemaining = stats.totalOvertime * (multiplier || 1.0) - stats.totalVacation;
+                  // dataManager에서 계산된 remaining 값 사용 (이미 반올림 적용됨)
+                  const adjustedRemaining = stats.remaining;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
