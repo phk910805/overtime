@@ -54,6 +54,18 @@ export class DataService {
   }
 
   /**
+   * 삭제된 직원 포함 전체 조회
+   */
+  async getAllEmployeesIncludingDeleted() {
+    const adapter = this._getAdapter();
+    if (adapter.getAllEmployeesIncludingDeleted) {
+      return await adapter.getAllEmployeesIncludingDeleted();
+    }
+    // 폴백: 기본 getEmployees 사용
+    return await this.getEmployees();
+  }
+
+  /**
    * 특정 월 기준으로 직원 조회 (삭제 상태를 월별로 판단)
    * @param {string} yearMonth - YYYY-MM 형식
    */

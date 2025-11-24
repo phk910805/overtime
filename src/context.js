@@ -69,6 +69,7 @@ const initializeDataLayer = async () => {
 
 const useOvertimeData = () => {
   const [employees, setEmployees] = useState([]);
+  const [allEmployeesIncludingDeleted, setAllEmployeesIncludingDeleted] = useState([]); // 삭제된 직원 포함
   const [overtimeRecords, setOvertimeRecords] = useState([]);
   const [vacationRecords, setVacationRecords] = useState([]);
   const [employeeChangeRecords, setEmployeeChangeRecords] = useState([]);
@@ -108,8 +109,15 @@ const useOvertimeData = () => {
         }
         
         const employeeChangesData = await dataService.getEmployeeChangeRecords();
+        
+        // 삭제된 직원 포함 전체 목록 로드
+        let allEmployeesData = [];
+        if (dataService.getAllEmployeesIncludingDeleted) {
+          allEmployeesData = await dataService.getAllEmployeesIncludingDeleted();
+        }
 
         setEmployees(employeesData || []);
+        setAllEmployeesIncludingDeleted(allEmployeesData || []);
         setEmployeeChangeRecords(employeeChangesData || []);
         
         // 전체 데이터 로드 (모든 월의 데이터)
@@ -323,57 +331,71 @@ const useOvertimeData = () => {
   };
 
   const getAllEmployeesWithRecords = useCallback((currentSelectedMonth) => {
-    // 직원 등록월이 선택된 월 이전인지 확인하는 함수
-    const isEmployeeRegisteredBeforeOrInMonth = (employee, targetMonth) => {
-      if (!employee.createdAt) return true; // 등록일 없으면 항상 표시
-      
-      try {
-        const createdDate = new Date(employee.createdAt);
-        if (isNaN(createdDate.getTime())) return true;
-        
-        // 직원 등록월 (YYYY-MM)
-        const createdMonth = createdDate.toISOString().slice(0, 7);
-        
-        // 선택된 월이 직원 등록월 이상이어야 표시
-        return targetMonth >= createdMonth;
-      } catch (error) {
-        return true; // 오류 시 항상 표시
+    // 직원이 선택된 월에 표시되어야 하는지 확인하는 함수
+    // 등록월 <= 선택된 월 <= 삭제월 (삭제된 경우)
+    const isEmployeeVisibleInMonth = (employee, targetMonth) => {
+      // 등록월 확인
+      let createdMonth = '1900-01';
+      if (employee.createdAt) {
+        try {
+          const createdDate = new Date(employee.createdAt);
+          if (!isNaN(createdDate.getTime())) {
+            createdMonth = createdDate.toISOString().slice(0, 7);
+          }
+        } catch (error) {
+          // 오류 시 기본값 사용
+        }
       }
+      
+      // 삭제월 확인 (삭제되지 않은 경우 먼 미래)
+      let deletedMonth = '9999-12';
+      if (employee.deletedAt) {
+        try {
+          const deletedDate = new Date(employee.deletedAt);
+          if (!isNaN(deletedDate.getTime())) {
+            deletedMonth = deletedDate.toISOString().slice(0, 7);
+          }
+        } catch (error) {
+          // 오류 시 기본값 사용
+        }
+      }
+      
+      // 등록월 <= 선택된 월 <= 삭제월
+      return targetMonth >= createdMonth && targetMonth <= deletedMonth;
     };
 
     // 활성 직원들 (등록월 필터링 적용)
     const activeEmployees = employees
-      .filter(employee => isEmployeeRegisteredBeforeOrInMonth(employee, currentSelectedMonth))
+      .filter(employee => isEmployeeVisibleInMonth(employee, currentSelectedMonth))
       .map(employee => ({
         ...employee,
         isActive: true
       }));
 
-    // 선택된 월의 데이터만 필터링
-    const [year, month] = currentSelectedMonth.split('-');
-    const monthlyOvertimeRecords = filterRecordsByMonth(overtimeRecords, year, month);
-    const monthlyVacationRecords = filterRecordsByMonth(vacationRecords, year, month);
+    // 삭제된 직원들 (등록월~삭제월 범위 내에서 표시)
+    const deletedEmployees = allEmployeesIncludingDeleted
+      .filter(employee => {
+        // 삭제된 직원만
+        if (!employee.deletedAt) return false;
+        // 활성 직원 목록에 이미 있으면 제외
+        if (activeEmployees.find(emp => emp.id === employee.id)) return false;
+        // 등록월~삭제월 범위 확인
+        return isEmployeeVisibleInMonth(employee, currentSelectedMonth);
+      })
+      .map(employee => ({
+        ...employee,
+        isActive: false
+      }))
+      .sort((a, b) => {
+        // 이름순 정렬
+        const nameA = (a.lastUpdatedName || a.name || '').toLowerCase();
+        const nameB = (b.lastUpdatedName || b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'ko');
+      });
 
-    // 삭제된 직원 중 해당 월에 데이터가 있는 직원들 추출
-    const deletedFromOvertime = extractDeletedEmployeesFromRecords(monthlyOvertimeRecords, activeEmployees);
-    const deletedFromVacation = extractDeletedEmployeesFromRecords(monthlyVacationRecords, activeEmployees);
-    
-    // 중복 제거하여 동일한 삭제된 직원 결합
-    const allDeletedEmployees = [...deletedFromOvertime];
-    deletedFromVacation.forEach(vacEmployee => {
-      if (!allDeletedEmployees.find(emp => emp.id === vacEmployee.id)) {
-        allDeletedEmployees.push(vacEmployee);
-      }
-    });
-
-    // 삭제된 직원도 등록월 필터링 적용
-    const filteredDeletedEmployees = allDeletedEmployees.filter(employee => 
-      isEmployeeRegisteredBeforeOrInMonth(employee, currentSelectedMonth)
-    );
-
-    // 활성 직원 + 해당 월에 데이터가 있는 삭제된 직원 결합
-    return [...activeEmployees, ...filteredDeletedEmployees];
-  }, [employees, overtimeRecords, vacationRecords]);
+    // 활성 직원 + 삭제된 직원 결합
+    return [...activeEmployees, ...deletedEmployees];
+  }, [employees, allEmployeesIncludingDeleted]);
 
 
   const getDailyData = useCallback((employeeId, date, type) => {

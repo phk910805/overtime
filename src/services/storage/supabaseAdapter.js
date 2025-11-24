@@ -45,6 +45,23 @@ export class SupabaseAdapter extends StorageAdapter {
     }
   }
 
+  // 삭제된 직원 포함 전체 조회
+  async getAllEmployeesIncludingDeleted() {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tables.employees)
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      const converted = (data || []).map(emp => this._convertSupabaseEmployee(emp));
+      return converted;
+    } catch (error) {
+      this._handleError(error, 'getAllEmployeesIncludingDeleted');
+    }
+  }
+
   // 월별 직원 조회 (삭제 상태를 월 기준으로 판단)
   async getEmployeesForMonth(yearMonth) {
     try {
