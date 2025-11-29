@@ -138,9 +138,9 @@ const useOvertimeData = () => {
     loadData();
   }, [dataService, selectedMonth]);
 
-  const addEmployee = useCallback(async (name) => {
+  const addEmployee = useCallback(async (employeeData) => {
     try {
-      const newEmployee = await dataService.addEmployee(name);
+      const newEmployee = await dataService.addEmployee(employeeData);
       
       // 현재 월인 경우에만 직원 목록에 추가
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -162,9 +162,9 @@ const useOvertimeData = () => {
     }
   }, [dataService, selectedMonth]);
 
-  const updateEmployee = useCallback(async (id, newName) => {
+  const updateEmployee = useCallback(async (id, employeeData) => {
     try {
-      const updatedEmployee = await dataService.updateEmployee(id, newName);
+      const updatedEmployee = await dataService.updateEmployee(id, employeeData);
       
       // 직접 상태 업데이트
       setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));

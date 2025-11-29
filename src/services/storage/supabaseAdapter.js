@@ -95,8 +95,36 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async addEmployee(employeeData) {
     try {
+      // 로그인한 사용자의 회사 정보 가져오기
+      let companyName = null;
+      let businessNumber = null;
+      
+      try {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await this.supabase
+            .from('profiles')
+            .select('company_name, business_number')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            companyName = profile.company_name;
+            businessNumber = profile.business_number;
+          }
+        }
+      } catch (profileError) {
+        console.warn('프로필 정보 조회 실패:', profileError);
+      }
+
       const newEmployee = {
         name: employeeData.name.trim(),
+        birth_date: employeeData.birthDate, // 필수
+        department: employeeData.department, // 필수
+        hire_date: employeeData.hireDate || null, // 선택 (미입력 시 null)
+        notes: employeeData.notes || null, // 선택
+        company_name: companyName,
+        business_number: businessNumber,
         last_updated_name: employeeData.name.trim(), // 생성 시 초기화
         created_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
       };
@@ -141,9 +169,20 @@ export class SupabaseAdapter extends StorageAdapter {
       
       const oldName = currentEmployee?.name || '알 수 없는 이름';
       
+      // 업데이트할 필드 구성
+      const updateData = {
+        name: employeeData.name.trim()
+      };
+      
+      // 선택 필드 추가 (제공된 경우에만)
+      if (employeeData.birthDate !== undefined) updateData.birth_date = employeeData.birthDate;
+      if (employeeData.department !== undefined) updateData.department = employeeData.department;
+      if (employeeData.hireDate !== undefined) updateData.hire_date = employeeData.hireDate;
+      if (employeeData.notes !== undefined) updateData.notes = employeeData.notes;
+      
       const { data, error } = await this.supabase
         .from(this.tables.employees)
-        .update({ name: employeeData.name.trim() })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -495,6 +534,12 @@ export class SupabaseAdapter extends StorageAdapter {
     return {
       id: supabaseData.id,
       name: supabaseData.name,
+      birthDate: supabaseData.birth_date,
+      department: supabaseData.department,
+      hireDate: supabaseData.hire_date,
+      notes: supabaseData.notes,
+      companyName: supabaseData.company_name,
+      businessNumber: supabaseData.business_number,
       createdAt: supabaseData.created_at,
       deletedAt: supabaseData.deleted_at,
       lastUpdatedName: supabaseData.last_updated_name
