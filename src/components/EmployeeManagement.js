@@ -21,16 +21,28 @@ const EmployeeManagement = memo(() => {
   const [notes, setNotes] = useState('');
 
   // 검증 훅 사용
-  const { errors, validate, clearError, clearAllErrors, setError } = useValidation();
+  const { errors, validate, clearError, clearAllErrors } = useValidation();
+  
+  // 추가 에러 상태 (생년월일, 부서, 메모용)
+  const [customErrors, setCustomErrors] = useState({});
   
   // 직원 목록용 정렬/페이징 훅
-  const employeeListPaging = useSortingPaging({ field: 'name', direction: 'asc' }, 10);
+  const employeeListPaging = useSortingPaging(
+    { field: 'name', direction: 'asc' }, 
+    10, 
+    'employeeManagement_employeeList_sort'
+  );
   
   // 관리 이력용 정렬/페이징 훅
-  const historyPaging = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
+  const historyPaging = useSortingPaging(
+    { field: 'createdAt', direction: 'desc' }, 
+    10, 
+    'employeeManagement_history_sort'
+  );
 
   const validateForm = useCallback(() => {
     let isValid = true;
+    const newCustomErrors = {};
     
     // 이름 검증
     const isValidName = validate('employeeName', 'employeeName', employeeName, employees, editingEmployee?.id);
@@ -38,24 +50,31 @@ const EmployeeManagement = memo(() => {
     
     // 생년월일 검증 (필수)
     if (!birthDate) {
-      setError('birthDate', '생년월일은 필수입니다.');
+      newCustomErrors.birthDate = '생년월일은 필수입니다.';
       isValid = false;
     }
     
     // 부서 검증 (필수)
     if (!department || !department.trim()) {
-      setError('department', '부서는 필수입니다.');
+      newCustomErrors.department = '부서는 필수입니다.';
+      isValid = false;
+    }
+    
+    // 입사일 검증 (필수)
+    if (!hireDate) {
+      newCustomErrors.hireDate = '입사일은 필수입니다.';
       isValid = false;
     }
     
     // 메모 길이 검증 (최대 1000자)
     if (notes && notes.length > 1000) {
-      setError('notes', '메모는 최대 1000자까지 입력 가능합니다.');
+      newCustomErrors.notes = '메모는 최대 1000자까지 입력 가능합니다.';
       isValid = false;
     }
     
+    setCustomErrors(newCustomErrors);
     return isValid;
-  }, [employeeName, birthDate, department, notes, employees, editingEmployee, validate, setError]);
+  }, [employeeName, birthDate, department, hireDate, notes, employees, editingEmployee, validate]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
@@ -65,7 +84,7 @@ const EmployeeManagement = memo(() => {
         name: employeeName.trim(),
         birthDate: birthDate,
         department: department.trim(),
-        hireDate: hireDate || null,
+        hireDate: hireDate, // 필수값
         notes: notes || null
       };
       
@@ -78,9 +97,9 @@ const EmployeeManagement = memo(() => {
       resetForm();
     } catch (error) {
       console.error('직원 저장 실패:', error);
-      setError('general', error.message || '저장 중 오류가 발생했습니다.');
+      setCustomErrors(prev => ({ ...prev, general: error.message || '저장 중 오류가 발생했습니다.' }));
     }
-  }, [employeeName, birthDate, department, hireDate, notes, editingEmployee, addEmployee, updateEmployee, validateForm, setError]);
+  }, [employeeName, birthDate, department, hireDate, notes, editingEmployee, addEmployee, updateEmployee, validateForm]);
 
   const resetForm = useCallback(() => {
     setEmployeeName('');
@@ -89,6 +108,7 @@ const EmployeeManagement = memo(() => {
     setHireDate('');
     setNotes('');
     clearAllErrors();
+    setCustomErrors({});
     setShowModal(false);
     setEditingEmployee(null);
   }, [clearAllErrors]);
@@ -101,6 +121,7 @@ const EmployeeManagement = memo(() => {
     setHireDate(employee.hireDate || '');
     setNotes(employee.notes || '');
     clearAllErrors();
+    setCustomErrors({});
     setShowModal(true);
   }, [clearAllErrors]);
 
@@ -119,6 +140,14 @@ const EmployeeManagement = memo(() => {
 
   const handleEmployeeTabChange = useCallback((tab) => {
     setActiveEmployeeTab(tab);
+  }, []);
+
+  const clearCustomError = useCallback((fieldName) => {
+    setCustomErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
   }, []);
 
   // 직원 관리 기록 계산
@@ -291,13 +320,22 @@ const EmployeeManagement = memo(() => {
         {activeEmployeeTab === 'list' && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
                 <thead className="bg-gray-50">
                   <tr>
+                    <SortableHeader 
+                      field="createdAt" 
+                      sortConfig={employeeListPaging.sortConfig} 
+                      onSort={employeeListPaging.handleSort}
+                      style={{width: '120px'}}
+                    >
+                      등록일
+                    </SortableHeader>
                     <SortableHeader 
                       field="name" 
                       sortConfig={employeeListPaging.sortConfig} 
                       onSort={employeeListPaging.handleSort}
+                      style={{width: '120px'}}
                     >
                       직원명
                     </SortableHeader>
@@ -305,40 +343,43 @@ const EmployeeManagement = memo(() => {
                       field="department" 
                       sortConfig={employeeListPaging.sortConfig} 
                       onSort={employeeListPaging.handleSort}
+                      style={{width: '120px'}}
                     >
                       부서
-                    </SortableHeader>
-                    <SortableHeader 
-                      field="birthDate" 
-                      sortConfig={employeeListPaging.sortConfig} 
-                      onSort={employeeListPaging.handleSort}
-                    >
-                      생년월일
                     </SortableHeader>
                     <SortableHeader 
                       field="hireDate" 
                       sortConfig={employeeListPaging.sortConfig} 
                       onSort={employeeListPaging.handleSort}
+                      style={{width: '120px'}}
                     >
                       입사일
                     </SortableHeader>
-                    <TableHeader className="text-right">작업</TableHeader>
+                    <TableHeader style={{width: '200px'}}>메모</TableHeader>
+                    <TableHeader className="text-right" style={{width: '100px'}}>작업</TableHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedEmployees.map((employee) => (
                     <tr key={employee.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
+                        {new Date(employee.createdAt).toLocaleDateString('ko-KR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 truncate">
                         {employee.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
                         {employee.department || '미지정'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {employee.birthDate ? new Date(employee.birthDate).toLocaleDateString('ko-KR') : '-'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
+                        {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ko-KR') : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ko-KR') : new Date(employee.createdAt).toLocaleDateString('ko-KR')}
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={employee.notes || ''}>
+                        {employee.notes ? (
+                          employee.notes.length > 10 
+                            ? `${employee.notes.substring(0, 10)}...` 
+                            : employee.notes
+                        ) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
@@ -359,7 +400,7 @@ const EmployeeManagement = memo(() => {
                     </tr>
                   ))}
                   {paginatedEmployees.length === 0 && (
-                    <EmptyState message="등록된 직원이 없습니다." colSpan="5" />
+                    <EmptyState message="등록된 직원이 없습니다." colSpan="6" />
                   )}
                 </tbody>
               </table>
@@ -444,23 +485,33 @@ const EmployeeManagement = memo(() => {
       {showModal && (
         <Modal show={showModal} onClose={resetForm} title={editingEmployee ? '직원 수정' : '직원 추가'}>
           <div className="space-y-4">
-            {errors.general && (
+            {customErrors.general && (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <p className="text-sm text-red-800">{errors.general}</p>
+                <p className="text-sm text-red-800">{customErrors.general}</p>
               </div>
             )}
             
-            <InputField
-              label="직원명"
-              value={employeeName}
-              onChange={(e) => {
-                setEmployeeName(e.target.value);
-                clearError('employeeName');
-              }}
-              error={errors.employeeName}
-              autoFocus
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                직원명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={employeeName}
+                onChange={(e) => {
+                  setEmployeeName(e.target.value);
+                  clearError('employeeName');
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.employeeName ? 'border-red-500' : 'border-gray-300'
+                }`}
+                autoFocus
+                required
+              />
+              {errors.employeeName && (
+                <p className="mt-1 text-sm text-red-600">{errors.employeeName}</p>
+              )}
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -471,43 +522,59 @@ const EmployeeManagement = memo(() => {
                 value={birthDate}
                 onChange={(e) => {
                   setBirthDate(e.target.value);
-                  clearError('birthDate');
+                  clearCustomError('birthDate');
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.birthDate ? 'border-red-500' : 'border-gray-300'
+                  customErrors.birthDate ? 'border-red-500' : 'border-gray-300'
                 }`}
                 required
               />
-              {errors.birthDate && (
-                <p className="mt-1 text-sm text-red-600">{errors.birthDate}</p>
+              {customErrors.birthDate && (
+                <p className="mt-1 text-sm text-red-600">{customErrors.birthDate}</p>
               )}
             </div>
             
-            <InputField
-              label="부서"
-              value={department}
-              onChange={(e) => {
-                setDepartment(e.target.value);
-                clearError('department');
-              }}
-              error={errors.department}
-              placeholder="예: 개발팀, 영업팀"
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                부서 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  clearCustomError('department');
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  customErrors.department ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="예: 개발팀, 영업팀"
+                required
+              />
+              {customErrors.department && (
+                <p className="mt-1 text-sm text-red-600">{customErrors.department}</p>
+              )}
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                입사일 <span className="text-gray-400">(선택)</span>
+                입사일 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={hireDate}
-                onChange={(e) => setHireDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setHireDate(e.target.value);
+                  clearCustomError('hireDate');
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  customErrors.hireDate ? 'border-red-500' : 'border-gray-300'
+                }`}
+                required
               />
-              <p className="mt-1 text-xs text-gray-500">
-                비워두면 등록일이 입사일로 표시됩니다
-              </p>
+              {customErrors.hireDate && (
+                <p className="mt-1 text-sm text-red-600">{customErrors.hireDate}</p>
+              )}
             </div>
             
             <div>
@@ -518,18 +585,18 @@ const EmployeeManagement = memo(() => {
                 value={notes}
                 onChange={(e) => {
                   setNotes(e.target.value);
-                  clearError('notes');
+                  clearCustomError('notes');
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.notes ? 'border-red-500' : 'border-gray-300'
+                  customErrors.notes ? 'border-red-500' : 'border-gray-300'
                 }`}
                 rows="3"
                 placeholder="직원 관련 메모 (야간근무 불가, 건강상 특이사항 등)"
                 maxLength="1000"
               />
               <div className="flex justify-between mt-1">
-                {errors.notes && (
-                  <p className="text-sm text-red-600">{errors.notes}</p>
+                {customErrors.notes && (
+                  <p className="text-sm text-red-600">{customErrors.notes}</p>
                 )}
                 <p className="text-xs text-gray-500 ml-auto">
                   {notes.length}/1000

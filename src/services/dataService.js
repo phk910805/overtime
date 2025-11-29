@@ -87,7 +87,7 @@ export class DataService {
    * @param {string} employeeData.name - 직원 이름 (필수)
    * @param {string} employeeData.birthDate - 생년월일 (필수)
    * @param {string} employeeData.department - 부서 (필수)
-   * @param {string} [employeeData.hireDate] - 입사일 (선택)
+   * @param {string} employeeData.hireDate - 입사일 (필수)
    * @param {string} [employeeData.notes] - 메모 (선택)
    */
   async addEmployee(employeeData) {
@@ -106,6 +106,10 @@ export class DataService {
     
     if (!employeeData.department || !employeeData.department.trim()) {
       throw new Error('Department is required');
+    }
+    
+    if (!employeeData.hireDate) {
+      throw new Error('Hire date is required');
     }
 
     return await this._getAdapter().addEmployee(employeeData);

@@ -159,8 +159,16 @@ const RecordHistory = memo(() => {
   // 히스토리에서는 historySelectedMonth를 사용
   const selectedMonth = historySelectedMonth;
   
-  const overtimeSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
-  const vacationSorting = useSortingPaging({ field: 'createdAt', direction: 'desc' }, 10);
+  const overtimeSorting = useSortingPaging(
+    { field: 'createdAt', direction: 'desc' }, 
+    10, 
+    'recordHistory_overtime_sort'
+  );
+  const vacationSorting = useSortingPaging(
+    { field: 'createdAt', direction: 'desc' }, 
+    10, 
+    'recordHistory_vacation_sort'
+  );
 
   const getMonthlyRecords = useMemo(() => {
     const [year, month] = selectedMonth.split('-');

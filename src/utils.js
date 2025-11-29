@@ -323,18 +323,46 @@ export const validators = {
 };
 
 // ========== SORTING & PAGING HOOK ==========
-export const useSortingPaging = (initialSort = { field: 'createdAt', direction: 'desc' }, initialItemsPerPage = 10) => {
-  const [sortConfig, setSortConfig] = React.useState(initialSort);
+export const useSortingPaging = (initialSort = { field: 'createdAt', direction: 'desc' }, initialItemsPerPage = 10, storageKey = null) => {
+  // localStorage에서 저장된 정렬 설정 불러오기
+  const getInitialSort = React.useCallback(() => {
+    if (!storageKey) return initialSort;
+    
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed;
+      }
+    } catch (error) {
+      console.warn('Failed to load sort config from localStorage:', error);
+    }
+    return initialSort;
+  }, [storageKey, initialSort]);
+
+  const [sortConfig, setSortConfig] = React.useState(getInitialSort);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage] = React.useState(initialItemsPerPage);
 
+  // 정렬 변경 시 localStorage에 저장
   const handleSort = React.useCallback((field) => {
-    setSortConfig(prev => ({
+    const newConfig = {
       field,
-      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
-    }));
+      direction: sortConfig.field === field && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+    };
+    
+    setSortConfig(newConfig);
     setCurrentPage(1);
-  }, []);
+    
+    // localStorage에 저장
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(newConfig));
+      } catch (error) {
+        console.warn('Failed to save sort config to localStorage:', error);
+      }
+    }
+  }, [sortConfig, storageKey]);
 
   const resetPage = React.useCallback(() => {
     setCurrentPage(1);

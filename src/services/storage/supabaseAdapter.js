@@ -95,23 +95,26 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async addEmployee(employeeData) {
     try {
-      // 로그인한 사용자의 회사 정보 가져오기
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+      
+      // 회사 정보 가져오기
       let companyName = null;
       let businessNumber = null;
       
       try {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await this.supabase
-            .from('profiles')
-            .select('company_name, business_number')
-            .eq('id', user.id)
-            .single();
-          
-          if (profile) {
-            companyName = profile.company_name;
-            businessNumber = profile.business_number;
-          }
+        const { data: profile } = await this.supabase
+          .from('profiles')
+          .select('company_name, business_number')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          companyName = profile.company_name;
+          businessNumber = profile.business_number;
         }
       } catch (profileError) {
         console.warn('프로필 정보 조회 실패:', profileError);
@@ -121,10 +124,11 @@ export class SupabaseAdapter extends StorageAdapter {
         name: employeeData.name.trim(),
         birth_date: employeeData.birthDate, // 필수
         department: employeeData.department, // 필수
-        hire_date: employeeData.hireDate || null, // 선택 (미입력 시 null)
+        hire_date: employeeData.hireDate, // 필수
         notes: employeeData.notes || null, // 선택
         company_name: companyName,
         business_number: businessNumber,
+        user_id: user.id, // 로그인한 사용자 ID
         last_updated_name: employeeData.name.trim(), // 생성 시 초기화
         created_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
       };
