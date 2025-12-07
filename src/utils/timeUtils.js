@@ -9,10 +9,12 @@ export class TimeUtils {
    * Supabase에 저장할 때 한국시간 기준으로 맞춤
    */
   static getKoreanTimeAsUTC() {
-    const now = new Date();
-    // 한국은 UTC+9이므로 9시간을 더해서 저장
-    const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-    return koreanTime.toISOString();
+    // 방법 1: 그냥 현재 시간을 UTC로 반환 (바로 정확함)
+    return new Date().toISOString();
+    
+    // 주석: Date 객체는 내부적으로 UTC로 저장하므로
+    // toISOString()을 호출하면 자동으로 올바른 UTC 시간이 반환됨
+    // 예: 서울 16:01 → UTC 07:01 (서울은 UTC+9)
   }
 
   /**

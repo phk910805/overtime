@@ -15,3 +15,65 @@ code {
 * {
   box-sizing: border-box;
 }
+
+/* Date input placeholder color matching */
+input[type="date"] {
+  cursor: pointer; /* 필드 전체에 포인터 커서 */
+}
+
+/* 텍스트 선택 방지 */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input[type="date"]::selection {
+  background: transparent;
+}
+
+input[type="date"]::-moz-selection {
+  background: transparent;
+}
+
+/* 빈 값일 때 placeholder 색상 (필수 필드) */
+input[type="date"]:not(:focus):invalid {
+  color: #9ca3af; /* gray-400 */
+}
+
+/* Chrome, Safari, Edge - 기본 placeholder 색상 */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #9ca3af; /* gray-400 - placeholder color */
+  cursor: pointer; /* 필드 내부도 클릭 가능 */
+}
+
+/* 포커스 시 정상 색상 */
+input[type="date"]:focus::-webkit-datetime-edit-text,
+input[type="date"]:focus::-webkit-datetime-edit-month-field,
+input[type="date"]:focus::-webkit-datetime-edit-day-field,
+input[type="date"]:focus::-webkit-datetime-edit-year-field {
+  color: #111827; /* gray-900 */
+}
+
+/* 값이 입력된 경우 - has-value 클래스 사용 */
+input[type="date"].has-value::-webkit-datetime-edit-text,
+input[type="date"].has-value::-webkit-datetime-edit-month-field,
+input[type="date"].has-value::-webkit-datetime-edit-day-field,
+input[type="date"].has-value::-webkit-datetime-edit-year-field {
+  color: #111827 !important; /* gray-900 */
+}
+
+/* 캠린더 아이콘 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+}
+
+/* Firefox */
+input[type="date"]::-moz-placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}

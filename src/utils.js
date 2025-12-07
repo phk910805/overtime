@@ -218,8 +218,8 @@ export const validators = {
       return { isValid: false, message: '직원명은 2자 이상 입력해주세요.', type: 'error' };
     }
     
-    if (trimmedName.length > 20) {
-      return { isValid: false, message: '직원명은 20자 이하로 입력해주세요.', type: 'error' };
+    if (trimmedName.length > 50) {
+      return { isValid: false, message: '직원명은 50자 이하로 입력해주세요.', type: 'error' };
     }
     
     const isDuplicate = employees.some(emp => 

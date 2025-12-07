@@ -128,9 +128,8 @@ export class SupabaseAdapter extends StorageAdapter {
         notes: employeeData.notes || null, // 선택
         company_name: companyName,
         business_number: businessNumber,
-        user_id: user.id, // 로그인한 사용자 ID
-        last_updated_name: employeeData.name.trim(), // 생성 시 초기화
-        created_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
+        user_id: user.id // 로그인한 사용자 ID
+        // created_at과 last_updated_name은 DB default/trigger로 자동 생성
       };
 
       const { data, error } = await this.supabase

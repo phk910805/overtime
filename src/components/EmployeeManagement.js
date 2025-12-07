@@ -48,15 +48,18 @@ const EmployeeManagement = memo(() => {
     const isValidName = validate('employeeName', 'employeeName', employeeName, employees, editingEmployee?.id);
     if (!isValidName) isValid = false;
     
-    // 생년월일 검증 (필수)
-    if (!birthDate) {
-      newCustomErrors.birthDate = '생년월일은 필수입니다.';
+    // 직원명 길이 검증 (추가)
+    if (employeeName && employeeName.length > 50) {
+      newCustomErrors.employeeName = '직원명은 50자 이하로 입력해주세요.';
       isValid = false;
     }
     
     // 부서 검증 (필수)
     if (!department || !department.trim()) {
       newCustomErrors.department = '부서는 필수입니다.';
+      isValid = false;
+    } else if (department.length > 100) {
+      newCustomErrors.department = '부서명은 100자 이하로 입력해주세요.';
       isValid = false;
     }
     
@@ -68,7 +71,7 @@ const EmployeeManagement = memo(() => {
     
     // 메모 길이 검증 (최대 1000자)
     if (notes && notes.length > 1000) {
-      newCustomErrors.notes = '메모는 최대 1000자까지 입력 가능합니다.';
+      newCustomErrors.notes = '메모는 1000자 이하로 입력해주세요.';
       isValid = false;
     }
     
@@ -82,7 +85,7 @@ const EmployeeManagement = memo(() => {
     try {
       const employeeData = {
         name: employeeName.trim(),
-        birthDate: birthDate,
+        birthDate: birthDate || null,
         department: department.trim(),
         hireDate: hireDate, // 필수값
         notes: notes || null
@@ -499,38 +502,39 @@ const EmployeeManagement = memo(() => {
                 type="text"
                 value={employeeName}
                 onChange={(e) => {
-                  setEmployeeName(e.target.value);
+                  const value = e.target.value;
+                  setEmployeeName(value);
                   clearError('employeeName');
+                  
+                  // 실시간 길이 검증
+                  if (value.length > 50) {
+                    setCustomErrors(prev => ({
+                      ...prev,
+                      employeeName: '직원명은 50자 이하로 입력해주세요.'
+                    }));
+                  } else {
+                    setCustomErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.employeeName;
+                      return newErrors;
+                    });
+                  }
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.employeeName ? 'border-red-500' : 'border-gray-300'
+                  errors.employeeName || customErrors.employeeName ? 'border-red-500' : 'border-gray-300'
                 }`}
+                placeholder="직원명을 입력해 주세요. (최대 50자)"
                 autoFocus
                 required
               />
-              {errors.employeeName && (
-                <p className="mt-1 text-sm text-red-600">{errors.employeeName}</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                생년월일 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => {
-                  setBirthDate(e.target.value);
-                  clearCustomError('birthDate');
-                }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  customErrors.birthDate ? 'border-red-500' : 'border-gray-300'
-                }`}
-                required
-              />
-              {customErrors.birthDate && (
-                <p className="mt-1 text-sm text-red-600">{customErrors.birthDate}</p>
+              {(errors.employeeName || customErrors.employeeName) ? (
+                <p className="mt-1 text-sm text-red-600">{errors.employeeName || customErrors.employeeName}</p>
+              ) : employeeName && (
+                <p className={`mt-1 text-xs ${
+                  employeeName.length > 50 ? 'text-red-600' : 'text-gray-500'
+                }`}>
+                  {employeeName.length}/50
+                </p>
               )}
             </div>
             
@@ -542,17 +546,33 @@ const EmployeeManagement = memo(() => {
                 type="text"
                 value={department}
                 onChange={(e) => {
-                  setDepartment(e.target.value);
-                  clearCustomError('department');
+                  const value = e.target.value;
+                  setDepartment(value);
+                  
+                  // 실시간 길이 검증
+                  if (value.length > 100) {
+                    setCustomErrors(prev => ({
+                      ...prev,
+                      department: '부서명은 100자 이하로 입력해주세요.'
+                    }));
+                  } else {
+                    clearCustomError('department');
+                  }
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   customErrors.department ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="예: 개발팀, 영업팀"
+                placeholder="부서명을 입력해 주세요. (최대 100자)"
                 required
               />
-              {customErrors.department && (
+              {customErrors.department ? (
                 <p className="mt-1 text-sm text-red-600">{customErrors.department}</p>
+              ) : department && (
+                <p className={`mt-1 text-xs ${
+                  department.length > 100 ? 'text-red-600' : 'text-gray-500'
+                }`}>
+                  {department.length}/100
+                </p>
               )}
             </div>
             
@@ -567,9 +587,21 @@ const EmployeeManagement = memo(() => {
                   setHireDate(e.target.value);
                   clearCustomError('hireDate');
                 }}
+                onMouseDown={(e) => {
+                  // 텍스트 선택 방지
+                  e.preventDefault();
+                }}
+                onClick={(e) => {
+                  // 필드 전체 클릭 시 캠린더 열기
+                  try {
+                    e.target.showPicker?.();
+                  } catch (error) {
+                    // 브라우저가 showPicker를 지원하지 않을 경우 무시
+                  }
+                }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   customErrors.hireDate ? 'border-red-500' : 'border-gray-300'
-                }`}
+                } ${hireDate ? 'has-value' : ''}`}
                 required
               />
               {customErrors.hireDate && (
@@ -579,29 +611,74 @@ const EmployeeManagement = memo(() => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                메모 <span className="text-gray-400">(선택, 최대 1000자)</span>
+                생년월일
+              </label>
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => {
+                  setBirthDate(e.target.value);
+                  clearCustomError('birthDate');
+                }}
+                onMouseDown={(e) => {
+                  // 텍스트 선택 방지
+                  e.preventDefault();
+                }}
+                onClick={(e) => {
+                  // 필드 전체 클릭 시 캠린더 열기
+                  try {
+                    e.target.showPicker?.();
+                  } catch (error) {
+                    // 브라우저가 showPicker를 지원하지 않을 경우 무시
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  customErrors.birthDate ? 'border-red-500' : 'border-gray-300'
+                } ${birthDate ? 'has-value' : ''}`}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                생년월일을 입력하면, 생일을 잊지 않도록 대시보드에서 알려드려요.
+              </p>
+              {customErrors.birthDate && (
+                <p className="mt-1 text-sm text-red-600">{customErrors.birthDate}</p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                메모
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => {
-                  setNotes(e.target.value);
-                  clearCustomError('notes');
+                  const value = e.target.value;
+                  setNotes(value);
+                  
+                  // 실시간 길이 검증
+                  if (value.length > 1000) {
+                    setCustomErrors(prev => ({
+                      ...prev,
+                      notes: '메모는 1000자 이하로 입력해주세요.'
+                    }));
+                  } else {
+                    clearCustomError('notes');
+                  }
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   customErrors.notes ? 'border-red-500' : 'border-gray-300'
                 }`}
                 rows="3"
-                placeholder="직원 관련 메모 (야간근무 불가, 건강상 특이사항 등)"
-                maxLength="1000"
+                placeholder="내용을 입력해 주세요."
               />
-              <div className="flex justify-between mt-1">
-                {customErrors.notes && (
-                  <p className="text-sm text-red-600">{customErrors.notes}</p>
-                )}
-                <p className="text-xs text-gray-500 ml-auto">
+              {customErrors.notes ? (
+                <p className="mt-1 text-sm text-red-600">{customErrors.notes}</p>
+              ) : notes && (
+                <p className={`mt-1 text-xs ${
+                  notes.length > 1000 ? 'text-red-600' : 'text-gray-500'
+                }`}>
                   {notes.length}/1000
                 </p>
-              </div>
+              )}
             </div>
           </div>
           

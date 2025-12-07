@@ -85,7 +85,7 @@ export class DataService {
    * 직원 추가
    * @param {Object} employeeData - 직원 정보
    * @param {string} employeeData.name - 직원 이름 (필수)
-   * @param {string} employeeData.birthDate - 생년월일 (필수)
+   * @param {string} [employeeData.birthDate] - 생년월일 (선택)
    * @param {string} employeeData.department - 부서 (필수)
    * @param {string} employeeData.hireDate - 입사일 (필수)
    * @param {string} [employeeData.notes] - 메모 (선택)
@@ -98,10 +98,6 @@ export class DataService {
     
     if (!employeeData.name || !employeeData.name.trim()) {
       throw new Error('Employee name is required');
-    }
-    
-    if (!employeeData.birthDate) {
-      throw new Error('Birth date is required');
     }
     
     if (!employeeData.department || !employeeData.department.trim()) {
