@@ -450,6 +450,12 @@ const HorizontalScrollContainer = forwardRef(({ children, className = '', onScro
         }, 50);
       }
     },
+    // 직접 스크롤 위치 설정 메서드 추가 (픽셀 단위)
+    scrollTo: (left, behavior = 'smooth') => {
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollTo({ left, behavior });
+    },
   }), [scroll, handleTrackClick, scrollState]);
 
   return (

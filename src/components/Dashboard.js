@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, memo, useRef, useLayoutEffect } from 'react';
+import { Plus, Calendar } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
@@ -20,7 +20,7 @@ const STYLES = {
 };
 
 // 헬퍼 함수
-const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-50';
+const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-100';
 const getDateTextColor = (isHoliday, isWeekend) => 
   (isHoliday || isWeekend) ? STYLES.COLORS.WEEKEND_HOLIDAY : STYLES.COLORS.DEFAULT;
 
@@ -386,6 +386,39 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const yearMonth = React.useMemo(() => selectedMonth.split('-'), [selectedMonth]);
   const daysArray = React.useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
 
+  // 오늘 날짜 계산
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+  const todayDay = today.getDate();
+  const isCurrentMonth = selectedMonth === `${todayYear}-${todayMonth}`;
+  const todayColumnIndex = isCurrentMonth ? todayDay : -1; // 이월 컬럼(0) 다음부터 시작하므로 day 그대로 사용
+
+  // 오늘 날짜로 스크롤하는 함수
+  const scrollToToday = useCallback((behavior = 'smooth') => {
+    if (!isCurrentMonth || !scrollContainerRef.current) return;
+
+    const scrollContainer = scrollContainerRef.current;
+
+    // 각 날짜 셀의 너비는 고정 (w-16 = 4rem = 64px)
+    const cellWidth = 64;
+    // 이월 컬럼도 w-16이므로 동일한 너비
+    const carryoverColumnWidth = 64;
+    
+    // 오늘 날짜 셀의 왼쪽 위치 = 이월 컬럼 너비 + (오늘 날짜 - 1) * 셀 너비
+    const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+
+    // scrollTo 메서드 직접 호출
+    scrollContainer.scrollTo(todayPosition, behavior);
+  }, [isCurrentMonth, todayDay]);
+
+  // 초기 로드 시 오늘 날짜로 자동 스크롤 (useLayoutEffect로 화면 그려지기 전 실행)
+  useLayoutEffect(() => {
+    if (!isCurrentMonth || !scrollContainerRef.current) return;
+    // 화면 그려지기 전 스크롤 (깜박임 최소화)
+    scrollToToday('auto');
+  }, [isCurrentMonth, selectedMonth, scrollToToday]);
+
   return (
     <div className="space-y-6">
       <Toast 
@@ -413,15 +446,27 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         <h2 className="text-2xl font-bold text-gray-900">
           {selectedMonth} 월별 현황
         </h2>
-        {editable && (
-          <button
-            onClick={() => setShowBulkSetting(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>일괄 설정</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {/* 오늘로 가기 버튼 */}
+          {isCurrentMonth && (
+            <button
+              onClick={() => scrollToToday('smooth')}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 text-sm"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>오늘</span>
+            </button>
+          )}
+          {editable && (
+            <button
+              onClick={() => setShowBulkSetting(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>일괄 설정</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -522,9 +567,21 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                     const isHolidayDate = holidayUtils.isHoliday(dateString, holidays);
                     const isWeekend = dayOfWeekIndex === 0 || dayOfWeekIndex === 6;
                     const textColorValue = getDateTextColor(isHolidayDate, isWeekend);
+                    const isTodayColumn = day === todayColumnIndex;
                     
                     return (
-                      <th key={day} className={STYLES.DATE_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, color: textColorValue, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                      <th 
+                        key={day} 
+                        className={STYLES.DATE_HEADER_CLASSES}
+                        style={{
+                          padding: STYLES.HEADER_PADDING, 
+                          color: textColorValue, 
+                          height: '32px', 
+                          maxHeight: '32px', 
+                          minHeight: '32px',
+                          ...(isTodayColumn && { backgroundColor: '#D1D5DB' })
+                        }}
+                      >
                         <DateHeaderCell holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}>
                           {day.toString().padStart(2, '0')}({dayOfWeek})
                         </DateHeaderCell>
@@ -569,9 +626,13 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                         const date = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
                         const dailyMinutes = getDailyData(employee.id, date, 'overtime');
                         const vacationMinutes = getDailyData(employee.id, date, 'vacation');
+                        const isTodayColumn = day === todayColumnIndex;
+                        
+                        // 오늘 날짜면 파란 배경, 단 삭제된 직원은 gray-100 유지
+                        const bgClass = isTodayColumn && employee.isActive ? 'bg-blue-50' : getEmployeeBgClass(employee.isActive);
                         
                         return (
-                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative h-20 ${getEmployeeBgClass(employee.isActive)}`}>
+                          <td key={day} className={`px-2 py-2 text-center text-xs align-top relative h-20 ${bgClass}`}>
                             <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
                             <div className="flex flex-col items-center justify-start h-full">
                               <div className="flex-1 flex items-center justify-center py-1">
