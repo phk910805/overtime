@@ -3,7 +3,7 @@
 ## 프로젝트 개요
 
 - **프로젝트명**: overtime-management
-- **로컬 위치**: /Users/user/Documents/overtime-app
+- **로컬 위치**: /Users/user/Desktop/overtime-app
 - **서버**: Supabase
 - **배포**: GitHub Pages (https://phk910805.github.io/overtime)
 - **MCP 연결**: 로컬 코드 직접 읽기/쓰기 가능
