@@ -412,11 +412,31 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     scrollContainer.scrollTo(todayPosition, behavior);
   }, [isCurrentMonth, todayDay]);
 
-  // 초기 로드 시 오늘 날짜로 자동 스크롤 (useLayoutEffect로 화면 그려지기 전 실행)
-  useLayoutEffect(() => {
-    if (!isCurrentMonth || !scrollContainerRef.current) return;
-    // 화면 그려지기 전 스크롤 (깜박임 최소화)
-    scrollToToday('auto');
+  // 초기 로드 시 오늘 날짜로 자동 스크롤
+  useEffect(() => {
+    console.log('🟢 자동 스크롤 useEffect 실행:', { 
+      isCurrentMonth, 
+      hasRef: !!scrollContainerRef.current,
+      selectedMonth 
+    });
+    
+    if (!isCurrentMonth) {
+      console.log('⚠️ 현재 월이 아님 - 스크롤 스킵');
+      return;
+    }
+    
+    // ref가 설정될 때까지 기다림 (배포 환경 대응)
+    const timer = setTimeout(() => {
+      console.log('🕒 100ms 후 ref 상태:', !!scrollContainerRef.current);
+      if (scrollContainerRef.current) {
+        console.log('✅ 오늘 날짜로 스크롤 실행!');
+        scrollToToday('auto');
+      } else {
+        console.error('❌ ref가 여전히 null!');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [isCurrentMonth, selectedMonth, scrollToToday]);
 
   return (
