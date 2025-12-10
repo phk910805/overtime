@@ -6,6 +6,7 @@ import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
 import HorizontalScrollContainer, { ScrollControlBar } from './HorizontalScrollContainer';
 import TimeInputValidator from '../utils/timeInputValidator.js';
+import MonthSelector from './MonthSelector';
 
 // 스타일 상수
 const STYLES = {
@@ -311,8 +312,36 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     setSelectedMonth: contextSetSelectedMonth
   } = useOvertimeContext();
 
-  // Dashboard는 customMonth가 제공되지 않으면 context의 selectedMonth를 사용
-  const selectedMonth = customMonth || contextSelectedMonth || new Date().toISOString().slice(0, 7);
+  // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)
+  const [internalMonth, setInternalMonth] = useState(() => {
+    if (customMonth) return customMonth;
+    return contextSelectedMonth || new Date().toISOString().slice(0, 7);
+  });
+
+  // customMonth가 제공되면 사용, 아니면 내부 state 사용
+  const selectedMonth = customMonth || internalMonth;
+
+  // 월 변경 핸들러 (context 업데이트 제거 - 중복 렌더링 방지)
+  const handleMonthChange = useCallback((newMonth) => {
+    if (!customMonth) {
+      setInternalMonth(newMonth);
+      // context 업데이트 제거: Dashboard가 자체 state로 관리하므로 불필요
+    }
+  }, [customMonth]);
+
+  // 편집 가능 여부 계산: 이번 달만 편집 가능
+  const today = new Date();
+  const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  
+  const isEditable = !customMonth && editable && selectedMonth === currentYearMonth;
+  const shouldShowReadOnlyBadge = !isEditable && !customMonth;
+
+  // customMonth가 변경될 때 internalMonth 업데이트
+  useEffect(() => {
+    if (customMonth) {
+      setInternalMonth(customMonth);
+    }
+  }, [customMonth]);
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
   const [showBulkSetting, setShowBulkSetting] = useState(false);
@@ -363,7 +392,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     };
   }, [selectedMonth]);
 
-  // 왼쪽 테이블 너비 측정
+  // 왼쪽 테이블 너비 측정 (초기 로드와 리사이즈만)
   useEffect(() => {
     const updateLeftTableWidth = () => {
       if (leftTableRef.current) {
@@ -371,32 +400,30 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       }
     };
     
-    // 초기 측정 + 지연 측정 (렌더링 완료 후)
+    // 즉시 측정 (지연 타이머 제거)
     updateLeftTableWidth();
-    const timer = setTimeout(updateLeftTableWidth, 100);
-    const timer2 = setTimeout(updateLeftTableWidth, 300);
     
     window.addEventListener('resize', updateLeftTableWidth);
     
     return () => {
-      clearTimeout(timer);
-      clearTimeout(timer2);
       window.removeEventListener('resize', updateLeftTableWidth);
     };
-  }, [selectedMonth]); // selectedMonth 변경 시에도 재측정
+  }, []); // 초기 로드 시에만 실행
 
-  // 직원 데이터 변경 시 너비 재측정
-  const employees = getAllEmployeesWithRecords(selectedMonth);
+  // 직원 데이터 캠싱 (불필요한 재계산 방지)
+  const employees = React.useMemo(() => 
+    getAllEmployeesWithRecords(selectedMonth),
+    [getAllEmployeesWithRecords, selectedMonth]
+  );
+  
   useEffect(() => {
     if (leftTableRef.current) {
-      const timer = setTimeout(() => {
-        setLeftTableWidth(leftTableRef.current?.offsetWidth || 0);
-      }, 50);
-      return () => clearTimeout(timer);
+      // 지연 없이 즉시 재측정
+      setLeftTableWidth(leftTableRef.current.offsetWidth);
     }
   }, [employees.length]);
 
-  // 헤더 높이 동기화
+  // 헤더 높이 동기화 (holidays나 직원 수 변경 시에만)
   useLayoutEffect(() => {
     const syncHeaderHeight = () => {
       if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
@@ -405,16 +432,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       }
     };
 
-    // 초기 동기화 + 지연 동기화
+    // 즉시 동기화 (지연 타이머 제거)
     syncHeaderHeight();
-    const timer = setTimeout(syncHeaderHeight, 100);
-    const timer2 = setTimeout(syncHeaderHeight, 300);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(timer2);
-    };
-  }, [selectedMonth, holidays, employees.length]);
+  }, [holidays, employees.length]); // selectedMonth 의존성 제거
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -473,45 +493,42 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const yearMonth = React.useMemo(() => selectedMonth.split('-'), [selectedMonth]);
   const daysArray = React.useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
 
-  // 오늘 날짜 계산
-  const today = new Date();
+  // 오늘 날짜 계산 (위에서 선언한 today 변수 사용)
   const todayYear = today.getFullYear();
   const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
   const todayDay = today.getDate();
   const isCurrentMonth = selectedMonth === `${todayYear}-${todayMonth}`;
   const todayColumnIndex = isCurrentMonth ? todayDay : -1; // 이월 컬럼(0) 다음부터 시작하므로 day 그대로 사용
 
-  // 오늘 날짜로 스크롤하는 함수
-  const scrollToToday = useCallback((behavior = 'smooth') => {
-    if (!isCurrentMonth || !scrollContainerRef.current) return;
-
-    const scrollContainer = scrollContainerRef.current;
-
-    // 각 날짜 셀의 너비는 고정 (w-16 = 4rem = 64px)
-    const cellWidth = 64;
-    // 이월 컬럼도 w-16이므로 동일한 너비
-    const carryoverColumnWidth = 64;
+  // 오늘 날짜로 이동하는 함수 (현재 달로 이동 + 스크롤)
+  const goToToday = useCallback(() => {
+    // 현재 달이 아니면 먼저 현재 달로 이동
+    if (selectedMonth !== currentYearMonth) {
+      handleMonthChange(currentYearMonth);
+    }
     
-    // 오늘 날짜 셀의 왼쪽 위치 = 이월 컬럼 너비 + (오늘 날짜 - 1) * 셀 너비
-    const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+    // 스크롤은 다음 렌더링 후에 실행
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const cellWidth = 64;
+        const carryoverColumnWidth = 64;
+        const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+        scrollContainerRef.current.scrollTo(todayPosition, 'smooth');
+      }
+    }, 100);
+  }, [selectedMonth, currentYearMonth, handleMonthChange, todayDay]);
 
-    // scrollTo 메서드 직접 호출
-    scrollContainer.scrollTo(todayPosition, behavior);
-  }, [isCurrentMonth, todayDay]);
-
-  // 초기 로드 시 오늘 날짜로 자동 스크롤
+  // 초기 로드 시 이번 달이면 오늘 날짜로 자동 스크롤
   useEffect(() => {
     if (!isCurrentMonth) return;
     
-    // ref가 설정될 때까지 기다림 (배포 환경 대응)
-    const timer = setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollToToday('auto');
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [isCurrentMonth, selectedMonth, scrollToToday]);
+    if (scrollContainerRef.current) {
+      const cellWidth = 64;
+      const carryoverColumnWidth = 64;
+      const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+      scrollContainerRef.current.scrollTo(todayPosition, 'auto');
+    }
+  }, [isCurrentMonth, selectedMonth, todayDay]);
 
   return (
     <div className="space-y-6">
@@ -522,36 +539,35 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         type={toast.type}
         duration={3000}
       />
-      {/* 읽기 전용 배지 */}
-      {showReadOnlyBadge && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span className="text-yellow-800 font-medium">
-              {isHistoryMode ? '과거 기록 - 읽기 전용' : '이전 월 데이터는 수정할 수 없습니다'}
-            </span>
-          </div>
-        </div>
-      )}
       
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {selectedMonth} 월별 현황
-        </h2>
+        {/* 월 선택 네비게이션 */}
+        {!customMonth && (
+          <MonthSelector
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+            minMonth="2025-01"  // 시스템 시작 월
+            maxMonth={currentYearMonth}  // 현재 월까지만 선택 가능
+          />
+        )}
+        {customMonth && (
+          <h2 className="text-2xl font-bold text-gray-900">
+            {selectedMonth} 월별 현황
+          </h2>
+        )}
         <div className="flex items-center space-x-2">
-          {/* 오늘로 가기 버튼 */}
-          {isCurrentMonth && (
+          {/* 오늘로 가기 버튼 - 항상 표시 */}
+          {!customMonth && (
             <button
-              onClick={() => scrollToToday('smooth')}
+              onClick={goToToday}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 text-sm"
             >
               <Calendar className="w-4 h-4" />
               <span>오늘</span>
             </button>
           )}
-          {editable && (
+          {/* 일괄 설정 버튼 - 항상 표시 (읽기 전용 달에도) */}
+          {!customMonth && (
             <button
               onClick={() => setShowBulkSetting(true)}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
@@ -562,6 +578,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           )}
         </div>
       </div>
+
+      {/* 읽기 전용 배지 - MonthSelector 아래로 이동 */}
+      {shouldShowReadOnlyBadge && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-yellow-800 font-medium">
+              지난 달 이전 데이터는 수정할 수 없습니다
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="flex">
@@ -756,7 +786,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                                 <TimeDisplay 
                                   value={dailyMinutes}
                                   onClick={() => handleTimeInputClick(employee.id, day, dailyMinutes, 'overtime')}
-                                  disabled={!employee.isActive || !editable}
+                                  disabled={!employee.isActive || !isEditable}
                                   color="blue"
                                 />
                               </div>
@@ -764,7 +794,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                                 <TimeDisplay 
                                   value={vacationMinutes}
                                   onClick={() => handleTimeInputClick(employee.id, day, vacationMinutes, 'vacation')}
-                                  disabled={!employee.isActive || !editable}
+                                  disabled={!employee.isActive || !isEditable}
                                   placeholder="00:00"
                                   color="green"
                                 />
