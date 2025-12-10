@@ -61,15 +61,24 @@ const Toast = memo(({ message, show, onClose, type = 'error' }) => {
 
 // ========== BULK SETTING MODAL ==========
 const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
-  const { employees, getAllEmployeesWithRecords, selectedMonth, updateDailyTime, getDailyData } = useOvertimeContext();
+  const { getAllEmployeesWithRecords, updateDailyTime, getDailyData } = useOvertimeContext();
+  
+  // 현재 달 계산 (일괄 설정은 항상 이번 달만)
+  const today = new Date();
+  const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const minDate = currentYearMonth + '-01';
+  const maxDate = currentYearMonth + '-' + dateUtils.getDaysInMonth(currentYearMonth).toString().padStart(2, '0');
+  
+  // 현재 달의 직원 목록
+  const employees = getAllEmployeesWithRecords(currentYearMonth).filter(emp => emp.isActive);
   
   const [settings, setSettings] = useState({
     rangeType: 'all',
     selectedEmployees: [],
     dateType: 'single',
-    singleDate: new Date().toISOString().slice(0, 10),
-    startDate: selectedMonth + '-01',
-    endDate: selectedMonth + '-' + dateUtils.getDaysInMonth(selectedMonth).toString().padStart(2, '0'),
+    singleDate: minDate,
+    startDate: minDate,
+    endDate: maxDate,
     timeType: 'overtime',
     overtimeHours: '',
     overtimeMinutes: '',
@@ -80,22 +89,17 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
 
-  const initialEndDate = useMemo(() => 
-    selectedMonth + '-' + dateUtils.getDaysInMonth(selectedMonth).toString().padStart(2, '0'),
-    [selectedMonth]
-  );
-
   useEffect(() => {
     if (show) {
       setSettings(prev => ({
         ...prev,
-        startDate: selectedMonth + '-01',
-        endDate: initialEndDate,
-        singleDate: selectedMonth + '-01'
+        startDate: minDate,
+        endDate: maxDate,
+        singleDate: minDate
       }));
       setPreviewData(null);
     }
-  }, [show, selectedMonth, initialEndDate]);
+  }, [show, minDate, maxDate]);
 
   const showToast = useCallback((message, type = 'error') => {
     setToast({ show: true, message, type });
@@ -134,10 +138,9 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
   }, [showToast]);
 
   const getTargetEmployees = useCallback(() => {
-    const allEmployees = getAllEmployeesWithRecords(selectedMonth).filter(emp => emp.isActive);
-    return settings.rangeType === 'all' ? allEmployees : 
-           allEmployees.filter(emp => settings.selectedEmployees.includes(emp.id.toString()));
-  }, [settings.rangeType, settings.selectedEmployees, getAllEmployeesWithRecords, selectedMonth]);
+    return settings.rangeType === 'all' ? employees : 
+           employees.filter(emp => settings.selectedEmployees.includes(emp.id.toString()));
+  }, [settings.rangeType, settings.selectedEmployees, employees]);
 
   const getTargetDates = useCallback(() => {
     if (settings.dateType === 'single') {
@@ -241,9 +244,9 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
       rangeType: 'all',
       selectedEmployees: [],
       dateType: 'single',
-      singleDate: selectedMonth + '-01',
-      startDate: selectedMonth + '-01',
-      endDate: initialEndDate,
+      singleDate: minDate,
+      startDate: minDate,
+      endDate: maxDate,
       timeType: 'overtime',
       overtimeHours: '',
       overtimeMinutes: '',
@@ -251,7 +254,7 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
       vacationMinutes: ''
     });
     setPreviewData(null);
-  }, [selectedMonth, initialEndDate]);
+  }, [minDate, maxDate]);
 
   const handleClose = useCallback(() => {
     resetSettings();
@@ -373,6 +376,12 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">기간 설정</label>
+            
+            {/* 안내 메시지 */}
+            <div className="mb-2 text-xs text-gray-500">
+              이번 달({currentYearMonth}) 날짜만 선택 가능합니다
+            </div>
+            
             <div className="space-y-2">
               <label className="flex items-center">
                 <input
@@ -390,6 +399,8 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
                   <input
                     type="date"
                     value={settings.singleDate}
+                    min={minDate}
+                    max={maxDate}
                     onChange={(e) => handleSettingChange('singleDate', e.target.value)}
                     className="px-2 py-1 border border-gray-300 rounded text-sm"
                   />
@@ -411,6 +422,8 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
                   <input
                     type="date"
                     value={settings.startDate}
+                    min={minDate}
+                    max={maxDate}
                     onChange={(e) => handleSettingChange('startDate', e.target.value)}
                     className="px-2 py-1 border border-gray-300 rounded text-sm"
                   />
@@ -418,6 +431,8 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
                   <input
                     type="date"
                     value={settings.endDate}
+                    min={minDate}
+                    max={maxDate}
                     onChange={(e) => handleSettingChange('endDate', e.target.value)}
                     className="px-2 py-1 border border-gray-300 rounded text-sm"
                   />

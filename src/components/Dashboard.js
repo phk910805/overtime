@@ -530,6 +530,13 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }
   }, [isCurrentMonth, selectedMonth, todayDay]);
 
+  // 월 변경 시 스크롤 위치 초기화 (이번 달 제외)
+  useEffect(() => {
+    if (selectedMonth !== currentYearMonth && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 'auto');
+    }
+  }, [selectedMonth, currentYearMonth]);
+
   return (
     <div className="space-y-6">
       <Toast 
