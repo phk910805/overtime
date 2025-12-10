@@ -426,13 +426,17 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   // 헤더 높이 동기화 (holidays나 직원 수 변경 시에만)
   useLayoutEffect(() => {
     const syncHeaderHeight = () => {
-      if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
-        const rightHeight = rightHeaderRowRef.current.offsetHeight;
-        leftHeaderRowRef.current.style.height = `${rightHeight}px`;
-      }
+      // 이중 requestAnimationFrame으로 DOM 완전 업데이트 보장
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
+            const rightHeight = rightHeaderRowRef.current.offsetHeight;
+            leftHeaderRowRef.current.style.height = `${rightHeight}px`;
+          }
+        });
+      });
     };
 
-    // 즉시 동기화 (지연 타이머 제거)
     syncHeaderHeight();
   }, [holidays, employees.length]); // selectedMonth 의존성 제거
 
