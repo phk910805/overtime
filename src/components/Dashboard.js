@@ -27,24 +27,89 @@ const getDateTextColor = (isHoliday, isWeekend) =>
 const TOOLTIP_STORAGE_KEY = 'hideScrollTip';
 
 const HeaderCell = memo(({ children, alignment = "start" }) => (
-  <div className={`flex flex-col items-${alignment} justify-center`} style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden' }}>
+  <div className={`flex flex-col items-${alignment} justify-start`} style={{ minHeight: '32px', paddingTop: '4px' }}>
     <div className="flex-shrink-0">
       {children}
     </div>
-    <div className="h-2" />
   </div>
 ));
 
-const DateHeaderCell = memo(({ children, holidayName = '' }) => (
-  <div className="flex flex-col items-center justify-center" style={{ minHeight: '32px', maxHeight: '32px', height: '32px', overflow: 'hidden', padding: '2px 0' }}>
-    <div className="flex-shrink-0 text-center" style={{ marginBottom: '1px' }}>
-      {children}
+const DateHeaderCell = memo(({ children, holidayName = '', birthdayEmployees = [] }) => {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
+  const iconRef = React.useRef(null);
+  const hasBirthday = birthdayEmployees.length > 0;
+  const birthdayTooltip = hasBirthday 
+    ? birthdayEmployees.map(emp => `${emp}님`).join(', ') + ' 생일' 
+    : '';
+
+  const handleMouseEnter = () => {
+    if (iconRef.current) {
+      const rect = iconRef.current.getBoundingClientRect();
+      setTooltipPos({ 
+        x: rect.left + rect.width / 2, 
+        y: rect.top 
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateRows: 'auto auto', paddingTop: '4px', paddingBottom: '4px' }}>
+      {/* 날짜/요일 - 고정 */}
+      <div className="flex items-center justify-center gap-0.5">
+        {children}
+        {hasBirthday && (
+          <span 
+            ref={iconRef}
+            className="text-xs"
+            style={{ cursor: 'default' }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            🎂
+          </span>
+        )}
+      </div>
+      {/* 기념일 - 있을 때만 렌더링 */}
+      {holidayName && (
+        <div 
+          className="text-[8px] text-gray-500 normal-case leading-tight overflow-hidden text-ellipsis" 
+          style={{ 
+            maxWidth: hasBirthday ? '70px' : '60px',
+            margin: '0 auto',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            wordBreak: 'keep-all'
+          }}
+        >
+          {holidayName}
+        </div>
+      )}
+      {showTooltip && hasBirthday && (
+        <span 
+          style={{
+            position: 'fixed',
+            left: `${tooltipPos.x}px`,
+            top: `${tooltipPos.y - 8}px`,
+            transform: 'translate(-50%, -100%)',
+            backgroundColor: '#1f2937',
+            color: 'white',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            zIndex: 10000,
+            pointerEvents: 'none'
+          }}
+        >
+          {birthdayTooltip}
+        </span>
+      )}
     </div>
-    <div className="text-[8px] text-gray-500 normal-case leading-none whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '60px', height: '10px' }}>
-      {holidayName}
-    </div>
-  </div>
-));
+  );
+});
 
 const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:00", color = "blue" }) => {
   const colorClass = color === "green" ? "text-green-600" : "text-blue-600";
@@ -263,6 +328,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   // 가로 스크롤 상태 및 ref
   const scrollContainerRef = useRef(null);
   const leftTableRef = useRef(null);
+  const leftHeaderRowRef = useRef(null);
+  const rightHeaderRowRef = useRef(null);
   const [scrollState, setScrollState] = useState({
     canScrollLeft: false,
     canScrollRight: false,
@@ -328,6 +395,26 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       return () => clearTimeout(timer);
     }
   }, [employees.length]);
+
+  // 헤더 높이 동기화
+  useLayoutEffect(() => {
+    const syncHeaderHeight = () => {
+      if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
+        const rightHeight = rightHeaderRowRef.current.offsetHeight;
+        leftHeaderRowRef.current.style.height = `${rightHeight}px`;
+      }
+    };
+
+    // 초기 동기화 + 지연 동기화
+    syncHeaderHeight();
+    const timer = setTimeout(syncHeaderHeight, 100);
+    const timer2 = setTimeout(syncHeaderHeight, 300);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
+  }, [selectedMonth, holidays, employees.length]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -481,28 +568,33 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
-                <tr>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                <tr ref={leftHeaderRowRef}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       이름
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                    <HeaderCell>
+                      부서
+                    </HeaderCell>
+                  </th>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       초과시간
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       사용시간
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell alignment="center">
                       구분
                     </HeaderCell>
@@ -523,6 +615,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                             삭제
                           </span>
                         )}
+                      </td>
+                      <td className={`px-4 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
+                        {employee.department || '-'}
                       </td>
                       <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
@@ -559,9 +654,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           >
             <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
-                <tr>
+                <tr ref={rightHeaderRowRef}>
                   {/* 이월 열 추가 */}
-                  <th className={`${STYLES.CENTER_HEADER_CLASSES} border-r border-gray-300`} style={{padding: STYLES.HEADER_PADDING, height: '32px', maxHeight: '32px', minHeight: '32px'}}>
+                  <th className={`${STYLES.CENTER_HEADER_CLASSES} border-r border-gray-300`} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell alignment="center">
                       이월
                     </HeaderCell>
@@ -576,6 +671,19 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                     const textColorValue = getDateTextColor(isHolidayDate, isWeekend);
                     const isTodayColumn = day === todayColumnIndex;
                     
+                    // 생일 체크: 해당 날짜가 직원의 생일인지 확인
+                    const birthdayEmployees = employees
+                      .filter(emp => {
+                        if (!emp.isActive) return false;
+                        // snake_case와 camelCase 모두 지원
+                        const birthDateValue = emp.birthDate || emp.birth_date;
+                        if (!birthDateValue) return false;
+                        const birthDate = new Date(birthDateValue);
+                        return birthDate.getMonth() === parseInt(yearMonth[1]) - 1 && 
+                               birthDate.getDate() === day;
+                      })
+                      .map(emp => emp.lastUpdatedName || emp.name);
+                    
                     return (
                       <th 
                         key={day} 
@@ -583,13 +691,15 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                         style={{
                           padding: STYLES.HEADER_PADDING, 
                           color: textColorValue, 
-                          height: '32px', 
-                          maxHeight: '32px', 
                           minHeight: '32px',
+                          verticalAlign: 'top',
                           ...(isTodayColumn && { backgroundColor: '#D1D5DB' })
                         }}
                       >
-                        <DateHeaderCell holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}>
+                        <DateHeaderCell 
+                          holidayName={isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : ''}
+                          birthdayEmployees={birthdayEmployees}
+                        >
                           {day.toString().padStart(2, '0')}({dayOfWeek})
                         </DateHeaderCell>
                       </th>

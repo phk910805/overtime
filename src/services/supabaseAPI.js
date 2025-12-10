@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 // 환경변수 REACT_APP_USE_SUPABASE=true일 때만 사용됨
 
 export const supabaseEmployeeAPI = {
-  // 모든 직원 조회
+  // 모든 직원 조회 (활성 직원만)
   getAll: async () => {
     if (!supabase) throw new Error('Supabase not configured');
     
@@ -16,21 +16,69 @@ export const supabaseEmployeeAPI = {
     
     if (error) throw error;
     
-    // 기존 format과 호환되도록 변환
+    // 모든 필드 포함하여 반환
     return (data || []).map(emp => ({
       id: emp.id,
       name: emp.name,
-      createdAt: emp.created_at
+      department: emp.department,
+      birth_date: emp.birth_date,
+      hire_date: emp.hire_date,
+      notes: emp.notes,
+      company_name: emp.company_name,
+      business_number: emp.business_number,
+      last_updated_name: emp.last_updated_name,
+      createdAt: emp.created_at,
+      deletedAt: emp.deleted_at
     }));
   },
 
-  // 직원 생성
-  create: async (name) => {
+  // 모든 직원 조회 (삭제된 직원 포함)
+  getAllIncludingDeleted: async () => {
     if (!supabase) throw new Error('Supabase not configured');
     
     const { data, error } = await supabase
       .from('employees')
-      .insert([{ name: name.trim() }])
+      .select('*')
+      .order('created_at', { ascending: true });
+    
+    if (error) throw error;
+    
+    // 모든 필드 포함하여 반환
+    return (data || []).map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      department: emp.department,
+      birth_date: emp.birth_date,
+      hire_date: emp.hire_date,
+      notes: emp.notes,
+      company_name: emp.company_name,
+      business_number: emp.business_number,
+      last_updated_name: emp.last_updated_name,
+      createdAt: emp.created_at,
+      deletedAt: emp.deleted_at
+    }));
+  },
+
+  // 직원 생성
+  create: async (employeeData) => {
+    if (!supabase) throw new Error('Supabase not configured');
+    
+    // 문자열로 받은 경우 (backward compatibility)
+    const dataToInsert = typeof employeeData === 'string' 
+      ? { name: employeeData.trim() }
+      : {
+          name: employeeData.name?.trim(),
+          department: employeeData.department || '',
+          birth_date: employeeData.birth_date || null,
+          hire_date: employeeData.hire_date || null,
+          notes: employeeData.notes || null,
+          company_name: employeeData.company_name || null,
+          business_number: employeeData.business_number || null
+        };
+    
+    const { data, error } = await supabase
+      .from('employees')
+      .insert([dataToInsert])
       .select();
     
     if (error) throw error;
@@ -49,17 +97,50 @@ export const supabaseEmployeeAPI = {
     return {
       id: employee.id,
       name: employee.name,
-      createdAt: employee.created_at
+      department: employee.department,
+      birth_date: employee.birth_date,
+      hire_date: employee.hire_date,
+      notes: employee.notes,
+      company_name: employee.company_name,
+      business_number: employee.business_number,
+      last_updated_name: employee.last_updated_name,
+      createdAt: employee.created_at,
+      deletedAt: employee.deleted_at
     };
   },
 
   // 직원 수정
-  update: async (id, name) => {
+  update: async (id, employeeData) => {
     if (!supabase) throw new Error('Supabase not configured');
+    
+    // 기존 직원 정보 가져오기 (이름 변경 감지용)
+    const { data: oldEmployee } = await supabase
+      .from('employees')
+      .select('name')
+      .eq('id', id)
+      .single();
+    
+    // 문자열로 받은 경우 (backward compatibility)
+    const dataToUpdate = typeof employeeData === 'string' 
+      ? { name: employeeData.trim() }
+      : {
+          ...(employeeData.name !== undefined && { name: employeeData.name.trim() }),
+          ...(employeeData.department !== undefined && { department: employeeData.department }),
+          ...(employeeData.birth_date !== undefined && { birth_date: employeeData.birth_date }),
+          ...(employeeData.hire_date !== undefined && { hire_date: employeeData.hire_date }),
+          ...(employeeData.notes !== undefined && { notes: employeeData.notes }),
+          ...(employeeData.company_name !== undefined && { company_name: employeeData.company_name }),
+          ...(employeeData.business_number !== undefined && { business_number: employeeData.business_number })
+        };
+    
+    // 이름이 변경된 경우 last_updated_name도 업데이트
+    if (dataToUpdate.name && oldEmployee && dataToUpdate.name !== oldEmployee.name) {
+      dataToUpdate.last_updated_name = dataToUpdate.name;
+    }
     
     const { data, error } = await supabase
       .from('employees')
-      .update({ name: name.trim() })
+      .update(dataToUpdate)
       .eq('id', id)
       .select();
     
@@ -68,18 +149,33 @@ export const supabaseEmployeeAPI = {
     const employee = data[0];
     
     // 변경 이력 추가
+    const changeData = {
+      employee_id: employee.id,
+      action: '수정',
+      employee_name: employee.name
+    };
+    
+    // 이름이 변경된 경우 이전 이름도 기록
+    if (oldEmployee && employee.name !== oldEmployee.name) {
+      changeData.old_name = oldEmployee.name;
+    }
+    
     await supabase
       .from('employee_changes')
-      .insert([{
-        employee_id: employee.id,
-        action: '수정',
-        employee_name: employee.name
-      }]);
+      .insert([changeData]);
     
     return {
       id: employee.id,
       name: employee.name,
-      createdAt: employee.created_at
+      department: employee.department,
+      birth_date: employee.birth_date,
+      hire_date: employee.hire_date,
+      notes: employee.notes,
+      company_name: employee.company_name,
+      business_number: employee.business_number,
+      last_updated_name: employee.last_updated_name,
+      createdAt: employee.created_at,
+      deletedAt: employee.deleted_at
     };
   },
 
@@ -103,6 +199,8 @@ export const supabaseEmployeeAPI = {
     
     if (error) throw error;
     
+    const deletedEmployee = data[0];
+    
     // 변경 이력 추가
     await supabase
       .from('employee_changes')
@@ -113,9 +211,17 @@ export const supabaseEmployeeAPI = {
       }]);
     
     return {
-      id: data[0].id,
-      name: data[0].name,
-      createdAt: data[0].created_at
+      id: deletedEmployee.id,
+      name: deletedEmployee.name,
+      department: deletedEmployee.department,
+      birth_date: deletedEmployee.birth_date,
+      hire_date: deletedEmployee.hire_date,
+      notes: deletedEmployee.notes,
+      company_name: deletedEmployee.company_name,
+      business_number: deletedEmployee.business_number,
+      last_updated_name: deletedEmployee.last_updated_name,
+      createdAt: deletedEmployee.created_at,
+      deletedAt: deletedEmployee.deleted_at
     };
   }
 };
