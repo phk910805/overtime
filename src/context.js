@@ -603,8 +603,9 @@ const useOvertimeData = () => {
       const { dateUtils } = require('./utils');
       const [currentYear, currentMonthNum] = currentMonth.split('-');
       
-      // 1. 현재 달의 이월이 이미 있는지 확인
-      const existingCarryovers = carryoverRecords.filter(
+      // 1. 현재 달의 이월이 이미 있는지 확인 (DB에서 직접 확인)
+      const allCarryovers = await dataService.getCarryoverRecords();
+      const existingCarryovers = allCarryovers.filter(
         record => record.year === parseInt(currentYear) && 
                   record.month === parseInt(currentMonthNum)
       );
@@ -682,7 +683,71 @@ const useOvertimeData = () => {
       }
       return 0;
     }
-  }, [carryoverRecords, employees, overtimeRecords, vacationRecords, multiplier, createCarryoverRecord]);
+  }, [employees, overtimeRecords, vacationRecords, multiplier, createCarryoverRecord, dataService]);
+
+  /**
+   * 과거 모든 달 이월 백필 (일회성 작업)
+   * @param {string} startMonth - 시작 월 (YYYY-MM)
+   * @param {string} endMonth - 종료 월 (YYYY-MM)
+   * @returns {Promise<object>} { total, created, skipped }
+   */
+  const backfillCarryovers = useCallback(async (startMonth, endMonth) => {
+    try {
+      console.log(`🔄 이월 백필 시작: ${startMonth} ~ ${endMonth}`);
+      
+      let totalMonths = 0;
+      let totalCreated = 0;
+      let totalSkipped = 0;
+      
+      // 월 목록 생성
+      const months = [];
+      let current = new Date(startMonth + '-01');
+      const end = new Date(endMonth + '-01');
+      
+      while (current <= end) {
+        const yearMonth = current.toISOString().slice(0, 7);
+        months.push(yearMonth);
+        current.setMonth(current.getMonth() + 1);
+      }
+      
+      console.log(`📅 총 ${months.length}개월 처리 예정:`, months);
+      
+      // 각 달에 대해 이월 생성
+      for (const month of months) {
+        console.log(`\n🔄 ${month} 처리 중...`);
+        const created = await autoCreateMonthlyCarryover(month);
+        
+        totalMonths++;
+        if (created > 0) {
+          totalCreated += created;
+          console.log(`  ✅ ${created}건 생성`);
+        } else {
+          totalSkipped++;
+          console.log(`  ⏭️ 스킵 (이미 있음)`);
+        }
+        
+        // 진행률
+        const progress = Math.round((totalMonths / months.length) * 100);
+        console.log(`📊 진행률: ${progress}% (${totalMonths}/${months.length})`);
+      }
+      
+      const result = {
+        total: totalMonths,
+        created: totalCreated,
+        skipped: totalSkipped
+      };
+      
+      console.log('\n🎉 백필 완료!');
+      console.log(`  - 처리한 월: ${result.total}개월`);
+      console.log(`  - 생성됨: ${result.created}건`);
+      console.log(`  - 스킵됨: ${result.skipped}개월`);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ 백필 실패:', error);
+      throw error;
+    }
+  }, [autoCreateMonthlyCarryover]);
 
   // 월 변경 시 자동 이월 생성
   useEffect(() => {
@@ -745,6 +810,7 @@ const useOvertimeData = () => {
     updateCarryoverRecord,
     checkAndRecalculateCarryover,
     autoCreateMonthlyCarryover,
+    backfillCarryovers,
 
     // 유틸리티
     getEmployeeNameFromRecord,
@@ -762,6 +828,16 @@ export const OvertimeProvider = ({ children }) => {
   const value = useMemo(() => ({
     ...overtimeData
   }), [overtimeData]);
+  
+  // 개발 환경에서 콘솔에 함수 노출
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      window.__overtimeContext = {
+        backfillCarryovers: overtimeData.backfillCarryovers,
+        autoCreateMonthlyCarryover: overtimeData.autoCreateMonthlyCarryover,
+      };
+    }
+  }, [overtimeData.backfillCarryovers, overtimeData.autoCreateMonthlyCarryover]);
 
   // 로딩 상태 표시
   if (overtimeData.isLoading) {
