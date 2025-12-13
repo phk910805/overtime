@@ -52,6 +52,59 @@ export const dateUtils = {
 
   formatDateString: (year, month, day) => {
     return `${year}-${month}-${day.toString().padStart(2, '0')}`;
+  },
+
+  /**
+   * 편집 권한 체크
+   * @param {string} selectedMonth - YYYY-MM 형식
+   * @returns {object} { editable, type, deadline, message }
+   */
+  getEditPermission: (selectedMonth) => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-12
+    const currentYearMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    
+    // 현재 달
+    if (selectedMonth === currentYearMonth) {
+      return { 
+        editable: true, 
+        type: 'current',
+        deadline: null,
+        message: null
+      };
+    }
+    
+    // 직전 달 확인
+    const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const lastMonthYearMonth = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}`;
+    
+    if (selectedMonth === lastMonthYearMonth) {
+      // 익월 말일까지 편집 가능
+      const nextMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+      const deadline = new Date(currentYear, currentMonth - 1, nextMonthLastDay, 23, 59, 59);
+      const isStillEditable = today <= deadline;
+      
+      const formattedDeadline = `${currentYear}.${String(currentMonth).padStart(2, '0')}.${String(nextMonthLastDay).padStart(2, '0')}`;
+      
+      return { 
+        editable: isStillEditable, 
+        type: 'lastMonth',
+        deadline: deadline,
+        message: isStillEditable 
+          ? `${lastMonth}월은 ${formattedDeadline}까지 편집할 수 있습니다`
+          : `${lastMonth}월 편집 기한이 만료되었습니다`
+      };
+    }
+    
+    // 그 이전 - 편집 불가
+    return { 
+      editable: false, 
+      type: 'readonly',
+      deadline: null,
+      message: '지난 달 이전 데이터는 수정할 수 없습니다'
+    };
   }
 };
 

@@ -330,12 +330,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }
   }, [customMonth]);
 
-  // 편집 가능 여부 계산: 이번 달만 편집 가능
+  // 편집 권한 계산
+  const editPermission = React.useMemo(() => {
+    if (customMonth) {
+      return { editable: false, type: 'custom', message: null };
+    }
+    return dateUtils.getEditPermission(selectedMonth);
+  }, [customMonth, selectedMonth]);
+  
+  const isEditable = editable && editPermission.editable;
+  const shouldShowReadOnlyBadge = !customMonth && !editPermission.editable;
+
+  // 오늘 날짜 및 현재 월 (기타 로직에서 사용)
   const today = new Date();
   const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  
-  const isEditable = !customMonth && editable && selectedMonth === currentYearMonth;
-  const shouldShowReadOnlyBadge = !isEditable && !customMonth;
 
   // customMonth가 변경될 때 internalMonth 업데이트
   useEffect(() => {
@@ -591,7 +599,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         </div>
       </div>
 
-      {/* 읽기 전용 배지 - MonthSelector 아래로 이동 */}
+      {/* 편집 권한 배지 - MonthSelector 아래로 이동 */}
       {shouldShowReadOnlyBadge && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
           <div className="flex items-center">
@@ -599,7 +607,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <span className="text-yellow-800 font-medium">
-              지난 달 이전 데이터는 수정할 수 없습니다
+              {editPermission.message || '지난 달 이전 데이터는 수정할 수 없습니다'}
             </span>
           </div>
         </div>
