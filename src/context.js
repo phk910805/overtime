@@ -73,6 +73,7 @@ const useOvertimeData = () => {
   const [overtimeRecords, setOvertimeRecords] = useState([]);
   const [vacationRecords, setVacationRecords] = useState([]);
   const [employeeChangeRecords, setEmployeeChangeRecords] = useState([]);
+  const [carryoverRecords, setCarryoverRecords] = useState([]); // 이월 기록
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -124,6 +125,10 @@ const useOvertimeData = () => {
         const allRecords = await dataService.getAllRecords();
         setOvertimeRecords(allRecords.overtimeRecords || []);
         setVacationRecords(allRecords.vacationRecords || []);
+        
+        // 이월 데이터 로드
+        const carryoverData = await dataService.getCarryoverRecords();
+        setCarryoverRecords(carryoverData || []);
 
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
@@ -448,12 +453,53 @@ const useOvertimeData = () => {
     }
   }, [dataService]);
 
+  // ========== 이월 관리 ==========
+
+  const getCarryoverForEmployee = useCallback((employeeId, yearMonth) => {
+    const [year, month] = yearMonth.split('-');
+    const carryover = carryoverRecords.find(
+      record => record.employeeId === employeeId && 
+                record.year === parseInt(year) && 
+                record.month === parseInt(month)
+    );
+    return carryover ? carryover.carryoverRemainingMinutes : 0;
+  }, [carryoverRecords]);
+
+  const createCarryoverRecord = useCallback(async (carryoverData) => {
+    try {
+      const newCarryover = await dataService.createCarryoverRecord(carryoverData);
+      setCarryoverRecords(prev => [...prev, newCarryover]);
+      return newCarryover;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to create carryover:', error);
+      }
+      throw error;
+    }
+  }, [dataService]);
+
+  const updateCarryoverRecord = useCallback(async (id, carryoverData) => {
+    try {
+      const updatedCarryover = await dataService.updateCarryoverRecord(id, carryoverData);
+      setCarryoverRecords(prev => prev.map(record => 
+        record.id === id ? updatedCarryover : record
+      ));
+      return updatedCarryover;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update carryover:', error);
+      }
+      throw error;
+    }
+  }, [dataService]);
+
   return {
     // 상태
     employees,
     overtimeRecords,
     vacationRecords,
     employeeChangeRecords,
+    carryoverRecords,
     isLoading,
     error,
     multiplier,
@@ -476,6 +522,11 @@ const useOvertimeData = () => {
     getDailyData,
     getMonthlyStats,
     updateDailyTime,
+
+    // 이월 관리
+    getCarryoverForEmployee,
+    createCarryoverRecord,
+    updateCarryoverRecord,
 
     // 유틸리티
     getEmployeeNameFromRecord,

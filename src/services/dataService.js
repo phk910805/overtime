@@ -284,6 +284,41 @@ export class DataService {
     return await this._getAdapter().updateSettings(settings);
   }
 
+  // ========== 이월 관리 ==========
+
+  /**
+   * 이월 기록 조회
+   * @param {Object} filters - 필터 조건 (yearMonth, year, month, employeeId)
+   */
+  async getCarryoverRecords(filters = {}) {
+    return await this._getAdapter().getCarryoverRecords(filters);
+  }
+
+  /**
+   * 이월 기록 생성
+   * @param {Object} carryoverData - 이월 데이터
+   */
+  async createCarryoverRecord(carryoverData) {
+    return await this._getAdapter().createCarryoverRecord(carryoverData);
+  }
+
+  /**
+   * 이월 기록 수정
+   * @param {number} id - 이월 기록 ID
+   * @param {Object} carryoverData - 수정할 데이터
+   */
+  async updateCarryoverRecord(id, carryoverData) {
+    return await this._getAdapter().updateCarryoverRecord(id, carryoverData);
+  }
+
+  /**
+   * 이월 기록 삭제
+   * @param {number} id - 이월 기록 ID
+   */
+  async deleteCarryoverRecord(id) {
+    return await this._getAdapter().deleteCarryoverRecord(id);
+  }
+
   // ========== 유틸리티 ==========
 
   /**

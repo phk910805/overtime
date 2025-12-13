@@ -14,7 +14,8 @@ export class SupabaseAdapter extends StorageAdapter {
       overtimeRecords: 'overtime_records',
       vacationRecords: 'vacation_records',
       employeeChangeRecords: 'employee_changes',
-      settings: 'settings'
+      settings: 'settings',
+      carryoverRecords: 'carryover_records'
     };
   }
 
@@ -524,6 +525,114 @@ export class SupabaseAdapter extends StorageAdapter {
     return await this.saveSettings(updatedSettings);
   }
 
+  // ========== 이월 관련 메서드 ==========
+
+  async getCarryoverRecords(filters = {}) {
+    try {
+      let query = this.supabase
+        .from(this.tables.carryoverRecords)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters.year) {
+        query = query.eq('year', filters.year);
+      }
+
+      if (filters.month) {
+        query = query.eq('month', filters.month);
+      }
+
+      if (filters.employeeId) {
+        query = query.eq('employee_id', filters.employeeId);
+      }
+
+      // yearMonth 형식 (YYYY-MM) 지원
+      if (filters.yearMonth) {
+        const [year, month] = filters.yearMonth.split('-');
+        query = query.eq('year', parseInt(year)).eq('month', parseInt(month));
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(this._convertSupabaseCarryoverRecord);
+    } catch (error) {
+      this._handleError(error, 'getCarryoverRecords');
+    }
+  }
+
+  async createCarryoverRecord(carryoverData) {
+    try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const supabaseRecord = {
+        employee_id: carryoverData.employeeId,
+        year: carryoverData.year,
+        month: carryoverData.month,
+        carryover_remaining_minutes: carryoverData.carryoverRemainingMinutes,
+        source_month_multiplier: carryoverData.sourceMonthMultiplier,
+        user_id: user.id
+      };
+
+      const { data, error } = await this.supabase
+        .from(this.tables.carryoverRecords)
+        .insert([supabaseRecord])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return this._convertSupabaseCarryoverRecord(data);
+    } catch (error) {
+      this._handleError(error, 'createCarryoverRecord');
+    }
+  }
+
+  async updateCarryoverRecord(id, carryoverData) {
+    try {
+      const updateData = {
+        carryover_remaining_minutes: carryoverData.carryoverRemainingMinutes,
+        updated_at: TimeUtils.getKoreanTimeAsUTC()
+      };
+
+      if (carryoverData.sourceMonthMultiplier !== undefined) {
+        updateData.source_month_multiplier = carryoverData.sourceMonthMultiplier;
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tables.carryoverRecords)
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return this._convertSupabaseCarryoverRecord(data);
+    } catch (error) {
+      this._handleError(error, 'updateCarryoverRecord');
+    }
+  }
+
+  async deleteCarryoverRecord(id) {
+    try {
+      const { error } = await this.supabase
+        .from(this.tables.carryoverRecords)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return true;
+    } catch (error) {
+      this._handleError(error, 'deleteCarryoverRecord');
+    }
+  }
+
   // ========== 캐시 관리 ==========
 
   clearCache() {
@@ -569,6 +678,20 @@ export class SupabaseAdapter extends StorageAdapter {
       employeeName: supabaseData.employee_name,
       oldName: supabaseData.old_name, // old_name 필드 추가
       createdAt: supabaseData.created_at
+    };
+  }
+
+  _convertSupabaseCarryoverRecord(supabaseData) {
+    return {
+      id: supabaseData.id,
+      employeeId: supabaseData.employee_id,
+      year: supabaseData.year,
+      month: supabaseData.month,
+      carryoverRemainingMinutes: supabaseData.carryover_remaining_minutes,
+      sourceMonthMultiplier: supabaseData.source_month_multiplier,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at
     };
   }
 }
