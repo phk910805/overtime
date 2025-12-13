@@ -307,6 +307,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     getAllEmployeesWithRecords,
     getDailyData,
     getMonthlyStats,
+    getCarryoverForEmployee,
     multiplier,
     selectedMonth: contextSelectedMonth,
     setSelectedMonth: contextSetSelectedMonth
@@ -622,6 +623,11 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                   </th>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
+                      이월
+                    </HeaderCell>
+                  </th>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                    <HeaderCell>
                       초과시간
                     </HeaderCell>
                   </th>
@@ -645,8 +651,10 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
               <tbody className="bg-white divide-y divide-gray-300">
                 {employees.map((employee) => {
                   const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
-                  // dataManager에서 계산된 remaining 값 사용 (이미 반올림 적용됨)
-                  const adjustedRemaining = stats.remaining;
+                  // 이월 데이터 가져오기
+                  const carryoverMinutes = getCarryoverForEmployee(employee.id, selectedMonth);
+                  // 이월 포함 잔여시간 계산
+                  const adjustedRemaining = carryoverMinutes + stats.remaining;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
                       <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
@@ -659,6 +667,11 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                       </td>
                       <td className={`px-4 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         {employee.department || '-'}
+                      </td>
+                      <td className={`px-3 py-4 text-sm border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
+                        <span className={carryoverMinutes > 0 ? "text-orange-600" : carryoverMinutes < 0 ? "text-red-600" : "text-gray-500"}>
+                          {carryoverMinutes > 0 && '+'}{carryoverMinutes < 0 && '-'}{timeUtils.formatTime(Math.abs(carryoverMinutes))}
+                        </span>
                       </td>
                       <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
@@ -696,12 +709,6 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
                 <tr ref={rightHeaderRowRef}>
-                  {/* 이월 열 추가 */}
-                  <th className={`${STYLES.CENTER_HEADER_CLASSES} border-r border-gray-300`} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
-                    <HeaderCell alignment="center">
-                      이월
-                    </HeaderCell>
-                  </th>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
@@ -750,35 +757,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
               </thead>
               <tbody className="bg-white divide-y divide-gray-300">
                 {employees.map((employee) => {
-                  // TODO: 실제 이월 데이터 가져오기 (현재는 더미 데이터)
-                  const carryoverOvertime = 0; // 이월된 초과근무 시간
-                  const carryoverVacation = 0; // 이월된 사용 시간
-                  
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
-                      {/* 이월 열 - 첫 번째 셀 */}
-                      <td className={`px-2 py-2 text-center text-xs align-top relative h-20 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
-                        <div className="absolute left-0 right-0 top-1/2 border-t border-gray-300 transform -translate-y-px"></div>
-                        <div className="flex flex-col items-center justify-start h-full">
-                          {/* 이월 초과 (상단) */}
-                          <div className="flex-1 flex items-center justify-center py-1">
-                            <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
-                              <span className={carryoverOvertime > 0 ? "text-blue-600" : "text-gray-500"}>
-                                {carryoverOvertime > 0 ? `+${timeUtils.formatTime(carryoverOvertime)}` : '00:00'}
-                              </span>
-                            </div>
-                          </div>
-                          {/* 이월 사용 (하단) */}
-                          <div className="flex-1 flex items-center justify-center py-1">
-                            <div className="w-16 h-8 rounded text-xs flex items-center justify-center">
-                              <span className={carryoverVacation > 0 ? "text-green-600" : "text-gray-500"}>
-                                {carryoverVacation > 0 ? `-${timeUtils.formatTime(carryoverVacation)}` : '00:00'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      
                       {/* 기존 날짜별 데이터 셀들 */}
                       {daysArray.map((day) => {
                         const date = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
