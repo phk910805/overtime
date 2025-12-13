@@ -5,6 +5,7 @@ import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
 import CarryoverChangeModal from './CarryoverChangeModal';
+import MonthChangeNotification from './MonthChangeNotification';
 import HorizontalScrollContainer, { ScrollControlBar } from './HorizontalScrollContainer';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 import MonthSelector from './MonthSelector';
@@ -358,6 +359,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const [showBulkSetting, setShowBulkSetting] = useState(false);
   const [showCarryoverChangeModal, setShowCarryoverChangeModal] = useState(false);
   const [carryoverChangeData, setCarryoverChangeData] = useState(null);
+  const [showMonthChangeNotification, setShowMonthChangeNotification] = useState(false);
+  const [monthChangeData, setMonthChangeData] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [holidays, setHolidays] = useState({});
   const [currentTimeInput, setCurrentTimeInput] = useState({
@@ -436,6 +439,50 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }
   }, [employees.length]);
 
+  // 월 변경 감지 및 알림
+  useEffect(() => {
+    // customMonth이거나 현재 월이 아니면 알림 표시 안 함
+    if (customMonth || selectedMonth !== currentYearMonth) {
+      return;
+    }
+
+    const LAST_VISIT_MONTH_KEY = 'lastVisitMonth';
+    const lastVisitMonth = localStorage.getItem(LAST_VISIT_MONTH_KEY);
+
+    // 처음 방문이거나 다른 달에서 돌아온 경우
+    if (lastVisitMonth && lastVisitMonth !== selectedMonth) {
+      // 이월 데이터 준비
+      const carryoverList = employees
+        .map(emp => ({
+          employeeName: emp.lastUpdatedName || emp.name,
+          carryoverMinutes: getCarryoverForEmployee(emp.id, selectedMonth)
+        }))
+        .filter(item => item.carryoverMinutes !== 0)
+        .sort((a, b) => Math.abs(b.carryoverMinutes) - Math.abs(a.carryoverMinutes)); // 절댓값 큰 순
+
+      // 지난 달 정보
+      const [currentYear, currentMonthNum] = selectedMonth.split('-');
+      const lastMonthNum = currentMonthNum === '01' ? '12' : String(parseInt(currentMonthNum) - 1).padStart(2, '0');
+      const lastMonthYear = currentMonthNum === '01' ? String(parseInt(currentYear) - 1) : currentYear;
+
+      // 편집 기한 (익월 말일)
+      const nextMonthLastDay = new Date(parseInt(currentYear), parseInt(currentMonthNum), 0).getDate();
+      const editDeadline = `${currentYear}.${currentMonthNum}.${String(nextMonthLastDay).padStart(2, '0')}`;
+
+      setMonthChangeData({
+        currentMonth: currentMonthNum,
+        lastMonth: lastMonthNum,
+        lastMonthYearMonth: `${lastMonthYear}-${lastMonthNum}`,
+        carryoverList,
+        editDeadline
+      });
+      setShowMonthChangeNotification(true);
+    }
+
+    // 현재 월로 업데이트
+    localStorage.setItem(LAST_VISIT_MONTH_KEY, selectedMonth);
+  }, [selectedMonth, currentYearMonth, customMonth, employees, getCarryoverForEmployee]);
+
   // 헤더 높이 동기화 (holidays나 직원 수 변경 시에만)
   useLayoutEffect(() => {
     const syncHeaderHeight = () => {
@@ -464,6 +511,17 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const handleBulkApplySuccess = useCallback((message) => {
     showToast(message);
   }, [showToast]);
+
+  const handleCloseMonthChangeNotification = useCallback(() => {
+    setShowMonthChangeNotification(false);
+  }, []);
+
+  const handleGoToLastMonth = useCallback(() => {
+    setShowMonthChangeNotification(false);
+    if (monthChangeData?.lastMonthYearMonth) {
+      handleMonthChange(monthChangeData.lastMonthYearMonth);
+    }
+  }, [monthChangeData, handleMonthChange]);
 
   const handleDailyTimeChange = useCallback((employeeId, day, totalMinutes, type) => {
     const [year, month] = selectedMonth.split('-');
@@ -870,6 +928,16 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         newCarryover={carryoverChangeData?.newCarryover || 0}
         targetMonthOldRemaining={carryoverChangeData?.targetMonthOldRemaining || 0}
         targetMonthNewRemaining={carryoverChangeData?.targetMonthNewRemaining || 0}
+      />
+
+      <MonthChangeNotification
+        show={showMonthChangeNotification}
+        onClose={handleCloseMonthChangeNotification}
+        onGoToLastMonth={handleGoToLastMonth}
+        currentMonth={monthChangeData?.currentMonth}
+        lastMonth={monthChangeData?.lastMonth}
+        carryoverList={monthChangeData?.carryoverList || []}
+        editDeadline={monthChangeData?.editDeadline}
       />
     </div>
   );
