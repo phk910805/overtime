@@ -54,8 +54,8 @@ const MonthChangeNotification = ({
             <div className="text-sm font-medium text-blue-900 mb-2">
               • {lastMonth}월 잔여시간이 이월됨
             </div>
-            <div className="space-y-1 ml-4">
-              {activeCarryovers.slice(0, 5).map((item, index) => (
+            <div className="space-y-1 ml-4 max-h-60 overflow-y-auto">
+              {activeCarryovers.map((item, index) => (
                 <div key={index} className="text-sm text-gray-700">
                   → {item.employeeName}: 
                   <span className={item.carryoverMinutes >= 0 ? "text-orange-600 font-medium ml-1" : "text-red-600 font-medium ml-1"}>
@@ -64,11 +64,6 @@ const MonthChangeNotification = ({
                   </span>
                 </div>
               ))}
-              {totalCount > 5 && (
-                <div className="text-sm text-gray-500">
-                  ...외 {totalCount - 5}명
-                </div>
-              )}
             </div>
             <div className="mt-2 text-sm text-blue-900 font-medium">
               총 {totalCount}명
