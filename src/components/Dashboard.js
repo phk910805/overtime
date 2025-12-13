@@ -4,6 +4,7 @@ import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
+import CarryoverChangeModal from './CarryoverChangeModal';
 import HorizontalScrollContainer, { ScrollControlBar } from './HorizontalScrollContainer';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 import MonthSelector from './MonthSelector';
@@ -308,6 +309,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     getDailyData,
     getMonthlyStats,
     getCarryoverForEmployee,
+    checkAndRecalculateCarryover,
     multiplier,
     selectedMonth: contextSelectedMonth,
     setSelectedMonth: contextSetSelectedMonth
@@ -354,6 +356,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
 
   const [showTimeInputPopup, setShowTimeInputPopup] = useState(false);
   const [showBulkSetting, setShowBulkSetting] = useState(false);
+  const [showCarryoverChangeModal, setShowCarryoverChangeModal] = useState(false);
+  const [carryoverChangeData, setCarryoverChangeData] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [holidays, setHolidays] = useState({});
   const [currentTimeInput, setCurrentTimeInput] = useState({
@@ -472,10 +476,26 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     setShowTimeInputPopup(true);
   }, []);
 
-  const handleTimeInputSave = useCallback((newValue) => {
-    handleDailyTimeChange(currentTimeInput.employeeId, currentTimeInput.day, newValue, currentTimeInput.type);
+  const handleTimeInputSave = useCallback(async (newValue) => {
+    const { employeeId, day, type } = currentTimeInput;
+    
+    // 데이터 저장
+    await handleDailyTimeChange(employeeId, day, newValue, type);
     setShowTimeInputPopup(false);
-  }, [currentTimeInput, handleDailyTimeChange]);
+    
+    // 편집 권한 확인
+    const permission = dateUtils.getEditPermission(selectedMonth);
+    
+    // 직전 달 편집이면 이월 재계산 체크
+    if (permission.type === 'lastMonth' && permission.editable) {
+      const impact = await checkAndRecalculateCarryover(employeeId, selectedMonth);
+      
+      if (impact.hasImpact) {
+        setCarryoverChangeData(impact);
+        setShowCarryoverChangeModal(true);
+      }
+    }
+  }, [currentTimeInput, handleDailyTimeChange, selectedMonth, checkAndRecalculateCarryover]);
 
   // 스크롤 핸들러
   const handleScroll = useCallback((direction) => {
@@ -836,6 +856,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         show={showBulkSetting}
         onClose={() => setShowBulkSetting(false)}
         onApplySuccess={handleBulkApplySuccess}
+      />
+
+      <CarryoverChangeModal
+        show={showCarryoverChangeModal}
+        onClose={() => setShowCarryoverChangeModal(false)}
+        employeeName={carryoverChangeData?.employeeName}
+        sourceMonth={carryoverChangeData?.sourceMonth}
+        targetMonth={carryoverChangeData?.targetMonth}
+        oldRemaining={carryoverChangeData?.oldRemaining || 0}
+        newRemaining={carryoverChangeData?.newRemaining || 0}
+        oldCarryover={carryoverChangeData?.oldCarryover || 0}
+        newCarryover={carryoverChangeData?.newCarryover || 0}
+        targetMonthOldRemaining={carryoverChangeData?.targetMonthOldRemaining || 0}
+        targetMonthNewRemaining={carryoverChangeData?.targetMonthNewRemaining || 0}
       />
     </div>
   );

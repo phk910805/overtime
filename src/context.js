@@ -493,6 +493,102 @@ const useOvertimeData = () => {
     }
   }, [dataService]);
 
+  /**
+   * 지난 달 수정 시 이월 영향 체크 및 재계산
+   * @param {number} employeeId - 직원 ID
+   * @param {string} sourceMonth - 수정한 달 (YYYY-MM)
+   * @returns {Promise<object>} { hasImpact, employeeName, sourceMonth, targetMonth, ... }
+   */
+  const checkAndRecalculateCarryover = useCallback(async (employeeId, sourceMonth) => {
+    try {
+      const { dateUtils } = require('./utils');
+      
+      // 다음 달 구하기
+      const targetMonth = dateUtils.getNextMonth(sourceMonth);
+      const [targetYear, targetMonthNum] = targetMonth.split('-');
+      
+      // 수정한 달의 새 잠여시간 계산
+      const sourceStats = dataCalculator.getMonthlyStats(
+        employeeId, 
+        sourceMonth, 
+        overtimeRecords, 
+        vacationRecords, 
+        multiplier
+      );
+      const newSourceRemaining = sourceStats.remaining;
+      
+      // 기존 이월 조회
+      const [year, month] = targetMonth.split('-');
+      const existingCarryover = carryoverRecords.find(
+        record => record.employeeId === employeeId && 
+                  record.year === parseInt(year) && 
+                  record.month === parseInt(month)
+      );
+      
+      const oldCarryover = existingCarryover ? existingCarryover.carryoverRemainingMinutes : 0;
+      const newCarryover = newSourceRemaining;
+      
+      // 변경 없으면 종료
+      if (oldCarryover === newCarryover) {
+        return { hasImpact: false };
+      }
+      
+      // 이월 업데이트
+      if (existingCarryover) {
+        await updateCarryoverRecord(existingCarryover.id, {
+          carryoverRemainingMinutes: newCarryover,
+          sourceMonthMultiplier: multiplier
+        });
+      } else {
+        await createCarryoverRecord({
+          employeeId,
+          year: parseInt(targetYear),
+          month: parseInt(targetMonthNum),
+          carryoverRemainingMinutes: newCarryover,
+          sourceMonthMultiplier: multiplier
+        });
+      }
+      
+      // 다음 달 잠여시간 영향 계산
+      const targetStats = dataCalculator.getMonthlyStats(
+        employeeId, 
+        targetMonth, 
+        overtimeRecords, 
+        vacationRecords, 
+        multiplier
+      );
+      
+      const targetMonthOldRemaining = oldCarryover + targetStats.remaining;
+      const targetMonthNewRemaining = newCarryover + targetStats.remaining;
+      
+      // 직원 이름 가져오기
+      const employee = employees.find(emp => emp.id === employeeId) || 
+                      allEmployeesIncludingDeleted.find(emp => emp.id === employeeId);
+      const employeeName = employee?.lastUpdatedName || employee?.name || '알 수 없는 직원';
+      
+      // 수정한 달의 이전 잠여시간 (역산: 새 이월 - 변화량)
+      const oldSourceRemaining = oldCarryover;
+      
+      return {
+        hasImpact: true,
+        employeeName,
+        sourceMonth: sourceMonth.split('-')[1], // "11"
+        targetMonth: targetMonth.split('-')[1], // "12"
+        oldRemaining: oldSourceRemaining,
+        newRemaining: newSourceRemaining,
+        oldCarryover,
+        newCarryover,
+        targetMonthOldRemaining,
+        targetMonthNewRemaining
+      };
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to check carryover impact:', error);
+      }
+      return { hasImpact: false };
+    }
+  }, [dataService, overtimeRecords, vacationRecords, multiplier, carryoverRecords, employees, allEmployeesIncludingDeleted, createCarryoverRecord, updateCarryoverRecord]);
+
   return {
     // 상태
     employees,
@@ -527,6 +623,7 @@ const useOvertimeData = () => {
     getCarryoverForEmployee,
     createCarryoverRecord,
     updateCarryoverRecord,
+    checkAndRecalculateCarryover,
 
     // 유틸리티
     getEmployeeNameFromRecord,

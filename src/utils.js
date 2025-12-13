@@ -55,6 +55,19 @@ export const dateUtils = {
   },
 
   /**
+   * 다음 달 구하기
+   * @param {string} yearMonth - YYYY-MM 형식
+   * @returns {string} YYYY-MM 형식
+   */
+  getNextMonth: (yearMonth) => {
+    const [year, month] = yearMonth.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1 + 1, 1); // +1월
+    const nextYear = date.getFullYear();
+    const nextMonth = date.getMonth() + 1;
+    return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+  },
+
+  /**
    * 편집 권한 체크
    * @param {string} selectedMonth - YYYY-MM 형식
    * @returns {object} { editable, type, deadline, message }
