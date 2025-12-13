@@ -80,6 +80,9 @@ const useOvertimeData = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  
+  // 이월 자동 생성 실행 플래그 (중복 실행 방지)
+  const isCreatingCarryoverRef = React.useRef(false);
 
   const dataService = getDataService();
 
@@ -589,6 +592,123 @@ const useOvertimeData = () => {
     }
   }, [dataService, overtimeRecords, vacationRecords, multiplier, carryoverRecords, employees, allEmployeesIncludingDeleted, createCarryoverRecord, updateCarryoverRecord]);
 
+  /**
+   * 월 자동 이월 생성
+   * 현재 달의 이월이 없으면 전월 잔여를 계산하여 자동 생성
+   * @param {string} currentMonth - YYYY-MM 형식
+   * @returns {Promise<number>} 생성된 이월 개수
+   */
+  const autoCreateMonthlyCarryover = useCallback(async (currentMonth) => {
+    try {
+      const { dateUtils } = require('./utils');
+      const [currentYear, currentMonthNum] = currentMonth.split('-');
+      
+      // 1. 현재 달의 이월이 이미 있는지 확인
+      const existingCarryovers = carryoverRecords.filter(
+        record => record.year === parseInt(currentYear) && 
+                  record.month === parseInt(currentMonthNum)
+      );
+      
+      if (existingCarryovers.length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ ${currentMonth} 이월이 이미 있음 (${existingCarryovers.length}건), Skip`);
+        }
+        return 0; // 이미 있으면 종료
+      }
+      
+      // 2. 지난 달 구하기
+      const lastMonthNum = currentMonthNum === '01' ? '12' : String(parseInt(currentMonthNum) - 1).padStart(2, '0');
+      const lastMonthYear = currentMonthNum === '01' ? String(parseInt(currentYear) - 1) : currentYear;
+      const lastMonth = `${lastMonthYear}-${lastMonthNum}`;
+      
+      // 3. 활성 직원 목록 가져오기
+      const activeEmployees = employees.filter(emp => !emp.deletedAt);
+      
+      if (activeEmployees.length === 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('⚠️ 활성 직원이 없음, 이월 생성 Skip');
+        }
+        return 0;
+      }
+      
+      // 4. 각 직원별 지난 달 잔여시간 계산 및 이월 생성
+      let createdCount = 0;
+      let skippedCount = 0;
+      
+      for (const employee of activeEmployees) {
+        try {
+          // 지난 달 잔여시간 계산
+          const lastMonthStats = dataCalculator.getMonthlyStats(
+            employee.id,
+            lastMonth,
+            overtimeRecords,
+            vacationRecords,
+            multiplier
+          );
+          
+          const carryoverMinutes = lastMonthStats.remaining;
+          
+          // 이월 레코드 생성 (잔여가 0이어도 생성)
+          await createCarryoverRecord({
+            employeeId: employee.id,
+            year: parseInt(currentYear),
+            month: parseInt(currentMonthNum),
+            carryoverRemainingMinutes: carryoverMinutes,
+            sourceMonthMultiplier: multiplier
+          });
+          
+          createdCount++;
+        } catch (error) {
+          // duplicate key 에러는 무시 (이미 있음)
+          if (error.message && error.message.includes('unique_employee_year_month')) {
+            skippedCount++;
+          } else {
+            // 다른 에러는 로그
+            if (process.env.NODE_ENV === 'development') {
+              console.error(`⚠️ ${employee.name} 이월 생성 실패:`, error.message);
+            }
+          }
+        }
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ ${currentMonth} 이월 자동 생성 완료: ${createdCount}건 생성, ${skippedCount}건 스킵`);
+      }
+      
+      return createdCount;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ 이월 자동 생성 실패:', error);
+      }
+      return 0;
+    }
+  }, [carryoverRecords, employees, overtimeRecords, vacationRecords, multiplier, createCarryoverRecord]);
+
+  // 월 변경 시 자동 이월 생성
+  useEffect(() => {
+    // 중복 실행 방지
+    if (isCreatingCarryoverRef.current) {
+      return;
+    }
+    
+    // 데이터 로딩 중이거나 직원이 없으면 Skip
+    if (isLoading || employees.length === 0) {
+      return;
+    }
+    
+    // 현재 달만 자동 생성 (과거 달은 수동 관리)
+    const currentYearMonth = new Date().toISOString().slice(0, 7);
+    if (selectedMonth !== currentYearMonth) {
+      return;
+    }
+    
+    isCreatingCarryoverRef.current = true;
+    
+    autoCreateMonthlyCarryover(selectedMonth).finally(() => {
+      isCreatingCarryoverRef.current = false;
+    });
+  }, [selectedMonth, isLoading, employees.length, autoCreateMonthlyCarryover]);
+
   return {
     // 상태
     employees,
@@ -624,6 +744,7 @@ const useOvertimeData = () => {
     createCarryoverRecord,
     updateCarryoverRecord,
     checkAndRecalculateCarryover,
+    autoCreateMonthlyCarryover,
 
     // 유틸리티
     getEmployeeNameFromRecord,
