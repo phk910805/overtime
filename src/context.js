@@ -3,7 +3,7 @@ import { createStorageAdapter } from './services/storage/index.js';
 import { getDataService } from './services/dataService.js';
 import { dataCalculator } from './dataManager';
 import { getConfig } from './services/config.js';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabase'; // Supabase client import
 
 const OvertimeContext = createContext();
 
@@ -42,10 +42,10 @@ const initializeDataLayer = async () => {
         console.warn('⚠️ Supabase config invalid, falling back to localStorage:', validation.errors);
         createStorageAdapter({ type: 'localStorage' });
       } else {
-        const supabaseClient = createClient(supabaseConfig.url, supabaseConfig.anonKey);
-        createStorageAdapter({ type: 'supabase', options: { supabaseClient } });
+        // 기존 supabase client 사용 (중복 생성 방지)
+        createStorageAdapter({ type: 'supabase', options: { supabaseClient: supabase } });
         if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Supabase client created successfully');
+          console.log('✅ Supabase client 사용 (lib/supabase.js)');
         }
       }
     } else {

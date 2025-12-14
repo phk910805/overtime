@@ -10,6 +10,10 @@ export class AuthService {
   constructor() {
     this.currentUser = null;
     this.listeners = new Set();
+    this.supabaseSubscription = null; // Supabase subscription 저장
+    
+    // Supabase Auth Listener를 한 번만 등록 (singleton)
+    this.initializeAuthListener();
     
     // StorageAdapter 초기화
     try {
@@ -26,6 +30,44 @@ export class AuthService {
         console.error('❌ StorageAdapter 초기화 실패:', error);
       }
     }
+  }
+
+  /**
+   * Supabase Auth Listener 초기화 (한 번만 실행)
+   */
+  initializeAuthListener() {
+    if (this.supabaseSubscription) {
+      return; // 이미 등록됨
+    }
+
+    let lastEvent = null;
+    let lastEventTime = 0;
+    const DEBOUNCE_TIME = 1000; // 1초 내 중복 이벤트 무시
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const now = Date.now();
+        const userId = session?.user?.id || session?.user?.email;
+        
+        // 동일 이벤트가 1초 내에 발생하면 무시
+        if (lastEvent === event && 
+            lastEventTime && 
+            (now - lastEventTime) < DEBOUNCE_TIME) {
+          return;
+        }
+        
+        lastEvent = event;
+        lastEventTime = now;
+        
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        
+        this.currentUser = session?.user || null;
+        this.notifyListeners(event, session?.user || null);
+      }
+    );
+
+    this.supabaseSubscription = subscription;
+    console.log('✅ Supabase Auth Listener 등록 완료');
   }
 
   /**
@@ -196,22 +238,12 @@ export class AuthService {
    * @param {Function} callback 
    */
   onAuthStateChange(callback) {
+    // callback만 등록 (Supabase listener는 이미 constructor에서 등록됨)
     this.listeners.add(callback);
-
-    // Supabase 인증 상태 변경 리스너
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('🔄 Auth state changed:', event, session?.user?.email);
-        
-        this.currentUser = session?.user || null;
-        this.notifyListeners(event, session?.user || null);
-      }
-    );
 
     // 리스너 해제 함수 반환
     return () => {
       this.listeners.delete(callback);
-      subscription.unsubscribe();
     };
   }
 

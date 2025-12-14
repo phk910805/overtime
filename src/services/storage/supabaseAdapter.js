@@ -103,17 +103,19 @@ export class SupabaseAdapter extends StorageAdapter {
       }
       
       // 회사 정보 가져오기
+      let companyId = null;
       let companyName = null;
       let businessNumber = null;
       
       try {
         const { data: profile } = await this.supabase
           .from('profiles')
-          .select('company_name, business_number')
+          .select('company_id, company_name, business_number')
           .eq('id', user.id)
           .single();
         
         if (profile) {
+          companyId = profile.company_id;
           companyName = profile.company_name;
           businessNumber = profile.business_number;
         }
@@ -127,6 +129,7 @@ export class SupabaseAdapter extends StorageAdapter {
         department: employeeData.department, // 필수
         hire_date: employeeData.hireDate, // 필수
         notes: employeeData.notes || null, // 선택
+        company_id: companyId, // 회사 ID 추가
         company_name: companyName,
         business_number: businessNumber,
         user_id: user.id // 로그인한 사용자 ID
@@ -318,6 +321,19 @@ export class SupabaseAdapter extends StorageAdapter {
     const tableName = type === 'overtime' ? this.tables.overtimeRecords : this.tables.vacationRecords;
 
     try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       // 직원 정보 조회 (이름 포함)
       const { data: employeeData, error: employeeError } = await this.supabase
         .from(this.tables.employees)
@@ -349,12 +365,14 @@ export class SupabaseAdapter extends StorageAdapter {
         return null;
       }
 
-      // Supabase에 저장 (employee_name 포함)
+      // Supabase에 저장 (employee_name, company_id 포함)
       const supabaseRecord = {
         employee_id: employeeId,
         date: date,
         total_minutes: totalMinutes,
         employee_name: employeeName, // 직원 이름 추가
+        company_id: profile?.company_id, // 회사 ID 추가
+        user_id: user.id, // 사용자 ID 추가
         description: historyRecord.description || null,
         created_at: historyRecord.createdAt
       };
@@ -377,6 +395,19 @@ export class SupabaseAdapter extends StorageAdapter {
     const tableName = type === 'overtime' ? this.tables.overtimeRecords : this.tables.vacationRecords;
 
     try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       // 대량 업데이트 히스토리 생성
       const historyRecords = HistoryPolicy.createBulkRecords(updates);
       
@@ -397,12 +428,14 @@ export class SupabaseAdapter extends StorageAdapter {
         employeeNameMap[emp.id] = emp.name;
       });
       
-      // Supabase 형식으로 변환 (employee_name 포함)
+      // Supabase 형식으로 변환 (employee_name, company_id 포함)
       const supabaseRecords = historyRecords.map(record => ({
         employee_id: record.employeeId,
         date: record.date,
         total_minutes: record.totalMinutes,
         employee_name: employeeNameMap[record.employeeId] || '알 수 없는 직원', // 직원 이름 추가
+        company_id: profile?.company_id, // 회사 ID 추가
+        user_id: user.id, // 사용자 ID 추가
         description: record.description,
         created_at: record.createdAt
       }));
@@ -447,11 +480,26 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async saveEmployeeChangeRecord(record) {
     try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       const supabaseRecord = {
         employee_id: record.employeeId,
         action: record.action,
         employee_name: record.employeeName,
         old_name: record.oldName || null, // old_name 필드 추가
+        company_id: profile?.company_id, // 회사 ID 추가
+        user_id: user.id, // 사용자 ID 추가
         created_at: record.createdAt
       };
 
@@ -473,10 +521,24 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async getSettings() {
     try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       const { data, error } = await this.supabase
         .from(this.tables.settings)
         .select('multiplier')
         .eq('key', 'app_settings')
+        .eq('company_id', profile?.company_id) // 회사 ID로 필터링
         .limit(1)
         .single();
 
@@ -495,15 +557,29 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async saveSettings(settings) {
     try {
+      // 로그인한 사용자 정보 가져오기
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       const { data, error } = await this.supabase
         .from(this.tables.settings)
         .upsert({ 
           key: 'app_settings',
           multiplier: settings.multiplier,
           value: { multiplier: settings.multiplier },
+          company_id: profile?.company_id, // 회사 ID 추가
           updated_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
         }, {
-          onConflict: 'key'
+          onConflict: 'key,company_id' // company_id도 충돌 체크에 포함
         })
         .select('multiplier')
         .single();
@@ -569,12 +645,20 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
+      // 회사 ID 가져오기
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
       const supabaseRecord = {
         employee_id: carryoverData.employeeId,
         year: carryoverData.year,
         month: carryoverData.month,
         carryover_remaining_minutes: carryoverData.carryoverRemainingMinutes,
         source_month_multiplier: carryoverData.sourceMonthMultiplier,
+        company_id: profile?.company_id, // 회사 ID 추가
         user_id: user.id
       };
 
@@ -759,7 +843,7 @@ export class SupabaseAdapter extends StorageAdapter {
       }
 
       if (existing) {
-        throw new Error(`이미 등록된 사업자번호입니다. 회사명: ${existing.company_name}`);
+        throw new Error(`이미 등록된 사업자등록번호입니다.\n- 회사명: ${existing.company_name}\n- 사업자등록번호: ${businessNumber}`);
       }
 
       const { data: newCompany, error: companyError } = await this.supabase

@@ -48,20 +48,33 @@ export function useAuth() {
     return () => {
       isMounted = false;
     };
-  }, [authService]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // authService 제거 - 한 번만 실행
 
   // 인증 상태 변경 리스너
   useEffect(() => {
     if (!initialized) return;
 
-    const unsubscribe = authService.onAuthStateChange((event, user) => {
-      console.log('🔄 Auth hook state change:', event, user?.email);
-      setUser(user);
-      setLoading(false);
+    const unsubscribe = authService.onAuthStateChange((event, newUser) => {
+      // 중복 체크: 같은 사용자면 무시
+      setUser(prevUser => {
+        const prevUserId = prevUser?.id || prevUser?.email;
+        const newUserId = newUser?.id || newUser?.email;
+        
+        if (prevUserId === newUserId) {
+          console.log('🔄 Auth state: 같은 사용자, 업데이트 스킵');
+          return prevUser;
+        }
+        
+        console.log('🔄 Auth hook state change:', event, newUser?.email);
+        setLoading(false);
+        return newUser;
+      });
     });
 
     return unsubscribe;
-  }, [authService, initialized]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized]); // authService 제거
 
   // 회원가입
   const signUp = useCallback(async (email, password, userData) => {
