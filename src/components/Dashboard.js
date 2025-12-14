@@ -37,6 +37,62 @@ const HeaderCell = memo(({ children, alignment = "start" }) => (
   </div>
 ));
 
+const HeaderCellWithTooltip = memo(({ children, tooltipText, alignment = "start" }) => {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
+  const iconRef = React.useRef(null);
+
+  const handleMouseEnter = () => {
+    if (iconRef.current) {
+      const rect = iconRef.current.getBoundingClientRect();
+      setTooltipPos({ 
+        x: rect.left + rect.width / 2, 
+        y: rect.top 
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  return (
+    <div className={`flex flex-col items-${alignment} justify-start`} style={{ minHeight: '32px', paddingTop: '4px', paddingBottom: '4px' }}>
+      <div className="flex-shrink-0">
+        <div className="flex items-center">
+          <span>{children}</span>
+          <span 
+            ref={iconRef}
+            className="cursor-help text-gray-400 hover:text-gray-600"
+            style={{ fontSize: '14px' }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            ⓘ
+          </span>
+        </div>
+        {showTooltip && (
+          <span 
+            style={{
+              position: 'fixed',
+              left: `${tooltipPos.x}px`,
+              top: `${tooltipPos.y - 8}px`,
+              transform: 'translate(-50%, -100%)',
+              backgroundColor: '#1f2937',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              whiteSpace: 'nowrap',
+              zIndex: 10000,
+              pointerEvents: 'none'
+            }}
+          >
+            {tooltipText}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
 const DateHeaderCell = memo(({ children, holidayName = '', birthdayEmployees = [] }) => {
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
@@ -755,7 +811,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                   </th>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
-                      초과시간
+                      초과시간{multiplier !== 1.0 ? `(×${multiplier})` : ''}
                     </HeaderCell>
                   </th>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
@@ -764,9 +820,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                     </HeaderCell>
                   </th>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
-                    <HeaderCell>
-                      잔여시간{multiplier !== 1.0 ? ` (${multiplier}배)` : ''}
-                    </HeaderCell>
+                    <HeaderCellWithTooltip tooltipText={`이월 + 초과시간 × ${multiplier}배 - 사용시간 = 잔여시간`}>
+                      잔여시간
+                    </HeaderCellWithTooltip>
                   </th>
                   <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell alignment="center">
