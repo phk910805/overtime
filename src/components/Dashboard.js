@@ -493,7 +493,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       return;
     }
     
-    // DOM 완전 렌더링 후 동기화
+    // DOM 완전 렌더링 후 동기화 (최적화된 타이밍)
     const timerId = setTimeout(() => {
       if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
         const rightHeight = rightHeaderRowRef.current.offsetHeight;
@@ -505,7 +505,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         leftHeaderRowRef.current.style.height = `${maxHeight}px`;
         rightHeaderRowRef.current.style.height = `${maxHeight}px`;
       }
-    }, 100);
+    }, 50); // 50ms로 최적화 (깜빡임 최소화)
 
     return () => clearTimeout(timerId);
   }, [selectedMonth, holidays, employees.length]);
@@ -706,7 +706,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-300">
               <thead className="bg-gray-200">
-                <tr ref={leftHeaderRowRef}>
+                <tr ref={leftHeaderRowRef} style={{ minHeight: '41px' }}>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       이름
@@ -804,7 +804,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           >
             <table className="w-full divide-y divide-gray-300">
               <thead className="bg-gray-200">
-                <tr ref={rightHeaderRowRef}>
+                <tr ref={rightHeaderRowRef} style={{ minHeight: '41px' }}>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
