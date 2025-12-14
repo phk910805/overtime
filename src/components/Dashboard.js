@@ -820,7 +820,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                     </HeaderCell>
                   </th>
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
-                    <HeaderCellWithTooltip tooltipText={`이월 + 초과시간 × ${multiplier}배 - 사용시간 = 잔여시간`}>
+                    <HeaderCellWithTooltip tooltipText={`이월 + 초과시간(×${multiplier}배) - 사용시간 = 잔여시간`}>
                       잔여시간
                     </HeaderCellWithTooltip>
                   </th>
