@@ -101,13 +101,21 @@ export const dateUtils = {
       
       const formattedDeadline = `${currentYear}.${String(currentMonth).padStart(2, '0')}.${String(nextMonthLastDay).padStart(2, '0')}`;
       
+      // 기한이 만료되면 과거 달과 동일하게 처리
+      if (!isStillEditable) {
+        return { 
+          editable: false, 
+          type: 'readonly',
+          deadline: null,
+          message: '지난 달 이전 데이터는 수정할 수 없습니다'
+        };
+      }
+      
       return { 
-        editable: isStillEditable, 
+        editable: true, 
         type: 'lastMonth',
         deadline: deadline,
-        message: isStillEditable 
-          ? `${lastMonth}월은 ${formattedDeadline}까지 편집할 수 있습니다`
-          : `${lastMonth}월 편집 기한이 만료되었습니다`
+        message: `${lastMonth}월은 ${formattedDeadline}까지 편집할 수 있습니다`
       };
     }
     
