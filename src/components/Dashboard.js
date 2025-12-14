@@ -364,6 +364,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const [monthChangeData, setMonthChangeData] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [holidays, setHolidays] = useState({});
+  
+  // 간단한 로딩 상태 (고정 딜레이)
+  const [isReady, setIsReady] = useState(false);
   const [currentTimeInput, setCurrentTimeInput] = useState({
     employeeId: null,
     day: null,
@@ -396,14 +399,39 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
 
   useEffect(() => {
     let isCancelled = false;
+    
+    // 월 변경 시 로딩 상태로 리셋
+    setIsReady(false);
+    
     const loadHolidays = async () => {
-      const year = selectedMonth.split('-')[0];
-      const holidayData = await holidayUtils.fetchHolidays(year);
-      if (!isCancelled) {
-        setHolidays(holidayData);
+      try {
+        const year = selectedMonth.split('-')[0];
+        const holidayData = await holidayUtils.fetchHolidays(year);
+        if (!isCancelled) {
+          setHolidays(holidayData || {});
+          
+          // holidays 로드 후 헤더 동기화 시간 확보 (100ms)
+          setTimeout(() => {
+            if (!isCancelled) {
+              setIsReady(true);
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.warn('Holiday fetch failed:', error);
+        if (!isCancelled) {
+          setHolidays({});
+          // 실패해도 100ms 후 표시
+          setTimeout(() => {
+            if (!isCancelled) {
+              setIsReady(true);
+            }
+          }, 100);
+        }
       }
     };
     loadHolidays();
+    
     return () => {
       isCancelled = true;
     };
@@ -701,7 +729,10 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden" style={{ 
+        visibility: isReady ? 'visible' : 'hidden',
+        minHeight: isReady ? 'auto' : '400px'
+      }}>
         <div className="flex">
           <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
             <table className="divide-y divide-gray-300">
