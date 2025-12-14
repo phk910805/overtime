@@ -694,6 +694,314 @@ export class SupabaseAdapter extends StorageAdapter {
       updatedAt: supabaseData.updated_at
     };
   }
+
+  // ========== Multi-tenancy 회사 관련 메서드 ==========
+
+  /**
+   * 현재 사용자의 회사 정보 조회
+   */
+  async getMyCompany() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data: profile, error: profileError } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      if (!profile.company_id) return null;
+
+      const { data: company, error: companyError } = await this.supabase
+        .from('companies')
+        .select('*')
+        .eq('id', profile.company_id)
+        .single();
+
+      if (companyError) throw companyError;
+
+      return {
+        id: company.id,
+        businessNumber: company.business_number,
+        companyName: company.company_name,
+        ownerId: company.owner_id,
+        createdAt: company.created_at
+      };
+    } catch (error) {
+      this._handleError(error, 'getMyCompany');
+    }
+  }
+
+  /**
+   * 새 회사 생성
+   */
+  async createCompany(businessNumber, companyName) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data: existing } = await this.supabase
+        .from('companies')
+        .select('id, company_name')
+        .eq('business_number', businessNumber)
+        .single();
+
+      if (existing) {
+        throw new Error(`이미 등록된 사업자번호입니다. 회사명: ${existing.company_name}`);
+      }
+
+      const { data: newCompany, error: companyError } = await this.supabase
+        .from('companies')
+        .insert({
+          business_number: businessNumber,
+          company_name: companyName,
+          owner_id: user.id
+        })
+        .select()
+        .single();
+
+      if (companyError) throw companyError;
+
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .update({ 
+          company_id: newCompany.id,
+          company_name: companyName,
+          business_number: businessNumber,
+          role: 'owner'
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      return {
+        id: newCompany.id,
+        businessNumber: newCompany.business_number,
+        companyName: newCompany.company_name,
+        ownerId: newCompany.owner_id
+      };
+    } catch (error) {
+      this._handleError(error, 'createCompany');
+    }
+  }
+
+  /**
+   * 초대 코드 생성
+   */
+  async createInviteCode(email) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile.company_id) {
+        throw new Error('회사 정보가 없습니다. 먼저 회사를 등록해주세요.');
+      }
+
+      const { data: existingUser } = await this.supabase
+        .from('profiles')
+        .select('id, company_id')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        if (existingUser.company_id === profile.company_id) {
+          throw new Error('이미 팀원으로 등록된 이메일입니다.');
+        } else {
+          throw new Error('다른 회사에 등록된 이메일입니다.');
+        }
+      }
+
+      const { data: pendingInvite } = await this.supabase
+        .from('company_invites')
+        .select('*')
+        .eq('invited_email', email)
+        .eq('company_id', profile.company_id)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      if (pendingInvite) {
+        throw new Error('이미 초대 이메일이 발송되었습니다.');
+      }
+
+      const inviteCode = this._generateInviteCode();
+
+      const { data: invite, error } = await this.supabase
+        .from('company_invites')
+        .insert({
+          company_id: profile.company_id,
+          invite_code: inviteCode,
+          invited_email: email,
+          created_by: user.id,
+          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        inviteCode: invite.invite_code,
+        email: invite.invited_email,
+        expiresAt: invite.expires_at
+      };
+    } catch (error) {
+      this._handleError(error, 'createInviteCode');
+    }
+  }
+
+  /**
+   * 초대 코드 검증
+   */
+  async validateInviteCode(code, email) {
+    try {
+      const { data: invite, error } = await this.supabase
+        .from('company_invites')
+        .select('*, companies(*)')
+        .eq('invite_code', code.toUpperCase())
+        .single();
+
+      if (error || !invite) {
+        throw new Error('유효하지 않은 초대 코드입니다.');
+      }
+
+      if (invite.invited_email !== email) {
+        throw new Error('초대받은 이메일과 가입 이메일이 다릅니다.');
+      }
+
+      if (new Date(invite.expires_at) < new Date()) {
+        throw new Error('초대 코드가 만료되었습니다.');
+      }
+
+      if (invite.is_used) {
+        throw new Error('이미 사용된 초대 코드입니다.');
+      }
+
+      return {
+        companyId: invite.company_id,
+        companyName: invite.companies.company_name,
+        businessNumber: invite.companies.business_number,
+        inviteId: invite.id
+      };
+    } catch (error) {
+      this._handleError(error, 'validateInviteCode');
+    }
+  }
+
+  /**
+   * 초대 코드 사용 (회사 참여)
+   */
+  async useInviteCode(inviteId) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data: invite } = await this.supabase
+        .from('company_invites')
+        .select('company_id, is_used')
+        .eq('id', inviteId)
+        .single();
+
+      if (!invite || invite.is_used) {
+        throw new Error('유효하지 않거나 이미 사용된 초대입니다.');
+      }
+
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .update({ 
+          company_id: invite.company_id,
+          role: 'admin'
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: inviteError } = await this.supabase
+        .from('company_invites')
+        .update({
+          is_used: true,
+          used_at: new Date().toISOString(),
+          used_by: user.id
+        })
+        .eq('id', inviteId);
+
+      if (inviteError) throw inviteError;
+
+      return { success: true };
+    } catch (error) {
+      this._handleError(error, 'useInviteCode');
+    }
+  }
+
+  /**
+   * 활성 초대 코드 목록 조회
+   */
+  async getActiveInviteCodes() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile.company_id) {
+        return [];
+      }
+
+      const { data: invites, error } = await this.supabase
+        .from('company_invites')
+        .select('*')
+        .eq('company_id', profile.company_id)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (invites || []).map(invite => ({
+        id: invite.id,
+        inviteCode: invite.invite_code,
+        email: invite.invited_email,
+        createdAt: invite.created_at,
+        expiresAt: invite.expires_at
+      }));
+    } catch (error) {
+      this._handleError(error, 'getActiveInviteCodes');
+    }
+  }
+
+  /**
+   * 초대 코드 생성 헬퍼
+   */
+  _generateInviteCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
 }
 
 export default SupabaseAdapter;
