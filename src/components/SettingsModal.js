@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { validators } from '../utils';
 import { useOvertimeContext } from '../context';
+import { getDataService } from '../services/dataService';
 import InviteTeamMember from './InviteTeamMember';
 import { Users, Clock, Mail } from 'lucide-react';
 
@@ -84,14 +85,12 @@ const SettingsModal = memo(({ show, onClose }) => {
 
   const loadActiveInvites = useCallback(async () => {
     try {
-      // TODO: dataService.getActiveInviteCodes() 호출
-      // const invites = await dataService.getActiveInviteCodes();
-      // setActiveInvites(invites);
-      
-      // 임시 데이터
-      setActiveInvites([]);
+      const dataService = getDataService();
+      const invites = await dataService.getActiveInviteCodes();
+      setActiveInvites(invites);
     } catch (error) {
       console.error('초대 코드 로드 실패:', error);
+      setActiveInvites([]);
     }
   }, []);
 

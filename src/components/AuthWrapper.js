@@ -5,14 +5,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { getDataService } from '../services/dataService';
 import LoginForm from './LoginForm';
 import ResetPasswordPage from './ResetPasswordPage';
+import CompanySetup from './CompanySetup';
 
 const AuthWrapper = ({ children }) => {
   const { user, loading, initialized, signIn, signUp } = useAuth();
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [currentRoute, setCurrentRoute] = useState('login');
+  
+  // 회사 설정 상태
+  const [companyChecked, setCompanyChecked] = useState(false);
+  const [hasCompany, setHasCompany] = useState(false);
 
   // URL 변경 감지
   useEffect(() => {
@@ -39,6 +45,52 @@ const AuthWrapper = ({ children }) => {
       window.removeEventListener('hashchange', checkRoute);
     };
   }, []);
+
+  // 로그인 후 회사 정보 확인
+  useEffect(() => {
+    const checkCompany = async () => {
+      if (!user) {
+        setCompanyChecked(false);
+        setHasCompany(false);
+        return;
+      }
+
+      try {
+        const dataService = getDataService();
+        const company = await dataService.getMyCompany();
+        
+        setHasCompany(!!company);
+        setCompanyChecked(true);
+      } catch (error) {
+        console.error('회사 정보 확인 실패:', error);
+        setHasCompany(false);
+        setCompanyChecked(true);
+      }
+    };
+
+    checkCompany();
+  }, [user]);
+
+  // 회사 설정 완료 처리
+  const handleCompanySetupComplete = (result) => {
+    console.log('회사 설정 완료:', result);
+    // 회사 설정 완료 후 다시 체크
+    setCompanyChecked(false);
+    setHasCompany(true);
+    
+    // 회사 정보 재확인
+    setTimeout(async () => {
+      try {
+        const dataService = getDataService();
+        const company = await dataService.getMyCompany();
+        setHasCompany(!!company);
+        setCompanyChecked(true);
+      } catch (error) {
+        console.error('회사 정보 재확인 실패:', error);
+        setCompanyChecked(true);
+      }
+    }, 500);
+  };
 
   // 로그인 처리
   const handleLogin = async (email, password) => {
@@ -106,23 +158,41 @@ const AuthWrapper = ({ children }) => {
     return <ResetPasswordPage onComplete={handleResetComplete} />;
   }
 
-  // 로그인되지 않은 상태
-  if (!user) {
+  // 로그인된 상태
+  if (user) {
+    // 회사 정보 체크 중
+    if (!companyChecked) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">회사 정보 확인 중...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // 회사 정보가 없는 경우 - 회사 설정 화면
+    if (!hasCompany) {
+      return <CompanySetup onComplete={handleCompanySetupComplete} />;
+    }
+
+    // 회사 정보가 있는 경우 - 기존 앱 표시
     return (
-      <LoginForm
-        onLogin={handleLogin}
-        onSignUp={handleSignUp}
-        loading={authLoading}
-        error={authError}
-      />
+      <>
+        {children}
+      </>
     );
   }
 
-  // 로그인된 상태 - 기존 앱 표시
+  // 로그인되지 않은 상태 - 로그인 폼
   return (
-    <>
-      {children}
-    </>
+    <LoginForm
+      onLogin={handleLogin}
+      onSignUp={handleSignUp}
+      loading={authLoading}
+      error={authError}
+    />
   );
 };
 
