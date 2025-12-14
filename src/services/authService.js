@@ -40,24 +40,20 @@ export class AuthService {
       return; // 이미 등록됨
     }
 
-    let lastEvent = null;
-    let lastEventTime = 0;
-    const DEBOUNCE_TIME = 1000; // 1초 내 중복 이벤트 무시
+    let lastEventMap = new Map(); // 이벤트 타입별로 관리
+    const DEBOUNCE_TIME = 500; // 500ms로 개선
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const now = Date.now();
-        const userId = session?.user?.id || session?.user?.email;
+        const lastTime = lastEventMap.get(event) || 0;
         
-        // 동일 이벤트가 1초 내에 발생하면 무시
-        if (lastEvent === event && 
-            lastEventTime && 
-            (now - lastEventTime) < DEBOUNCE_TIME) {
+        // 같은 이벤트 타입이 500ms 내에 발생하면 무시
+        if ((now - lastTime) < DEBOUNCE_TIME) {
           return;
         }
         
-        lastEvent = event;
-        lastEventTime = now;
+        lastEventMap.set(event, now);
         
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
@@ -176,6 +172,17 @@ export class AuthService {
 
       this.currentUser = null;
       this.notifyListeners('SIGNED_OUT', null);
+      
+      // 스토리지 어댑터 캐시 초기화
+      const { getStorageAdapter } = require('./storage');
+      try {
+        const storageAdapter = getStorageAdapter();
+        if (storageAdapter && storageAdapter.clearProfileCache) {
+          storageAdapter.clearProfileCache();
+        }
+      } catch (storageError) {
+        // 스토리지 어댑터가 없을 수 있음 (무시)
+      }
       
       console.log('✅ 로그아웃 성공');
       return { success: true };

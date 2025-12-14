@@ -17,6 +17,16 @@ export class SupabaseAdapter extends StorageAdapter {
       settings: 'settings',
       carryoverRecords: 'carryover_records'
     };
+    
+    // 캐시 추가
+    this._settingsCache = null;
+    this._settingsCacheTime = 0;
+    this.SETTINGS_CACHE_DURATION = 10 * 60 * 1000; // 10분
+    
+    // profiles 캐시 추가
+    this._profileCache = null;
+    this._profileCacheTime = 0;
+    this.PROFILE_CACHE_DURATION = 5 * 60 * 1000; // 5분
   }
 
   // ========== 유틸리티 메서드 ==========
@@ -24,6 +34,41 @@ export class SupabaseAdapter extends StorageAdapter {
   _handleError(error, operation) {
     console.error(`Supabase ${operation} 실패:`, error);
     throw new Error(`${operation} failed: ${error.message}`);
+  }
+
+  /**
+   * 프로필 정보 가져오기 (캐시 사용)
+   */
+  async _getProfileInfo() {
+    const now = Date.now();
+    
+    // 캐시가 유효하면 재사용
+    if (this._profileCache && 
+        (now - this._profileCacheTime) < this.PROFILE_CACHE_DURATION) {
+      return this._profileCache;
+    }
+
+    // 캐시가 없거나 만료됨 → DB 조회
+    const { data: { user } } = await this.supabase.auth.getUser();
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const { data: profile, error } = await this.supabase
+      .from('profiles')
+      .select('company_id, company_name, business_number')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.warn('프로필 정보 조회 실패:', error);
+      return null;
+    }
+
+    this._profileCache = profile;
+    this._profileCacheTime = now;
+    
+    return profile;
   }
 
   // ========== 직원 관련 메서드 ==========
@@ -102,36 +147,18 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
       
-      // 회사 정보 가져오기
-      let companyId = null;
-      let companyName = null;
-      let businessNumber = null;
+      // 회사 정보 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
       
-      try {
-        const { data: profile } = await this.supabase
-          .from('profiles')
-          .select('company_id, company_name, business_number')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile) {
-          companyId = profile.company_id;
-          companyName = profile.company_name;
-          businessNumber = profile.business_number;
-        }
-      } catch (profileError) {
-        console.warn('프로필 정보 조회 실패:', profileError);
-      }
-
       const newEmployee = {
         name: employeeData.name.trim(),
         birth_date: employeeData.birthDate, // 필수
         department: employeeData.department, // 필수
         hire_date: employeeData.hireDate, // 필수
         notes: employeeData.notes || null, // 선택
-        company_id: companyId, // 회사 ID 추가
-        company_name: companyName,
-        business_number: businessNumber,
+        company_id: profile?.company_id, // 회사 ID 추가
+        company_name: profile?.company_name,
+        business_number: profile?.business_number,
         user_id: user.id // 로그인한 사용자 ID
         // created_at과 last_updated_name은 DB default/trigger로 자동 생성
       };
@@ -327,12 +354,8 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       // 직원 정보 조회 (이름 포함)
       const { data: employeeData, error: employeeError } = await this.supabase
@@ -401,12 +424,8 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       // 대량 업데이트 히스토리 생성
       const historyRecords = HistoryPolicy.createBulkRecords(updates);
@@ -486,12 +505,8 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       const supabaseRecord = {
         employee_id: record.employeeId,
@@ -521,18 +536,21 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async getSettings() {
     try {
+      // 캐시 확인
+      const now = Date.now();
+      if (this._settingsCache && 
+          (now - this._settingsCacheTime) < this.SETTINGS_CACHE_DURATION) {
+        return this._settingsCache;
+      }
+
       // 로그인한 사용자 정보 가져오기
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       const { data, error } = await this.supabase
         .from(this.tables.settings)
@@ -546,7 +564,13 @@ export class SupabaseAdapter extends StorageAdapter {
         throw error;
       }
 
-      return data ? { multiplier: data.multiplier } : { multiplier: 1.0 };
+      const settings = data ? { multiplier: data.multiplier } : { multiplier: 1.0 };
+      
+      // 캐시 저장
+      this._settingsCache = settings;
+      this._settingsCacheTime = now;
+      
+      return settings;
     } catch (error) {
       console.warn('Supabase settings error, using localStorage fallback:', error.message);
       // localStorage 폴백
@@ -557,18 +581,18 @@ export class SupabaseAdapter extends StorageAdapter {
 
   async saveSettings(settings) {
     try {
+      // 캐시 무효화
+      this._settingsCache = null;
+      this._settingsCacheTime = 0;
+
       // 로그인한 사용자 정보 가져오기
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       const { data, error } = await this.supabase
         .from(this.tables.settings)
@@ -645,12 +669,8 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 회사 ID 가져오기
-      const { data: profile } = await this.supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
+      // 회사 ID 가져오기 (캐시 사용)
+      const profile = await this._getProfileInfo();
 
       const supabaseRecord = {
         employee_id: carryoverData.employeeId,
@@ -720,8 +740,20 @@ export class SupabaseAdapter extends StorageAdapter {
   // ========== 캐시 관리 ==========
 
   clearCache() {
-    // Supabase는 서버 기반이므로 로컬 캐시가 있다면 여기서 클리어
-    // 현재는 별도 캐시 구현이 없으므로 빈 구현
+    // settings 캐시 초기화
+    this._settingsCache = null;
+    this._settingsCacheTime = 0;
+    // profile 캐시 초기화
+    this._profileCache = null;
+    this._profileCacheTime = 0;
+  }
+
+  /**
+   * 프로필 캐시만 초기화 (로그아웃 시 사용)
+   */
+  clearProfileCache() {
+    this._profileCache = null;
+    this._profileCacheTime = 0;
   }
 
   // ========== 데이터 변환 유틸리티 ==========
