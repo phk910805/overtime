@@ -30,7 +30,7 @@ const getDateTextColor = (isHoliday, isWeekend) =>
 const TOOLTIP_STORAGE_KEY = 'hideScrollTip';
 
 const HeaderCell = memo(({ children, alignment = "start" }) => (
-  <div className={`flex flex-col items-${alignment} justify-start`} style={{ minHeight: '32px', paddingTop: '4px' }}>
+  <div className={`flex flex-col items-${alignment} justify-start`} style={{ minHeight: '32px', paddingTop: '4px', paddingBottom: '4px' }}>
     <div className="flex-shrink-0">
       {children}
     </div>
@@ -484,22 +484,31 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     localStorage.setItem(LAST_VISIT_MONTH_KEY, selectedMonth);
   }, [selectedMonth, currentYearMonth, customMonth, employees, getCarryoverForEmployee]);
 
-  // 헤더 높이 동기화 (holidays나 직원 수 변경 시에만)
+  // 헤더 높이 동기화 (월 변경, holidays, 직원 수 변경 시)
   useLayoutEffect(() => {
-    const syncHeaderHeight = () => {
-      // 이중 requestAnimationFrame으로 DOM 완전 업데이트 보장
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
-            const rightHeight = rightHeaderRowRef.current.offsetHeight;
-            leftHeaderRowRef.current.style.height = `${rightHeight}px`;
-          }
-        });
-      });
-    };
+    // holidays가 아직 로드되지 않았으면 건너뛰기
+    const hasHolidays = holidays && Object.keys(holidays).length > 0;
+    
+    if (!hasHolidays) {
+      return;
+    }
+    
+    // DOM 완전 렌더링 후 동기화
+    const timerId = setTimeout(() => {
+      if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
+        const rightHeight = rightHeaderRowRef.current.offsetHeight;
+        const leftHeight = leftHeaderRowRef.current.offsetHeight;
+        
+        // 양쪽 중 더 큰 높이로 맞춤
+        const maxHeight = Math.max(leftHeight, rightHeight);
+        
+        leftHeaderRowRef.current.style.height = `${maxHeight}px`;
+        rightHeaderRowRef.current.style.height = `${maxHeight}px`;
+      }
+    }, 100);
 
-    syncHeaderHeight();
-  }, [holidays, employees.length]); // selectedMonth 의존성 제거
+    return () => clearTimeout(timerId);
+  }, [selectedMonth, holidays, employees.length]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
