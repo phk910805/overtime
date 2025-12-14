@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { validators } from '../utils';
 import { useOvertimeContext } from '../context';
+import InviteTeamMember from './InviteTeamMember';
+import { Users, Clock, Mail } from 'lucide-react';
 
 // ========== MODAL COMPONENTS ==========
 const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
@@ -52,6 +54,13 @@ const SettingsModal = memo(({ show, onClose }) => {
   const [multiplier, setMultiplier] = useState('1.0');
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState('multiplier'); // 'multiplier' | 'invite'
+  
+  // 초대 코드 관련 상태
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [activeInvites, setActiveInvites] = useState([]);
 
   // 자주 사용하는 배수 프리셋
   const presets = [
@@ -66,8 +75,31 @@ const SettingsModal = memo(({ show, onClose }) => {
     if (show) {
       setMultiplier(contextMultiplier?.toString() || '1.0');
       setError('');
+      setActiveTab('multiplier');
+      
+      // 초대 코드 목록 로드
+      loadActiveInvites();
     }
   }, [show, contextMultiplier]);
+
+  const loadActiveInvites = useCallback(async () => {
+    try {
+      // TODO: dataService.getActiveInviteCodes() 호출
+      // const invites = await dataService.getActiveInviteCodes();
+      // setActiveInvites(invites);
+      
+      // 임시 데이터
+      setActiveInvites([]);
+    } catch (error) {
+      console.error('초대 코드 로드 실패:', error);
+    }
+  }, []);
+
+  const handleInviteCreated = useCallback((inviteData) => {
+    showToast('초대 코드가 생성되었습니다');
+    setShowInviteModal(false);
+    loadActiveInvites();
+  }, [showToast, loadActiveInvites]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -146,7 +178,42 @@ const SettingsModal = memo(({ show, onClose }) => {
         onClose={hideToast}
         type={toast.type}
       />
+      {showInviteModal && (
+        <InviteTeamMember
+          companyName="회사명" // TODO: 실제 회사명 전달
+          onClose={() => setShowInviteModal(false)}
+          onInvite={handleInviteCreated}
+        />
+      )}
       <Modal show={show} onClose={onClose} title="설정" size="lg">
+        {/* 탭 네비게이션 */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('multiplier')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'multiplier'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              배수 설정
+            </button>
+            <button
+              onClick={() => setActiveTab('invite')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'invite'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4 inline-block mr-1" />
+              팀원 초대
+            </button>
+          </nav>
+        </div>
+        {/* 배수 설정 탭 */}
+        {activeTab === 'multiplier' && (
         <div className="space-y-6">
           {/* 배수 설정 */}
           <div>
@@ -212,28 +279,101 @@ const SettingsModal = memo(({ show, onClose }) => {
             </ul>
           </div>
         </div>
+        )}
 
-        <div className="flex justify-between mt-8 pt-4 border-t">
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            기본값으로 재설정
-          </button>
-          <div className="flex space-x-2">
+        {/* 초대 코드 관리 탭 */}
+        {activeTab === 'invite' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-medium text-gray-700">활성 초대 코드</h4>
             <button
-              onClick={handleClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              onClick={() => setShowInviteModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex items-center gap-2"
             >
-              취소
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              저장
+              <Mail className="w-4 h-4" />
+              초대 코드 생성
             </button>
           </div>
+
+          {activeInvites.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 mb-2">생성된 초대 코드가 없습니다</p>
+              <p className="text-sm text-gray-500">팀원을 초대하려면 초대 코드를 생성하세요</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeInvites.map((invite) => (
+                <div key={invite.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-mono font-bold text-lg text-blue-600">
+                        {invite.inviteCode}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        <Mail className="w-3 h-3 inline mr-1" />
+                        {invite.email}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        만료: {new Date(invite.expiresAt).toLocaleString('ko-KR')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+            <p className="text-sm text-blue-800">
+              <strong>안내:</strong>
+            </p>
+            <ul className="text-xs text-blue-700 mt-2 space-y-1 ml-4">
+              <li>• 초대 코드는 1시간 동안 유효합니다</li>
+              <li>• 초대받은 이메일로만 가입할 수 있습니다</li>
+              <li>• 코드는 1회만 사용 가능합니다</li>
+            </ul>
+          </div>
+        </div>
+        )}
+
+        <div className="flex justify-between mt-8 pt-4 border-t">
+          {activeTab === 'multiplier' ? (
+            <>
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                기본값으로 재설정
+              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  저장
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-end w-full">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                닫기
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
     </>
