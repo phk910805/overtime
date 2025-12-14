@@ -4,11 +4,28 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { createStorageAdapter } from './storage';
 
 export class AuthService {
   constructor() {
     this.currentUser = null;
     this.listeners = new Set();
+    
+    // StorageAdapter 초기화
+    try {
+      createStorageAdapter({
+        type: 'supabase',
+        options: {
+          supabaseClient: supabase
+        }
+      });
+      console.log('✅ StorageAdapter 초기화 성공');
+    } catch (error) {
+      // 이미 초기화된 경우 무시
+      if (!error.message?.includes('already initialized')) {
+        console.error('❌ StorageAdapter 초기화 실패:', error);
+      }
+    }
   }
 
   /**
@@ -35,10 +52,7 @@ export class AuthService {
         options: {
           emailRedirectTo: this.getRedirectURL(),
           data: {
-            full_name: userData.full_name || '',
-            company_name: userData.company_name || '',
-            business_number: userData.business_number || '',
-            role: userData.role || 'admin'
+            full_name: userData.full_name || ''
           }
         }
       });
@@ -175,8 +189,6 @@ export class AuthService {
         
         this.currentUser = session?.user || null;
         this.notifyListeners(event, session?.user || null);
-        
-        callback(event, session?.user || null);
       }
     );
 

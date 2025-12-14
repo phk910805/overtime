@@ -55,16 +55,33 @@ const AuthWrapper = ({ children }) => {
         return;
       }
 
-      try {
-        const dataService = getDataService();
-        const company = await dataService.getMyCompany();
-        
-        setHasCompany(!!company);
-        setCompanyChecked(true);
-      } catch (error) {
-        console.error('회사 정보 확인 실패:', error);
-        setHasCompany(false);
-        setCompanyChecked(true);
+      // StorageAdapter 초기화 대기 (최대 3번 재시도)
+      let retries = 3;
+      let delay = 500;
+
+      while (retries > 0) {
+        try {
+          const dataService = getDataService();
+          const company = await dataService.getMyCompany();
+          
+          setHasCompany(!!company);
+          setCompanyChecked(true);
+          return; // 성공 시 종료
+        } catch (error) {
+          // StorageAdapter 초기화 에러인 경우 재시도
+          if (error.message?.includes('not initialized') && retries >= 1) {
+            console.log(`StorageAdapter 초기화 대기 중... (재시도 ${4 - retries}/3)`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2; // 지수 백오프
+            retries--;
+          } else {
+            // 다른 에러이거나 재시도 소진
+            console.error('회사 정보 확인 실패:', error);
+            setHasCompany(false);
+            setCompanyChecked(true);
+            return;
+          }
+        }
       }
     };
 

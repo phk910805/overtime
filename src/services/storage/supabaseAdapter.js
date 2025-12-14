@@ -811,20 +811,7 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('회사 정보가 없습니다. 먼저 회사를 등록해주세요.');
       }
 
-      const { data: existingUser } = await this.supabase
-        .from('profiles')
-        .select('id, company_id')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        if (existingUser.company_id === profile.company_id) {
-          throw new Error('이미 팀원으로 등록된 이메일입니다.');
-        } else {
-          throw new Error('다른 회사에 등록된 이메일입니다.');
-        }
-      }
-
+      // 이미 동일 이메일로 활성 초대 코드가 있는지 확인
       const { data: pendingInvite } = await this.supabase
         .from('company_invites')
         .select('*')
@@ -832,12 +819,18 @@ export class SupabaseAdapter extends StorageAdapter {
         .eq('company_id', profile.company_id)
         .eq('is_used', false)
         .gt('expires_at', new Date().toISOString())
-        .single();
+        .maybeSingle(); // single() 대신 maybeSingle() 사용
 
+      // 기존 초대 코드가 있으면 무효화
       if (pendingInvite) {
-        throw new Error('이미 초대 이메일이 발송되었습니다.');
+        console.log('기존 초대 코드 무효화:', pendingInvite.invite_code);
+        await this.supabase
+          .from('company_invites')
+          .update({ is_used: true })
+          .eq('id', pendingInvite.id);
       }
 
+      // 새 초대 코드 생성
       const inviteCode = this._generateInviteCode();
 
       const { data: invite, error } = await this.supabase

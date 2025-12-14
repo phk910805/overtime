@@ -94,12 +94,6 @@ const SettingsModal = memo(({ show, onClose }) => {
     }
   }, []);
 
-  const handleInviteCreated = useCallback((inviteData) => {
-    showToast('초대 코드가 생성되었습니다');
-    setShowInviteModal(false);
-    loadActiveInvites();
-  }, [showToast, loadActiveInvites]);
-
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
   }, []);
@@ -107,6 +101,12 @@ const SettingsModal = memo(({ show, onClose }) => {
   const hideToast = useCallback(() => {
     setToast({ show: false, message: '', type: 'success' });
   }, []);
+
+  const handleInviteCreated = useCallback((inviteData) => {
+    showToast('초대 코드가 생성되었습니다');
+    setShowInviteModal(false);
+    loadActiveInvites();
+  }, [showToast, loadActiveInvites]);
 
   const handleMultiplierChange = useCallback((e) => {
     const value = e.target.value;
