@@ -334,6 +334,68 @@ export class DataService {
   getHistoryPolicy() {
     return HistoryPolicy;
   }
+
+  // ========== Multi-tenancy 회사 관리 ==========
+
+  /**
+   * 현재 사용자의 회사 정보 조회
+   */
+  async getMyCompany() {
+    return await this._getAdapter().getMyCompany();
+  }
+
+  /**
+   * 새 회사 생성
+   * @param {string} businessNumber - 사업자번호 (###-##-#####)
+   * @param {string} companyName - 회사명
+   */
+  async createCompany(businessNumber, companyName) {
+    if (!businessNumber || !companyName) {
+      throw new Error('사업자번호와 회사명은 필수입니다.');
+    }
+    return await this._getAdapter().createCompany(businessNumber, companyName);
+  }
+
+  /**
+   * 초대 코드 생성
+   * @param {string} email - 초대할 이메일
+   */
+  async createInviteCode(email) {
+    if (!email) {
+      throw new Error('이메일은 필수입니다.');
+    }
+    return await this._getAdapter().createInviteCode(email);
+  }
+
+  /**
+   * 초대 코드 검증
+   * @param {string} code - 초대 코드
+   * @param {string} email - 가입 이메일
+   */
+  async validateInviteCode(code, email) {
+    if (!code || !email) {
+      throw new Error('초대 코드와 이메일은 필수입니다.');
+    }
+    return await this._getAdapter().validateInviteCode(code, email);
+  }
+
+  /**
+   * 초대 코드 사용 (회사 참여)
+   * @param {number} inviteId - 초대 ID
+   */
+  async useInviteCode(inviteId) {
+    if (!inviteId) {
+      throw new Error('초대 ID는 필수입니다.');
+    }
+    return await this._getAdapter().useInviteCode(inviteId);
+  }
+
+  /**
+   * 활성 초대 코드 목록 조회
+   */
+  async getActiveInviteCodes() {
+    return await this._getAdapter().getActiveInviteCodes();
+  }
 }
 
 // 싱글톤 인스턴스
