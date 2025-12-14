@@ -746,11 +746,17 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const { data: existing } = await this.supabase
+      // 사업자번호 중복 체크
+      const { data: existing, error: checkError } = await this.supabase
         .from('companies')
         .select('id, company_name')
         .eq('business_number', businessNumber)
-        .single();
+        .maybeSingle(); // single() 대신 maybeSingle() 사용
+
+      // 406 에러 무시 (RLS 정책 문제)
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.warn('중복 체크 실패 (무시):', checkError);
+      }
 
       if (existing) {
         throw new Error(`이미 등록된 사업자번호입니다. 회사명: ${existing.company_name}`);

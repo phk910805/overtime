@@ -104,7 +104,23 @@ export class AuthService {
 
     } catch (error) {
       console.error('❌ 로그인 실패:', error.message);
-      return { success: false, error: error.message };
+      
+      // Supabase 영어 에러 메시지를 한글로 변환
+      let koreanError = error.message;
+      
+      if (error.message === 'Invalid login credentials') {
+        koreanError = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error.message.includes('Email not confirmed')) {
+        koreanError = '이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.';
+      } else if (error.message.includes('Invalid email')) {
+        koreanError = '올바른 이메일 형식을 입력해주세요.';
+      } else if (error.message.includes('User not found')) {
+        koreanError = '존재하지 않는 계정입니다.';
+      } else if (error.message.includes('Too many requests')) {
+        koreanError = '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.';
+      }
+      
+      return { success: false, error: koreanError };
     }
   }
 
