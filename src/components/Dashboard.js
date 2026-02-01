@@ -22,6 +22,19 @@ const STYLES = {
   }
 };
 
+// 타이밍 상수 (성능 최적화)
+const TIMING = {
+  DATA_LOAD_DELAY: 100,           // 데이터 로드 딜레이
+  SCROLL_TO_TODAY_DELAY: 100,     // 오늘 날짜 스크롤 딜레이
+  MONTH_CHANGE_SCROLL_DELAY: 100, // 월 변경 시 스크롤 딜레이
+  INPUT_FOCUS_DELAY: 100,         // 입력 필드 포커스 딜레이
+};
+
+// 로컬 스토리지 키 상수
+const STORAGE_KEYS = {
+  HIDE_SCROLL_TIP: 'hideScrollTip',
+};
+
 // 헬퍼 함수
 const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-100';
 const getDateTextColor = (isHoliday, isWeekend) => 
@@ -218,7 +231,7 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
           hoursRef.current.focus();
           hoursRef.current.select();
         }
-      }, 100);
+      }, TIMING.INPUT_FOCUS_DELAY);
     }
   }, [show, value]);
 
@@ -471,7 +484,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             if (!isCancelled) {
               setIsReady(true);
             }
-          }, 100);
+          }, TIMING.DATA_LOAD_DELAY);
         }
       } catch (error) {
         console.warn('Holiday fetch failed:', error);
@@ -482,7 +495,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             if (!isCancelled) {
               setIsReady(true);
             }
-          }, 100);
+          }, TIMING.DATA_LOAD_DELAY);
         }
       }
     };
@@ -568,7 +581,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     localStorage.setItem(LAST_VISIT_MONTH_KEY, selectedMonth);
   }, [selectedMonth, currentYearMonth, customMonth, employees, getCarryoverForEmployee]);
 
-  // 헤더 높이 동기화 (월 변경, holidays, 직원 수 변경 시)
+  // 헤더 높이 동기화 (setTimeout 방식 - 안정적)
   useLayoutEffect(() => {
     // holidays가 아직 로드되지 않았으면 건너뛰기
     const hasHolidays = holidays && Object.keys(holidays).length > 0;
@@ -577,19 +590,17 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       return;
     }
     
-    // DOM 완전 렌더링 후 동기화 (최적화된 타이밍)
+    // 50ms 딜레이 후 높이 동기화
     const timerId = setTimeout(() => {
       if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
         const rightHeight = rightHeaderRowRef.current.offsetHeight;
         const leftHeight = leftHeaderRowRef.current.offsetHeight;
-        
-        // 양쪽 중 더 큰 높이로 맞춤
         const maxHeight = Math.max(leftHeight, rightHeight);
         
         leftHeaderRowRef.current.style.height = `${maxHeight}px`;
         rightHeaderRowRef.current.style.height = `${maxHeight}px`;
       }
-    }, 50); // 50ms로 최적화 (깜빡임 최소화)
+    }, 50);
 
     return () => clearTimeout(timerId);
   }, [selectedMonth, holidays, employees.length]);
@@ -700,7 +711,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
         scrollContainerRef.current.scrollTo(todayPosition, 'smooth');
       }
-    }, 100);
+    }, TIMING.SCROLL_TO_TODAY_DELAY);
   }, [selectedMonth, currentYearMonth, handleMonthChange, todayDay]);
 
   // 초기 로드 시 이번 달이면 오늘 날짜로 자동 스크롤

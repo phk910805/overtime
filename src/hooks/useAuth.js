@@ -3,7 +3,7 @@
  * 인증 상태 관리를 위한 React Hook
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAuthService } from '../services/authService';
 
 export function useAuth() {
@@ -11,7 +11,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  const authService = getAuthService();
+  // useRef로 변경: 의존성 문제 해결 (성능 최적화)
+  const authServiceRef = useRef(null);
+  if (!authServiceRef.current) {
+    authServiceRef.current = getAuthService();
+  }
+  const authService = authServiceRef.current;
 
   // 초기 사용자 상태 확인
   useEffect(() => {
@@ -48,8 +53,7 @@ export function useAuth() {
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // authService 제거 - 한 번만 실행
+  }, []); // authService는 useRef로 안정적 - 의존성 불필요
 
   // 인증 상태 변경 리스너
   useEffect(() => {
@@ -73,8 +77,7 @@ export function useAuth() {
     });
 
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized]); // authService 제거
+  }, [initialized]); // authService는 useRef로 안정적 - 의존성 불필요
 
   // 회원가입
   const signUp = useCallback(async (email, password, userData) => {

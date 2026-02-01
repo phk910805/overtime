@@ -4,6 +4,7 @@ import { getDataService } from './services/dataService.js';
 import { dataCalculator } from './dataManager';
 import { getConfig } from './services/config.js';
 import { supabase } from './lib/supabase'; // Supabase client import
+import { dateUtils } from './utils'; // dateUtils import 추가
 
 const OvertimeContext = createContext();
 
@@ -338,7 +339,9 @@ const useOvertimeData = () => {
     return Array.from(deletedEmployeeMap.values());
   };
 
-  const getAllEmployeesWithRecords = useCallback((currentSelectedMonth) => {
+  // useMemo로 변경: 의존성 변경 시에만 함수 재생성 (성능 최적화)
+  const getAllEmployeesWithRecords = useMemo(() => {
+    return (currentSelectedMonth) => {
     // 직원이 선택된 월에 표시되어야 하는지 확인하는 함수
     // 등록월 <= 선택된 월 <= 삭제월 (삭제된 경우)
     const isEmployeeVisibleInMonth = (employee, targetMonth) => {
@@ -401,8 +404,9 @@ const useOvertimeData = () => {
         return nameA.localeCompare(nameB, 'ko');
       });
 
-    // 활성 직원 + 삭제된 직원 결합
-    return [...activeEmployees, ...deletedEmployees];
+      // 활성 직원 + 삭제된 직원 결합
+      return [...activeEmployees, ...deletedEmployees];
+    };
   }, [employees, allEmployeesIncludingDeleted]);
 
 

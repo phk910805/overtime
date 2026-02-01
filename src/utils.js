@@ -126,6 +126,59 @@ export const dateUtils = {
       deadline: null,
       message: '지난 달 이전 데이터는 수정할 수 없습니다'
     };
+  },
+
+  /**
+   * 직원 생성일 파싱 (안전)
+   * @param {string} createdAt - 생성일 문자열
+   * @returns {Date|null} - Date 객체 또는 null
+   */
+  parseEmployeeCreatedDate: (createdAt) => {
+    if (!createdAt) return null;
+    
+    try {
+      const date = new Date(createdAt);
+      return isNaN(date.getTime()) ? null : date;
+    } catch (error) {
+      console.warn('날짜 파싱 오류:', createdAt, error);
+      return null;
+    }
+  },
+
+  /**
+   * 직원 생성 월 가져오기 (YYYY-MM)
+   * @param {string} createdAt - 생성일 문자열
+   * @returns {string} - YYYY-MM 또는 '1900-01'
+   */
+  getEmployeeCreatedMonth: (createdAt) => {
+    const date = dateUtils.parseEmployeeCreatedDate(createdAt);
+    return date ? date.toISOString().slice(0, 7) : '1900-01';
+  },
+
+  /**
+   * 직원 삭제 월 가져오기 (YYYY-MM)
+   * @param {string} deletedAt - 삭제일 문자열
+   * @returns {string} - YYYY-MM 또는 '9999-12'
+   */
+  getEmployeeDeletedMonth: (deletedAt) => {
+    if (!deletedAt) return '9999-12'; // 삭제되지 않은 경우 먼 미래
+    
+    const date = dateUtils.parseEmployeeCreatedDate(deletedAt);
+    return date ? date.toISOString().slice(0, 7) : '9999-12';
+  },
+
+  /**
+   * 직원이 특정 월에 활성 상태인지 확인
+   * @param {Object} employee - 직원 객체 (createdAt, deletedAt 포함)
+   * @param {string} targetMonth - 확인할 월 (YYYY-MM)
+   * @returns {boolean} - 활성 여부
+   */
+  isEmployeeActiveInMonth: (employee, targetMonth) => {
+    const createdMonth = dateUtils.getEmployeeCreatedMonth(employee.createdAt);
+    const deletedMonth = dateUtils.getEmployeeDeletedMonth(employee.deletedAt);
+    
+    // 등록월 <= 대상월 <= 삭제월
+    return targetMonth >= createdMonth && targetMonth <= deletedMonth;
   }
 };
 

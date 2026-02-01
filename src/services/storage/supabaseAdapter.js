@@ -2,6 +2,12 @@ import { StorageAdapter } from './StorageAdapter.js';
 import HistoryPolicy from '../historyPolicy.js';
 import { TimeUtils } from '../../utils/timeUtils.js';
 
+// 캠시 Duration 상수 (성능 최적화)
+const CACHE_DURATIONS = {
+  SETTINGS: 10 * 60 * 1000,  // 10분
+  PROFILE: 5 * 60 * 1000,    // 5분
+};
+
 /**
  * Supabase 기반 스토리지 어댑터
  */
@@ -21,12 +27,12 @@ export class SupabaseAdapter extends StorageAdapter {
     // 캐시 추가
     this._settingsCache = null;
     this._settingsCacheTime = 0;
-    this.SETTINGS_CACHE_DURATION = 10 * 60 * 1000; // 10분
+    this.SETTINGS_CACHE_DURATION = CACHE_DURATIONS.SETTINGS;
     
     // profiles 캐시 추가
     this._profileCache = null;
     this._profileCacheTime = 0;
-    this.PROFILE_CACHE_DURATION = 5 * 60 * 1000; // 5분
+    this.PROFILE_CACHE_DURATION = CACHE_DURATIONS.PROFILE;
   }
 
   // ========== 유틸리티 메서드 ==========
