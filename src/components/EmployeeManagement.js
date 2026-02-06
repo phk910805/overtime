@@ -2,7 +2,7 @@ import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Users, Plus, Edit2, UserMinus, Calendar } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { useSortingPaging, useValidation } from '../utils';
-import { Modal, ConfirmModal, InputField, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
+import { Modal, ConfirmModal, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
 
 // ========== MAIN COMPONENT ==========
 const EmployeeManagement = memo(() => {
@@ -40,20 +40,21 @@ const EmployeeManagement = memo(() => {
     'employeeManagement_history_sort'
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const validateForm = useCallback(() => {
     let isValid = true;
     const newCustomErrors = {};
-    
+
     // 이름 검증
     const isValidName = validate('employeeName', 'employeeName', employeeName, employees, editingEmployee?.id);
     if (!isValidName) isValid = false;
-    
+
     // 직원명 길이 검증 (추가)
     if (employeeName && employeeName.length > 50) {
       newCustomErrors.employeeName = '직원명은 50자 이하로 입력해주세요.';
       isValid = false;
     }
-    
+
     // 부서 검증 (필수)
     if (!department || !department.trim()) {
       newCustomErrors.department = '부서는 필수입니다.';
@@ -62,26 +63,27 @@ const EmployeeManagement = memo(() => {
       newCustomErrors.department = '부서명은 100자 이하로 입력해주세요.';
       isValid = false;
     }
-    
+
     // 입사일 검증 (필수)
     if (!hireDate) {
       newCustomErrors.hireDate = '입사일은 필수입니다.';
       isValid = false;
     }
-    
+
     // 메모 길이 검증 (최대 1000자)
     if (notes && notes.length > 1000) {
       newCustomErrors.notes = '메모는 1000자 이하로 입력해주세요.';
       isValid = false;
     }
-    
+
     setCustomErrors(newCustomErrors);
     return isValid;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeName, birthDate, department, hireDate, notes, employees, editingEmployee, validate]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
-    
+
     try {
       const employeeData = {
         name: employeeName.trim(),
@@ -90,7 +92,7 @@ const EmployeeManagement = memo(() => {
         hireDate: hireDate, // 필수값
         notes: notes || null
       };
-      
+
       if (editingEmployee) {
         await updateEmployee(editingEmployee.id, employeeData);
       } else {
@@ -102,6 +104,7 @@ const EmployeeManagement = memo(() => {
       console.error('직원 저장 실패:', error);
       setCustomErrors(prev => ({ ...prev, general: error.message || '저장 중 오류가 발생했습니다.' }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeName, birthDate, department, hireDate, notes, editingEmployee, addEmployee, updateEmployee, validateForm]);
 
   const resetForm = useCallback(() => {

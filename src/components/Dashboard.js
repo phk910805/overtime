@@ -30,11 +30,6 @@ const TIMING = {
   INPUT_FOCUS_DELAY: 100,         // 입력 필드 포커스 딜레이
 };
 
-// 로컬 스토리지 키 상수
-const STORAGE_KEYS = {
-  HIDE_SCROLL_TIP: 'hideScrollTip',
-};
-
 // 헬퍼 함수
 const getEmployeeBgClass = (isActive) => isActive ? 'bg-white' : 'bg-gray-100';
 const getDateTextColor = (isHoliday, isWeekend) => 
@@ -381,8 +376,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     getCarryoverForEmployee,
     checkAndRecalculateCarryover,
     multiplier,
-    selectedMonth: contextSelectedMonth,
-    setSelectedMonth: contextSetSelectedMonth
+    selectedMonth: contextSelectedMonth
   } = useOvertimeContext();
 
   // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)

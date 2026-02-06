@@ -27,7 +27,7 @@ export function useAuth() {
         setLoading(true);
         
         // 현재 세션 확인
-        const session = await authService.getCurrentSession();
+        await authService.getCurrentSession();
         const currentUser = await authService.getCurrentUser();
         
         if (isMounted) {
@@ -53,6 +53,7 @@ export function useAuth() {
     return () => {
       isMounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // authService는 useRef로 안정적 - 의존성 불필요
 
   // 인증 상태 변경 리스너
@@ -77,6 +78,7 @@ export function useAuth() {
     });
 
     return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized]); // authService는 useRef로 안정적 - 의존성 불필요
 
   // 회원가입

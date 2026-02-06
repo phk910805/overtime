@@ -77,10 +77,11 @@ const SettingsModal = memo(({ show, onClose }) => {
       setMultiplier(contextMultiplier?.toString() || '1.0');
       setError('');
       setActiveTab('multiplier');
-      
+
       // 초대 코드 목록 로드
       loadActiveInvites();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, contextMultiplier]);
 
   const loadActiveInvites = useCallback(async () => {

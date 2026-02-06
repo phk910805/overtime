@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Edit, ChevronDown } from 'lucide-react';
+import { LogOut, Edit, ChevronDown } from 'lucide-react';
 import ProfileEditModal from './ProfileEditModal';
 
 const ProfileDropdown = ({ user, onSignOut, onProfileEdit }) => {

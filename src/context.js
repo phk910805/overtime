@@ -4,7 +4,7 @@ import { getDataService } from './services/dataService.js';
 import { dataCalculator } from './dataManager';
 import { getConfig } from './services/config.js';
 import { supabase } from './lib/supabase'; // Supabase client import
-import { dateUtils } from './utils'; // dateUtils import 추가
+import { dateUtils } from './utils';
 
 const OvertimeContext = createContext();
 
@@ -37,8 +37,6 @@ const initializeDataLayer = async () => {
     }
     
     if (storageConfig.type === 'supabase') {
-      const supabaseConfig = config.getSupabaseConfig();
-      
       if (!validation.isValid) {
         console.warn('⚠️ Supabase config invalid, falling back to localStorage:', validation.errors);
         createStorageAdapter({ type: 'localStorage' });
@@ -281,64 +279,6 @@ const useOvertimeData = () => {
     return await dataService.getEmployeeNameFromRecord(record);
   }, [dataService]);
 
-  // 헬퍼 함수들
-  const isValidEmployeeDate = (employee) => {
-    if (!employee.createdAt) return true; // 기존 데이터 호환성
-    
-    try {
-      const employeeCreatedDate = new Date(employee.createdAt);
-      return !isNaN(employeeCreatedDate.getTime());
-    } catch (error) {
-      console.warn('직원 생성일 변환 오류:', employee.name, employee.createdAt);
-      return true; // 오류 시 항상 표시
-    }
-  };
-
-  const getEmployeeCreatedMonth = (employee) => {
-    if (!employee.createdAt) return '1900-01'; // 매우 이른 날짜로 항상 통과
-    
-    try {
-      const employeeCreatedDate = new Date(employee.createdAt);
-      if (isNaN(employeeCreatedDate.getTime())) return '1900-01';
-      return employeeCreatedDate.toISOString().slice(0, 7);
-    } catch (error) {
-      return '1900-01';
-    }
-  };
-
-  const filterRecordsByMonth = (records, year, month) => {
-    return records.filter(record => {
-      if (!record.date) return false;
-      const recordDate = new Date(record.date);
-      return recordDate.getFullYear() === parseInt(year) && 
-             (recordDate.getMonth() + 1).toString().padStart(2, '0') === month;
-    });
-  };
-
-  const extractDeletedEmployeesFromRecords = (records, activeEmployees) => {
-    const deletedEmployeeMap = new Map();
-    
-    records.forEach(record => {
-      if (record.employeeName && record.totalMinutes > 0 && 
-          !activeEmployees.find(emp => emp.id === record.employeeId)) {
-        if (!deletedEmployeeMap.has(record.employeeId)) {
-          // 활성 직원 목록에서 삭제된 직원의 최신 정보 찾기
-          const deletedEmployee = employees.find(emp => emp.id === record.employeeId);
-          
-          deletedEmployeeMap.set(record.employeeId, {
-            id: record.employeeId,
-            name: deletedEmployee?.lastUpdatedName || deletedEmployee?.name || record.employeeName,
-            lastUpdatedName: deletedEmployee?.lastUpdatedName || record.employeeName,
-            createdAt: record.createdAt,
-            isActive: false
-          });
-        }
-      }
-    });
-    
-    return Array.from(deletedEmployeeMap.values());
-  };
-
   // useMemo로 변경: 의존성 변경 시에만 함수 재생성 (성능 최적화)
   const getAllEmployeesWithRecords = useMemo(() => {
     return (currentSelectedMonth) => {
@@ -508,8 +448,6 @@ const useOvertimeData = () => {
    */
   const checkAndRecalculateCarryover = useCallback(async (employeeId, sourceMonth) => {
     try {
-      const { dateUtils } = require('./utils');
-      
       // 다음 달 구하기
       const targetMonth = dateUtils.getNextMonth(sourceMonth);
       const [targetYear, targetMonthNum] = targetMonth.split('-');
@@ -594,6 +532,7 @@ const useOvertimeData = () => {
       }
       return { hasImpact: false };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataService, overtimeRecords, vacationRecords, multiplier, carryoverRecords, employees, allEmployeesIncludingDeleted, createCarryoverRecord, updateCarryoverRecord]);
 
   /**
@@ -604,7 +543,6 @@ const useOvertimeData = () => {
    */
   const autoCreateMonthlyCarryover = useCallback(async (currentMonth) => {
     try {
-      const { dateUtils } = require('./utils');
       const [currentYear, currentMonthNum] = currentMonth.split('-');
       
       // 1. 현재 달의 이월이 이미 있는지 확인 (DB에서 직접 확인)

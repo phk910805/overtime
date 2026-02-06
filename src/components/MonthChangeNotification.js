@@ -1,5 +1,5 @@
 import React from 'react';
-import { timeUtils, dateUtils } from '../utils';
+import { timeUtils } from '../utils';
 
 /**
  * 월 변경 알림 툴팁

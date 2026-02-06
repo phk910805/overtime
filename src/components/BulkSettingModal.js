@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, dateUtils } from '../utils';
 import TimeInputValidator from '../utils/timeInputValidator.js';
@@ -101,6 +101,7 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
     }
   }, [show, minDate, maxDate]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const showToast = useCallback((message, type = 'error') => {
     setToast({ show: true, message, type });
   }, []);
@@ -321,6 +322,7 @@ const BulkSettingModal = memo(({ show, onClose, onApplySuccess }) => {
         onApplySuccess(resultMessage);
       }, 100);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewData, getTargetEmployees, getTargetDates, settings, updateDailyTime, getDailyData, resetSettings, onClose, onApplySuccess]);
 
   if (!show) return null;

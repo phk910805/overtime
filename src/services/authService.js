@@ -308,7 +308,7 @@ export class AuthService {
       }
 
       // 현재 사용자 이메일과 입력된 비밀번호로 로그인 시도
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: this.currentUser.email,
         password: password
       });

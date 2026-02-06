@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Save, X, Building, FileText, Shield } from 'lucide-react';
+import { Save, X, Building, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getAuthService } from '../services/authService';
 import PasswordField from './PasswordField';
@@ -120,6 +120,7 @@ const ProfileEditModal = ({ isOpen, onClose }) => {
     if (user && isOpen) {
       loadUserProfile();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isOpen]);
 
   // 모달이 닫힐 때 폼 초기화

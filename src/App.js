@@ -1,6 +1,5 @@
 import React, { useState, useCallback, memo } from 'react';
-import { Calendar, Clock, Users, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
-import { OvertimeProvider, useOvertimeContext } from './context';
+import { Calendar, Clock, Users, BarChart3, Settings } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';

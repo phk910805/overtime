@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import { ChevronUp, ChevronDown, CheckCircle, XCircle, AlertTriangle, Info, Loader } from 'lucide-react';
 
 // ========== BASIC COMPONENTS ==========

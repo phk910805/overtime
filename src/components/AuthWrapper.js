@@ -71,6 +71,7 @@ const AuthWrapper = ({ children }) => {
           // StorageAdapter 초기화 에러인 경우 재시도
           if (error.message?.includes('not initialized') && retries >= 1) {
             console.log(`StorageAdapter 초기화 대기 중... (재시도 ${4 - retries}/3)`);
+            // eslint-disable-next-line no-loop-func
             await new Promise(resolve => setTimeout(resolve, delay));
             delay *= 2; // 지수 백오프
             retries--;

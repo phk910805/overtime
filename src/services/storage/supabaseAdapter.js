@@ -490,7 +490,6 @@ export class SupabaseAdapter extends StorageAdapter {
       if (filters.month) {
         const [year, month] = filters.month.split('-');
         const startDate = `${year}-${month}-01`;
-        const endDate = `${year}-${month}-31`;
         query = query.gte('created_at', startDate).lt('created_at', `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-01`);
       }
 
