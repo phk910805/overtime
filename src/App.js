@@ -41,7 +41,7 @@ const OvertimeManagementApp = memo(() => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               <Clock className="w-8 h-8 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리</h1>
+              <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리!</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button

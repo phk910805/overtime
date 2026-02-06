@@ -39,6 +39,9 @@ firebase-debug.log
 *.swp
 *.swo
 
+# Claude Code (MCP config contains auth tokens)
+.claude/mcp.json
+
 # OS generated files
 Thumbs.db
 .DS_Store?
