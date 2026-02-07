@@ -41,6 +41,7 @@ firebase-debug.log
 
 # Claude Code (MCP config contains auth tokens)
 .claude/mcp.json
+.mcp.json
 
 # OS generated files
 Thumbs.db

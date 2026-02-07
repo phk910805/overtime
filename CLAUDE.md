@@ -72,6 +72,10 @@ src/
 - eslint-disable 주석은 **dependency array 바로 윗줄**에 배치
 - 빌드 실패 시 절대 커밋/푸시하지 않을 것
 
+### DB 스키마 변경 시
+- SQL 제공 시 **변경 SQL + 롤백 SQL을 항상 함께 제공**할 것
+- 사용자가 요청하지 않아도 자동으로 롤백 SQL 포함
+
 ### 절대 금지 사항
 - `.env.production` 직접 수정 금지 (사용자 확인 필수)
 - Supabase 스키마/RLS 정책 변경 금지 (사용자 확인 필수)
@@ -93,31 +97,52 @@ src/
 
 ## 환경 구분
 
-| 환경 | 브랜치 | URL | Supabase |
-|------|--------|-----|----------|
-| **Dev** | `feature/*` | localhost:3000 | dev 프로젝트 |
-| **Staging** | `dev` | dev.overtime.pages.dev | dev 프로젝트 |
-| **Production** | `main` | overtime.pages.dev | 프로덕션 프로젝트 |
+| 단계 | 환경 | 코드 실행 | Supabase | 확인 포인트 |
+|------|------|----------|----------|------------|
+| **1단계: Dev** | Firebase Studio preview (:3000) | 로컬 (webpack dev server) | dev (`maoliyexnv...`) | 기능 동작 |
+| **2단계: Staging** | Cloudflare Preview | CDN (빌드된 정적 파일) | dev (`maoliyexnv...`) | 배포 환경 동작 |
+| **3단계: Production** | Cloudflare Production | CDN (빌드된 정적 파일) | prod (`qcsvkxtxtd...`) | 실서비스 |
+
+### 각 단계의 목적
+- **1단계 (Dev)**: 기능 개발 & 테스트. dev Supabase로 자유롭게 데이터 조작 가능
+- **2단계 (Staging)**: 빌드/번들링, 라우팅, 환경변수 등 "배포했을 때만 발생하는 문제" 검증
+- **3단계 (Production)**: 실서비스 반영. Staging에서 확인된 코드를 그대로 배포
+
+### 배포 프로세스
+```
+1. 코드 수정 → Firebase Studio preview에서 테스트 (1단계)
+2. CI=true npm run build (빌드 검증)
+3. dev 브랜치에 커밋/푸시 → Cloudflare Preview 자동 배포 (2단계)
+4. Preview URL에서 배포 상태 확인
+5. main에 merge + push → Cloudflare Production 자동 배포 (3단계)
+6. overtime.pages.dev 확인
+```
+
+### DB 스키마 변경이 있는 경우
+```
+1. dev Supabase에서 SQL 테스트 (1단계에서 확인)
+2. 프로덕션 Supabase에 SQL 적용 (코드 배포 전에 먼저)
+3. main push (코드 배포) (3단계)
+```
 
 ### 브랜치 전략
 ```
-feature/* → dev (staging 확인) → main (프로덕션)
+dev (일상 작업) → main (프로덕션 배포)
+feature/* → dev (기능 단위 분리가 필요한 경우)
 ```
-
-### 배포 경로
-- **Staging**: `dev` 브랜치 push → Cloudflare Pages Preview 자동 배포
-- **Production**: `main` 브랜치 push → Cloudflare Pages Production 자동 배포
-- **절대 `feature/*`에서 `main`으로 직접 merge 금지** — 반드시 `dev` 거쳐야 함
-
-### 작업 기본 브랜치
-- 모든 작업은 `dev` 기반으로 `feature/*` 브랜치 생성
-- 작업 완료 → `dev`에 merge → staging 확인 → `main`에 merge
+- 모든 작업은 `dev` 브랜치 기반
+- **절대 `main`에 직접 커밋/푸시 금지** — 반드시 `dev` 거쳐야 함
 
 ## 환경 변수
 
 - `REACT_APP_USE_SUPABASE` — Supabase 사용 여부
 - `REACT_APP_SUPABASE_URL` — Supabase URL
 - `REACT_APP_SUPABASE_ANON_KEY` — Supabase 익명 키
-- `.env.local` — 로컬 개발용 dev Supabase (git 미포함)
-- Cloudflare Pages Production 환경변수 — 프로덕션 Supabase (변경 금지)
-- Cloudflare Pages Preview 환경변수 — dev Supabase
+- `REACT_APP_HOLIDAY_API_URL` — 공휴일 API URL
+- `REACT_APP_ENABLE_ACCOUNT_MANAGEMENT` — 계정 관리 기능 활성화 여부
+
+### 환경별 설정
+- `.env.local` — 로컬 개발용 dev Supabase (git 미포함, `.env.production`보다 우선)
+- `.env.production` — 프로덕션 Supabase (git 포함, Cloudflare에서 환경변수로 오버라이드)
+- **Cloudflare Pages Production 환경변수** — 프로덕션 Supabase (변경 금지)
+- **Cloudflare Pages Preview 환경변수** — dev Supabase

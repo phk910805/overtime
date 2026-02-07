@@ -2,8 +2,11 @@
 -- Dev Supabase 프로젝트 스키마 설정
 -- ================================================================
 -- 대상: maoliyexnvbamcjbmfsc (overtime-dev)
--- 목적: 프로덕션 스키마 복제 (데이터 제외)
--- 실행: Supabase Dashboard → SQL Editor → 전체 복사 붙여넣기 → Run
+-- 목적: 프로덕션 스키마 정확히 복제 (데이터 제외)
+-- 출처: 프로덕션 pg_policies + 스키마 덤프 (2026-02-07 기준)
+-- 실행: Supabase Dashboard > SQL Editor > 전체 복사 붙여넣기 > Run
+-- ================================================================
+-- 주의: Part 3 실행 전 반드시 Part 1, 2가 완료되어야 합니다.
 -- ================================================================
 
 -- ================================================================
@@ -157,7 +160,8 @@ CREATE INDEX IF NOT EXISTS idx_carryover_employee_year_month
 ON carryover_records(employee_id, year DESC, month DESC);
 
 -- ================================================================
--- Part 3: RLS 활성화 + 정책
+-- Part 3: RLS 활성화 + 헬퍼 함수 + 정책
+-- (프로덕션 pg_policies 2026-02-07 기준 정확히 복제)
 -- ================================================================
 
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
@@ -171,91 +175,104 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE company_invites ENABLE ROW LEVEL SECURITY;
 
--- profiles RLS
+-- RLS 헬퍼 함수 (SECURITY DEFINER로 profiles 자기참조 재귀 방지)
+CREATE OR REPLACE FUNCTION get_user_company_id()
+RETURNS INTEGER AS $$
+  SELECT company_id FROM profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- profiles (자기 프로필만 조회/수정)
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT TO authenticated
-USING (id = auth.uid());
+  USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated
-USING (id = auth.uid());
-CREATE POLICY "Users can view company profiles" ON profiles FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  USING (auth.uid() = id);
 
--- companies RLS
-CREATE POLICY "Users can view own company" ON companies FOR SELECT TO authenticated
-USING (id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Owner can update company" ON companies FOR UPDATE TO authenticated
-USING (owner_id = auth.uid());
-CREATE POLICY "Authenticated can insert company" ON companies FOR INSERT TO authenticated
-WITH CHECK (true);
+-- companies (SELECT 전체 공개, INSERT/UPDATE/DELETE는 owner만)
+CREATE POLICY "Enable read access for authenticated users" ON companies FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY "Enable insert for authenticated users" ON companies FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "Company owners can update their companies" ON companies FOR UPDATE TO authenticated
+  USING (auth.uid() = owner_id)
+  WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "Company owners can delete their companies" ON companies FOR DELETE TO authenticated
+  USING (auth.uid() = owner_id);
 
--- employees RLS
-CREATE POLICY "Users can view company employees" ON employees FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company employees" ON employees FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()) OR company_id IS NULL);
-CREATE POLICY "Users can update company employees" ON employees FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can delete company employees" ON employees FOR DELETE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- employees (get_user_company_id 사용)
+CREATE POLICY "Users can view their company employees" ON employees FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company employees" ON employees FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update their company employees" ON employees FOR UPDATE TO authenticated
+  USING (company_id = get_user_company_id())
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can delete their company employees" ON employees FOR DELETE TO authenticated
+  USING (company_id = get_user_company_id());
 
--- overtime_records RLS
-CREATE POLICY "Users can view company overtime" ON overtime_records FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company overtime" ON overtime_records FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()) OR company_id IS NULL);
-CREATE POLICY "Users can update company overtime" ON overtime_records FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can delete company overtime" ON overtime_records FOR DELETE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- overtime_records
+CREATE POLICY "Users can view their company overtime records" ON overtime_records FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company overtime records" ON overtime_records FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update their company overtime records" ON overtime_records FOR UPDATE TO authenticated
+  USING (company_id = get_user_company_id())
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can delete their company overtime records" ON overtime_records FOR DELETE TO authenticated
+  USING (company_id = get_user_company_id());
 
--- vacation_records RLS
-CREATE POLICY "Users can view company vacation" ON vacation_records FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company vacation" ON vacation_records FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()) OR company_id IS NULL);
-CREATE POLICY "Users can update company vacation" ON vacation_records FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can delete company vacation" ON vacation_records FOR DELETE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- vacation_records
+CREATE POLICY "Users can view their company vacation records" ON vacation_records FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company vacation records" ON vacation_records FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update their company vacation records" ON vacation_records FOR UPDATE TO authenticated
+  USING (company_id = get_user_company_id())
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can delete their company vacation records" ON vacation_records FOR DELETE TO authenticated
+  USING (company_id = get_user_company_id());
 
--- carryover_records RLS
-CREATE POLICY "Users can view company carryover" ON carryover_records FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company carryover" ON carryover_records FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()) OR company_id IS NULL);
-CREATE POLICY "Users can update company carryover" ON carryover_records FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can delete company carryover" ON carryover_records FOR DELETE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- carryover_records
+CREATE POLICY "Users can view their company carryover records" ON carryover_records FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company carryover records" ON carryover_records FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update their company carryover records" ON carryover_records FOR UPDATE TO authenticated
+  USING (company_id = get_user_company_id())
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can delete their company carryover records" ON carryover_records FOR DELETE TO authenticated
+  USING (company_id = get_user_company_id());
 
--- employee_changes RLS
-CREATE POLICY "Users can view company changes" ON employee_changes FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company changes" ON employee_changes FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()) OR company_id IS NULL);
+-- employee_changes
+CREATE POLICY "Users can view their company employee changes" ON employee_changes FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company employee changes" ON employee_changes FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
 
--- settings RLS
-CREATE POLICY "Users can view company settings" ON settings FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company settings" ON settings FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can update company settings" ON settings FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- settings
+CREATE POLICY "Users can view their company settings" ON settings FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company settings" ON settings FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update their company settings" ON settings FOR UPDATE TO authenticated
+  USING (company_id = get_user_company_id())
+  WITH CHECK (company_id = get_user_company_id());
 
--- settings_history RLS
-CREATE POLICY "Users can view company settings history" ON settings_history FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company settings history" ON settings_history FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can update company settings history" ON settings_history FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- settings_history
+CREATE POLICY "Users can view their company settings history" ON settings_history FOR SELECT TO authenticated
+  USING (company_id = get_user_company_id());
+CREATE POLICY "Users can insert their company settings history" ON settings_history FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
 
--- company_invites RLS
-CREATE POLICY "Users can view company invites" ON company_invites FOR SELECT TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can insert company invites" ON company_invites FOR INSERT TO authenticated
-WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
-CREATE POLICY "Users can update company invites" ON company_invites FOR UPDATE TO authenticated
-USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+-- company_invites (SELECT 전체 공개, 나머지는 자기 회사만)
+CREATE POLICY "Anyone can view invites for validation" ON company_invites FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY "Users can create their company invites" ON company_invites FOR INSERT TO authenticated
+  WITH CHECK (company_id = (SELECT profiles.company_id FROM profiles WHERE profiles.id = auth.uid()));
+CREATE POLICY "Users can update their company invites" ON company_invites FOR UPDATE TO authenticated
+  USING (company_id = (SELECT profiles.company_id FROM profiles WHERE profiles.id = auth.uid()))
+  WITH CHECK (company_id = (SELECT profiles.company_id FROM profiles WHERE profiles.id = auth.uid()));
+CREATE POLICY "Users can delete their company invites" ON company_invites FOR DELETE TO authenticated
+  USING (company_id = (SELECT profiles.company_id FROM profiles WHERE profiles.id = auth.uid()));
 
 -- ================================================================
 -- Part 4: 함수 & 트리거
