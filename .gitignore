@@ -43,6 +43,9 @@ firebase-debug.log
 .claude/mcp.json
 .mcp.json
 
+# Playwright screenshots
+/screenshots
+
 # OS generated files
 Thumbs.db
 .DS_Store?
