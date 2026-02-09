@@ -46,6 +46,9 @@ firebase-debug.log
 # Playwright screenshots
 /screenshots
 
+# Image upload (AI 소통용)
+/upload_image
+
 # OS generated files
 Thumbs.db
 .DS_Store?
