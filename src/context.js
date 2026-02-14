@@ -18,6 +18,13 @@ export const useOvertimeContext = () => {
 
 let isInitialized = false;
 
+// 로그아웃 시 authService에서 호출하여 리셋
+let _resetCallbacks = [];
+export function resetIsInitialized() {
+  isInitialized = false;
+  _resetCallbacks.forEach(cb => cb());
+}
+
 // 환경변수 기반 초기화 로직
 const initializeDataLayer = async () => {
   if (isInitialized) return;
@@ -82,59 +89,67 @@ const useOvertimeData = () => {
   
   // 이월 자동 생성 실행 플래그 (중복 실행 방지)
   const isCreatingCarryoverRef = React.useRef(false);
+  const isDataLoadedRef = React.useRef(false);
+  const lastLoadTimeRef = React.useRef(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const dataService = getDataService();
 
-  // 초기 데이터 로드
+  // useEffect 1: 초기 데이터 로드 (1회만)
   useEffect(() => {
-    const loadData = async () => {
+    if (isDataLoadedRef.current) return;
+
+    const loadInitialData = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
         // 데이터 계층 초기화
         await initializeDataLayer();
-        
-        // 월별 직원 데이터 로드 - 현재 월에서는 활성 직원만
-        let employeesData;
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        
-        if (selectedMonth === currentMonth) {
-          // 현재 월: 활성 직원만
-          employeesData = await dataService.getEmployees();
-        } else {
-          // 과거 월: 해당 월의 직원
-          if (dataService.getEmployeesForMonth) {
-            employeesData = await dataService.getEmployeesForMonth(selectedMonth);
-          } else {
-            employeesData = await dataService.getEmployees();
+
+        // companyId 설정
+        try {
+          const companyId = await dataService.getCompanyId();
+          if (companyId) {
+            dataCalculator.setCompanyId(companyId);
           }
+        } catch (e) {
+          // companyId 조회 실패 시 무시
         }
-        
-        const employeeChangesData = await dataService.getEmployeeChangeRecords();
-        
-        // 삭제된 직원 포함 전체 목록 로드
-        let allEmployeesData = [];
-        if (dataService.getAllEmployeesIncludingDeleted) {
-          allEmployeesData = await dataService.getAllEmployeesIncludingDeleted();
-        }
+
+        // 현재 월 기준 직원 + 전체 데이터 병렬 로드
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const isCurrentMonth = selectedMonth === currentMonth;
+
+        const [
+          employeesData,
+          allEmployeesData,
+          employeeChangesData,
+          allRecords,
+          carryoverData
+        ] = await Promise.all([
+          isCurrentMonth
+            ? dataService.getEmployees()
+            : dataService.getEmployeesForMonth(selectedMonth),
+          dataService.getAllEmployeesIncludingDeleted(),
+          dataService.getEmployeeChangeRecords(),
+          dataService.getAllRecords(),
+          dataService.getCarryoverRecords()
+        ]);
 
         setEmployees(employeesData || []);
         setAllEmployeesIncludingDeleted(allEmployeesData || []);
         setEmployeeChangeRecords(employeeChangesData || []);
-        
-        // 전체 데이터 로드 (모든 월의 데이터)
-        const allRecords = await dataService.getAllRecords();
         setOvertimeRecords(allRecords.overtimeRecords || []);
         setVacationRecords(allRecords.vacationRecords || []);
-        
-        // 이월 데이터 로드
-        const carryoverData = await dataService.getCarryoverRecords();
         setCarryoverRecords(carryoverData || []);
+
+        isDataLoadedRef.current = true;
+        lastLoadTimeRef.current = Date.now();
 
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load data:', error);
+          console.error('Failed to load initial data:', error);
         }
         setError(error.message);
       } finally {
@@ -142,8 +157,112 @@ const useOvertimeData = () => {
       }
     };
 
-    loadData();
+    loadInitialData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataService]);
+
+  // useEffect 2: 월 변경 시 직원만 업데이트
+  useEffect(() => {
+    if (!isDataLoadedRef.current) return;
+
+    const updateEmployeesForMonth = async () => {
+      try {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        let employeesData;
+
+        if (selectedMonth === currentMonth) {
+          employeesData = await dataService.getEmployees();
+        } else {
+          employeesData = await dataService.getEmployeesForMonth(selectedMonth);
+        }
+
+        setEmployees(employeesData || []);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to update employees for month:', error);
+        }
+      }
+    };
+
+    updateEmployeesForMonth();
   }, [dataService, selectedMonth]);
+
+  // useEffect 3: 리프레시 트리거 (탭 복귀 등)
+  useEffect(() => {
+    if (refreshTrigger === 0) return;
+
+    const refreshAllData = async () => {
+      try {
+        // 캐시 무효화 후 전체 재로드
+        dataService.clearCache();
+
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const isCurrentMonth = selectedMonth === currentMonth;
+
+        const [
+          employeesData,
+          allEmployeesData,
+          employeeChangesData,
+          allRecords,
+          carryoverData
+        ] = await Promise.all([
+          isCurrentMonth
+            ? dataService.getEmployees()
+            : dataService.getEmployeesForMonth(selectedMonth),
+          dataService.getAllEmployeesIncludingDeleted(),
+          dataService.getEmployeeChangeRecords(),
+          dataService.getAllRecords(),
+          dataService.getCarryoverRecords()
+        ]);
+
+        setEmployees(employeesData || []);
+        setAllEmployeesIncludingDeleted(allEmployeesData || []);
+        setEmployeeChangeRecords(employeeChangesData || []);
+        setOvertimeRecords(allRecords.overtimeRecords || []);
+        setVacationRecords(allRecords.vacationRecords || []);
+        setCarryoverRecords(carryoverData || []);
+
+        lastLoadTimeRef.current = Date.now();
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 Data refreshed via trigger');
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to refresh data:', error);
+        }
+      }
+    };
+
+    refreshAllData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
+
+  // useEffect 4: visibilitychange — 탭 복귀 시 5분 경과했으면 리프레시
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const elapsed = Date.now() - lastLoadTimeRef.current;
+        if (elapsed > 5 * 60 * 1000) {
+          setRefreshTrigger(prev => prev + 1);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // resetIsInitialized 콜백 등록 (로그아웃 시 ref도 리셋)
+  useEffect(() => {
+    const resetCallback = () => {
+      isDataLoadedRef.current = false;
+    };
+    _resetCallbacks.push(resetCallback);
+    return () => {
+      _resetCallbacks = _resetCallbacks.filter(cb => cb !== resetCallback);
+    };
+  }, []);
 
   const addEmployee = useCallback(async (employeeData) => {
     try {

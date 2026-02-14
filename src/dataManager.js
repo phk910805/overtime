@@ -190,6 +190,7 @@ export const storageManager = new StorageManager();
 
 class DataCalculator {
   constructor() {
+    this.companyId = null;
     this.statsCache = new Map();
     this.dailyDataCache = new Map();
     this.filteredRecordsCache = new Map();
@@ -200,6 +201,20 @@ class DataCalculator {
       cacheMisses: 0
     };
     this.lastOptimization = Date.now();
+  }
+
+  setCompanyId(id) {
+    if (this.companyId !== id) {
+      this.companyId = id;
+      this.clearCache();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🏢 DataCalculator companyId set: ${id}, caches cleared`);
+      }
+    }
+  }
+
+  _makeCacheKey(baseKey) {
+    return this.companyId ? `${this.companyId}:${baseKey}` : baseKey;
   }
 
   _evictOldestCache(cache) {
@@ -301,7 +316,7 @@ class DataCalculator {
   }
 
   _getFilteredMonthlyRecords(selectedMonth, overtimeRecords, vacationRecords) {
-    const cacheKey = `${selectedMonth}-${overtimeRecords.length}-${vacationRecords.length}`;
+    const cacheKey = this._makeCacheKey(`${selectedMonth}-${overtimeRecords.length}-${vacationRecords.length}`);
     
     const cached = this._getCacheEntry(this.filteredRecordsCache, cacheKey);
     if (cached) return cached;
@@ -324,7 +339,7 @@ class DataCalculator {
   }
 
   getMonthlyStats(employeeId, selectedMonth, overtimeRecords, vacationRecords, multiplier = 1.0) {
-    const cacheKey = `${employeeId || 'all'}-${selectedMonth}-${multiplier}-${overtimeRecords.length}-${vacationRecords.length}`;
+    const cacheKey = this._makeCacheKey(`${employeeId || 'all'}-${selectedMonth}-${multiplier}-${overtimeRecords.length}-${vacationRecords.length}`);
     
     const cached = this._getCacheEntry(this.statsCache, cacheKey);
     if (cached) return cached;
@@ -375,7 +390,7 @@ class DataCalculator {
 
   getDailyData(employeeId, date, type, overtimeRecords, vacationRecords) {
     const recordsHash = type === 'overtime' ? overtimeRecords.length : vacationRecords.length;
-    const cacheKey = `${employeeId}-${date}-${type}-${recordsHash}`;
+    const cacheKey = this._makeCacheKey(`${employeeId}-${date}-${type}-${recordsHash}`);
     
     const cached = this._getCacheEntry(this.dailyDataCache, cacheKey);
     if (cached) return cached;

@@ -9,6 +9,39 @@ import HistoryPolicy from './historyPolicy.js';
 export class DataService {
   constructor() {
     this._storageAdapter = null;
+    this._cache = new Map();
+    this._cacheTTL = 5 * 60 * 1000; // 5분
+  }
+
+  // ========== 캐시 헬퍼 ==========
+
+  _getCached(key) {
+    const entry = this._cache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > this._cacheTTL) {
+      this._cache.delete(key);
+      return null;
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📦 Cache HIT: ${key}`);
+    }
+    return entry.data;
+  }
+
+  _setCache(key, data) {
+    this._cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  _invalidateCache(...keys) {
+    keys.forEach(key => this._cache.delete(key));
+  }
+
+  _invalidateCacheByPrefix(prefix) {
+    for (const key of this._cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this._cache.delete(key);
+      }
+    }
   }
 
   /**
@@ -16,15 +49,17 @@ export class DataService {
    * 대시보드에서 월별 전환 시 사용
    */
   async getAllRecords() {
+    const cached = this._getCached('allRecords');
+    if (cached) return cached;
+
     const [overtimeRecords, vacationRecords] = await Promise.all([
       this.getOvertimeRecords(), // 필터 없이 전체 데이터
       this.getVacationRecords()  // 필터 없이 전체 데이터
     ]);
 
-    return {
-      overtimeRecords,
-      vacationRecords
-    };
+    const result = { overtimeRecords, vacationRecords };
+    this._setCache('allRecords', result);
+    return result;
   }
 
   /**
@@ -50,19 +85,28 @@ export class DataService {
    * 모든 직원 조회
    */
   async getEmployees() {
-    return await this._getAdapter().getEmployees();
+    const cached = this._getCached('employees');
+    if (cached) return cached;
+    const result = await this._getAdapter().getEmployees();
+    this._setCache('employees', result);
+    return result;
   }
 
   /**
    * 삭제된 직원 포함 전체 조회
    */
   async getAllEmployeesIncludingDeleted() {
+    const cached = this._getCached('allEmployees');
+    if (cached) return cached;
     const adapter = this._getAdapter();
+    let result;
     if (adapter.getAllEmployeesIncludingDeleted) {
-      return await adapter.getAllEmployeesIncludingDeleted();
+      result = await adapter.getAllEmployeesIncludingDeleted();
+    } else {
+      result = await this.getEmployees();
     }
-    // 폴백: 기본 getEmployees 사용
-    return await this.getEmployees();
+    this._setCache('allEmployees', result);
+    return result;
   }
 
   /**
@@ -70,15 +114,19 @@ export class DataService {
    * @param {string} yearMonth - YYYY-MM 형식
    */
   async getEmployeesForMonth(yearMonth) {
+    const cacheKey = `employeesForMonth:${yearMonth}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+
     const adapter = this._getAdapter();
-    
-    // Supabase 어댑터인 경우 월별 조회 사용
+    let result;
     if (adapter.getEmployeesForMonth) {
-      return await adapter.getEmployeesForMonth(yearMonth);
+      result = await adapter.getEmployeesForMonth(yearMonth);
+    } else {
+      result = await this.getEmployees();
     }
-    
-    // localStorage 등 다른 어댑터는 기본 조회 사용
-    return await this.getEmployees();
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   /**
@@ -108,7 +156,11 @@ export class DataService {
       throw new Error('Hire date is required');
     }
 
-    return await this._getAdapter().addEmployee(employeeData);
+    const result = await this._getAdapter().addEmployee(employeeData);
+    this._invalidateCache('employees', 'allEmployees');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('changeRecords');
+    return result;
   }
 
   /**
@@ -126,7 +178,11 @@ export class DataService {
       throw new Error('Employee name is required');
     }
 
-    return await this._getAdapter().updateEmployee(id, employeeData);
+    const result = await this._getAdapter().updateEmployee(id, employeeData);
+    this._invalidateCache('employees', 'allEmployees');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('changeRecords');
+    return result;
   }
 
   /**
@@ -134,7 +190,11 @@ export class DataService {
    * @param {number} id - 직원 ID
    */
   async deleteEmployee(id) {
-    return await this._getAdapter().deleteEmployee(id);
+    const result = await this._getAdapter().deleteEmployee(id);
+    this._invalidateCache('employees', 'allEmployees');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('changeRecords');
+    return result;
   }
 
   /**
@@ -183,11 +243,13 @@ export class DataService {
       throw new Error('Invalid parameters for time record');
     }
 
-    return await this._getAdapter().saveTimeRecord(type, {
+    const result = await this._getAdapter().saveTimeRecord(type, {
       employeeId,
       date,
       totalMinutes
     });
+    this._invalidateCache('allRecords');
+    return result;
   }
 
   /**
@@ -200,7 +262,9 @@ export class DataService {
       throw new Error('Updates array is required and must not be empty');
     }
 
-    return await this._getAdapter().bulkSaveTimeRecords(type, updates);
+    const result = await this._getAdapter().bulkSaveTimeRecords(type, updates);
+    this._invalidateCache('allRecords');
+    return result;
   }
 
   // ========== 변경 이력 관리 ==========
@@ -210,7 +274,14 @@ export class DataService {
    * @param {Object} filters - 필터 조건
    */
   async getEmployeeChangeRecords(filters = {}) {
-    return await this._getAdapter().getEmployeeChangeRecords(filters);
+    const cacheKey = Object.keys(filters).length === 0
+      ? 'changeRecords'
+      : `changeRecords:${JSON.stringify(filters)}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+    const result = await this._getAdapter().getEmployeeChangeRecords(filters);
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   // ========== 설정 관리 ==========
@@ -282,7 +353,14 @@ export class DataService {
    * @param {Object} filters - 필터 조건 (yearMonth, year, month, employeeId)
    */
   async getCarryoverRecords(filters = {}) {
-    return await this._getAdapter().getCarryoverRecords(filters);
+    const cacheKey = Object.keys(filters).length === 0
+      ? 'carryover'
+      : `carryover:${JSON.stringify(filters)}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+    const result = await this._getAdapter().getCarryoverRecords(filters);
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   /**
@@ -290,7 +368,9 @@ export class DataService {
    * @param {Object} carryoverData - 이월 데이터
    */
   async createCarryoverRecord(carryoverData) {
-    return await this._getAdapter().createCarryoverRecord(carryoverData);
+    const result = await this._getAdapter().createCarryoverRecord(carryoverData);
+    this._invalidateCacheByPrefix('carryover');
+    return result;
   }
 
   /**
@@ -299,7 +379,9 @@ export class DataService {
    * @param {Object} carryoverData - 수정할 데이터
    */
   async updateCarryoverRecord(id, carryoverData) {
-    return await this._getAdapter().updateCarryoverRecord(id, carryoverData);
+    const result = await this._getAdapter().updateCarryoverRecord(id, carryoverData);
+    this._invalidateCacheByPrefix('carryover');
+    return result;
   }
 
   /**
@@ -307,16 +389,36 @@ export class DataService {
    * @param {number} id - 이월 기록 ID
    */
   async deleteCarryoverRecord(id) {
-    return await this._getAdapter().deleteCarryoverRecord(id);
+    const result = await this._getAdapter().deleteCarryoverRecord(id);
+    this._invalidateCacheByPrefix('carryover');
+    return result;
   }
 
   // ========== 유틸리티 ==========
 
   /**
+   * 현재 사용자의 company_id 조회 (Supabase 어댑터에서)
+   */
+  async getCompanyId() {
+    const adapter = this._getAdapter();
+    if (adapter._companyId) return adapter._companyId;
+    // profile에서 가져오기
+    if (adapter.getUserProfile) {
+      const profile = await adapter.getUserProfile();
+      return profile?.company_id || null;
+    }
+    return null;
+  }
+
+  /**
    * 캐시 클리어
    */
   clearCache() {
+    this._cache.clear();
     this._getAdapter().clearCache();
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🧹 DataService cache cleared');
+    }
   }
 
   /**

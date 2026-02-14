@@ -5,6 +5,8 @@
 
 import { supabase } from '../lib/supabase';
 import { createStorageAdapter } from './storage';
+import { dataCalculator } from '../dataManager';
+import { getDataService } from './dataService';
 
 export class AuthService {
   constructor() {
@@ -172,19 +174,39 @@ export class AuthService {
 
       this.currentUser = null;
       this.notifyListeners('SIGNED_OUT', null);
-      
-      // 스토리지 어댑터 캐시 초기화
-      const { getStorageAdapter } = require('./storage');
+
+      // 전체 캐시 초기화
       try {
+        // 1. 스토리지 어댑터 캐시 (프로필 + 설정 모두)
+        const { getStorageAdapter } = require('./storage');
         const storageAdapter = getStorageAdapter();
-        if (storageAdapter && storageAdapter.clearProfileCache) {
-          storageAdapter.clearProfileCache();
+        if (storageAdapter && storageAdapter.clearCache) {
+          storageAdapter.clearCache();
         }
       } catch (storageError) {
         // 스토리지 어댑터가 없을 수 있음 (무시)
       }
-      
-      console.log('✅ 로그아웃 성공');
+
+      // 2. DataCalculator 계산 캐시
+      dataCalculator.clearCache();
+
+      // 3. DataService 메모리 캐시
+      try {
+        getDataService().clearCache();
+      } catch (dsError) {
+        // DataService 미초기화 시 무시
+      }
+
+      // 4. sessionStorage 초기화
+      sessionStorage.clear();
+
+      // 5. context.js isInitialized 리셋
+      const { resetIsInitialized } = require('../context');
+      if (resetIsInitialized) {
+        resetIsInitialized();
+      }
+
+      console.log('✅ 로그아웃 성공 (전체 캐시 초기화 완료)');
       return { success: true };
 
     } catch (error) {
