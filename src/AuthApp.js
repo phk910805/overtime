@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import AuthWrapper from './components/AuthWrapper';
 import { OvertimeProvider } from './context';
@@ -33,7 +34,14 @@ const AuthenticatedApp = () => {
   return (
     <AuthWrapper>
       <OvertimeProvider>
-        <App />
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<App />} />
+          <Route path="/records" element={<App />} />
+          <Route path="/records/:tab" element={<App />} />
+          <Route path="/employees" element={<App />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </OvertimeProvider>
     </AuthWrapper>
   );

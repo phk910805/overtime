@@ -1,4 +1,5 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Users, BarChart3 } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
@@ -20,28 +21,23 @@ const getInitials = (name) => {
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState(() => {
-    // sessionStorage에서 저장된 탭 확인
-    const savedTab = sessionStorage.getItem('activeTabAfterDelete');
-    if (savedTab) {
-      // 지금 바로 삭제하지 말고 나중에 삭제
-      return savedTab;
-    }
-    return 'dashboard';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // useEffect로 sessionStorage 정리
-  React.useEffect(() => {
-    const savedTab = sessionStorage.getItem('activeTabAfterDelete');
-    if (savedTab) {
-      sessionStorage.removeItem('activeTabAfterDelete');
-    }
-  }, []);
-  const [showSettings, setShowSettings] = useState(false);
+  // URL → 활성 탭 매핑
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/records')) return 'records';
+    if (path.startsWith('/employees')) return 'employees';
+    return 'dashboard';
+  }, [location.pathname]);
+
+  const [showSettings, setShowSettings] = React.useState(false);
 
   const handleTabChange = useCallback((tab) => {
-    setActiveTab(tab);
-  }, []);
+    const paths = { dashboard: '/dashboard', records: '/records', employees: '/employees' };
+    navigate(paths[tab] || '/dashboard');
+  }, [navigate]);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '사용자';
 

@@ -1,4 +1,5 @@
-import React, { useState, useCallback, memo, useMemo } from 'react';
+import React, { useCallback, memo, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, FileText } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, useSortingPaging } from '../utils';
@@ -139,8 +140,10 @@ const RecordHistory = memo(() => {
     overtimeRecords,
     vacationRecords
   } = useOvertimeContext();
-  
-  const [activeHistoryTab, setActiveHistoryTab] = useState('overtime');
+
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const activeHistoryTab = tab === 'vacation' ? 'vacation' : 'overtime';
   
   const overtimeSorting = useSortingPaging(
     { field: 'createdAt', direction: 'desc' }, 
@@ -202,9 +205,9 @@ const RecordHistory = memo(() => {
     return sortRecords(vacationRecords, vacationSorting.sortConfig, employees);
   }, [vacationRecords, vacationSorting.sortConfig, sortRecords, employees]);
 
-  const handleTabChange = useCallback((tab) => {
-    setActiveHistoryTab(tab);
-  }, []);
+  const handleTabChange = useCallback((newTab) => {
+    navigate(`/records/${newTab}`);
+  }, [navigate]);
 
   const getTotalPages = useCallback((totalItems, itemsPerPage) => {
     return Math.ceil(totalItems / itemsPerPage);

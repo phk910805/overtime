@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getDataService } from '../services/dataService';
 import LoginForm from './LoginForm';
@@ -12,39 +13,19 @@ import CompanySetup from './CompanySetup';
 
 const AuthWrapper = ({ children }) => {
   const { user, loading, initialized, signIn, signUp } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
-  const [currentRoute, setCurrentRoute] = useState('login');
-  
+
   // 회사 설정 상태
   const [companyChecked, setCompanyChecked] = useState(false);
   const [hasCompany, setHasCompany] = useState(false);
 
-  // URL 변경 감지
-  useEffect(() => {
-    const checkRoute = () => {
-      const path = window.location.pathname;
-      const hash = window.location.hash;
-      
-      // /reset-password 또는 hash에 reset-password나 access_token이 있는 경우
-      if (path.includes('reset-password') || hash.includes('reset-password') || hash.includes('access_token')) {
-        setCurrentRoute('reset-password');
-      } else {
-        setCurrentRoute('login');
-      }
-    };
-
-    checkRoute();
-    
-    // URL 변경 감지
-    window.addEventListener('popstate', checkRoute);
-    window.addEventListener('hashchange', checkRoute);
-    
-    return () => {
-      window.removeEventListener('popstate', checkRoute);
-      window.removeEventListener('hashchange', checkRoute);
-    };
-  }, []);
+  // URL에서 비밀번호 재설정 경로 판별
+  const isResetPassword = location.pathname.includes('reset-password')
+    || location.hash.includes('reset-password')
+    || location.hash.includes('access_token');
 
   // 로그인 후 회사 정보 확인
   useEffect(() => {
@@ -154,9 +135,7 @@ const AuthWrapper = ({ children }) => {
 
   // 비밀번호 재설정 완료 후 처리
   const handleResetComplete = () => {
-    setCurrentRoute('login');
-    // URL 정리
-    window.history.pushState({}, '', '/overtime/');
+    navigate('/', { replace: true });
   };
 
   // 로딩 중
@@ -172,7 +151,7 @@ const AuthWrapper = ({ children }) => {
   }
 
   // 비밀번호 재설정 페이지 (로그인 여부 무관)
-  if (currentRoute === 'reset-password') {
+  if (isResetPassword) {
     return <ResetPasswordPage onComplete={handleResetComplete} />;
   }
 
