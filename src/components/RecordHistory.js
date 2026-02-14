@@ -87,7 +87,14 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, employees, curren
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+          <colgroup>
+            <col style={{width: '20%'}} />
+            <col style={{width: '30%'}} />
+            <col style={{width: '20%'}} />
+            <col style={{width: '15%'}} />
+            <col style={{width: '15%'}} />
+          </colgroup>
           <thead className="bg-gray-50">
             <tr>
               <SortableHeader field="createdAt" sortConfig={sortConfig} onSort={onSort}>
@@ -106,20 +113,30 @@ const RecordTable = memo(({ records, type, sortConfig, onSort, employees, curren
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedRecords.map((record) => (
               <tr key={record.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                  {new Date(record.createdAt).toLocaleString('ko-KR')}
+                <td className="px-6 py-4 text-xs text-gray-500">
+                  <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                    {new Date(record.createdAt).toLocaleString('ko-KR')}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {getEmployeeNameFromRecord(record)}
+                <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                  <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                    {getEmployeeNameFromRecord(record)}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {record.date}
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                    {record.date}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {getChangeDisplay(record, records, type)}
+                <td className="px-6 py-4 text-sm">
+                  <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                    {getChangeDisplay(record, records, type)}
+                  </div>
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getDescriptionColor(record.description || record.action || '-', type)}`}>
-                  {record.description || record.action || '-'}
+                <td className={`px-6 py-4 text-sm ${getDescriptionColor(record.description || record.action || '-', type)}`}>
+                  <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                    {record.description || record.action || '-'}
+                  </div>
                 </td>
               </tr>
             ))}

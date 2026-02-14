@@ -13,9 +13,9 @@ import MonthSelector from './MonthSelector';
 // 스타일 상수
 const STYLES = {
   HEADER_PADDING: '6px 8px 2px 8px',
-  LEFT_HEADER_CLASSES: 'text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 min-w-max whitespace-nowrap',
-  CENTER_HEADER_CLASSES: 'text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16',
-  DATE_HEADER_CLASSES: 'text-center text-xs font-medium uppercase tracking-wider w-16 bg-gray-200 border-r border-gray-300',
+  LEFT_HEADER_CLASSES: 'text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 whitespace-nowrap',
+  CENTER_HEADER_CLASSES: 'text-center text-xs font-medium text-gray-500 uppercase tracking-wider',
+  DATE_HEADER_CLASSES: 'text-center text-xs font-medium uppercase tracking-wider w-[72px] bg-gray-200 border-r border-gray-300',
   COLORS: {
     DEFAULT: '#6b7280', // text-gray-500
     WEEKEND_HOLIDAY: '#7c3aed' // text-violet-600
@@ -181,7 +181,7 @@ const DateHeaderCell = memo(({ children, holidayName = '', birthdayEmployees = [
 const TimeDisplay = memo(({ value, onClick, disabled = false, placeholder = "00:00", color = "blue" }) => {
   const colorClass = color === "green" ? "text-green-600" : "text-blue-600";
   const prefix = color === "green" ? "-" : "+";
-  const baseClasses = "w-16 h-8 rounded text-xs flex items-center justify-center";
+  const baseClasses = "w-[72px] h-8 rounded text-xs flex items-center justify-center";
   const dynamicClasses = disabled ? 
     `${baseClasses} text-gray-500 cursor-not-allowed` : 
     `${baseClasses} cursor-pointer hover:bg-gray-100`;
@@ -587,10 +587,14 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     // 50ms 딜레이 후 높이 동기화
     const timerId = setTimeout(() => {
       if (rightHeaderRowRef.current && leftHeaderRowRef.current) {
+        // 이전 높이를 리셋하여 자연 높이 측정
+        leftHeaderRowRef.current.style.height = '';
+        rightHeaderRowRef.current.style.height = '';
+
         const rightHeight = rightHeaderRowRef.current.offsetHeight;
         const leftHeight = leftHeaderRowRef.current.offsetHeight;
         const maxHeight = Math.max(leftHeight, rightHeight);
-        
+
         leftHeaderRowRef.current.style.height = `${maxHeight}px`;
         rightHeaderRowRef.current.style.height = `${maxHeight}px`;
       }
@@ -700,9 +704,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     // 스크롤은 다음 렌더링 후에 실행
     setTimeout(() => {
       if (scrollContainerRef.current) {
-        const cellWidth = 64;
-        const carryoverColumnWidth = 64;
-        const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+        const cellWidth = 72;
+        const todayPosition = (todayDay - 1) * cellWidth;
         scrollContainerRef.current.scrollTo(todayPosition, 'smooth');
       }
     }, TIMING.SCROLL_TO_TODAY_DELAY);
@@ -713,9 +716,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     if (!isCurrentMonth) return;
     
     if (scrollContainerRef.current) {
-      const cellWidth = 64;
-      const carryoverColumnWidth = 64;
-      const todayPosition = carryoverColumnWidth + (todayDay - 1) * cellWidth;
+      const cellWidth = 72;
+      const todayPosition = (todayDay - 1) * cellWidth;
       scrollContainerRef.current.scrollTo(todayPosition, 'auto');
     }
   }, [isCurrentMonth, selectedMonth, todayDay]);
@@ -796,40 +798,49 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       }}>
         <div className="flex">
           <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
-            <table className="divide-y divide-gray-300">
+            <table className="divide-y divide-gray-300" style={{tableLayout: 'fixed', minWidth: '560px'}}>
+              <colgroup>
+                <col style={{width: '112px'}} />
+                <col style={{width: '112px'}} />
+                <col style={{width: '72px'}} />
+                <col />
+                <col style={{width: '72px'}} />
+                <col style={{width: '72px'}} />
+                <col style={{width: '48px'}} />
+              </colgroup>
               <thead className="bg-gray-200">
-                <tr ref={leftHeaderRowRef} style={{ minHeight: '41px' }}>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                <tr ref={leftHeaderRowRef} style={{ minHeight: '43px' }}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       이름
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       부서
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       이월
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       초과시간{multiplier !== 1.0 ? `(×${multiplier})` : ''}
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       사용시간
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCellWithTooltip tooltipText={`이월 + 초과시간(×${multiplier}배) - 사용시간 = 잔여시간`}>
                       잔여시간
                     </HeaderCellWithTooltip>
                   </th>
-                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '32px', verticalAlign: 'top'}}>
+                  <th className={STYLES.CENTER_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell alignment="center">
                       구분
                     </HeaderCell>
@@ -845,16 +856,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                   const adjustedRemaining = carryoverMinutes + stats.remaining;
                   return (
                     <tr key={employee.id} className={employee.isActive ? '' : 'bg-gray-50'}>
-                      <td className={`px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
-                        {employee.lastUpdatedName || employee.name}
-                        {!employee.isActive && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                            삭제
-                          </span>
-                        )}
+                      <td className={`px-2 py-4 text-sm font-medium text-gray-900 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`} title={employee.lastUpdatedName || employee.name}>
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.lastUpdatedName || employee.name}
+                          {!employee.isActive && (
+                            <span className="ml-1 inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              삭제
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className={`px-4 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
-                        {employee.department || '-'}
+                      <td className={`px-2 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`} title={employee.department || '-'}>
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.department || '-'}
+                        </div>
                       </td>
                       <td className={`px-3 py-4 text-sm border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         <span className={carryoverMinutes > 0 ? "text-orange-600" : carryoverMinutes < 0 ? "text-red-600" : "text-gray-500"}>
@@ -894,9 +909,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             className="flex-1 overflow-x-auto"
             onScrollStateChange={setScrollState}
           >
-            <table className="w-full divide-y divide-gray-300">
+            <table className="divide-y divide-gray-300" style={{tableLayout: 'fixed', width: `${daysInMonth * 72}px`}}>
               <thead className="bg-gray-200">
-                <tr ref={rightHeaderRowRef} style={{ minHeight: '41px' }}>
+                <tr ref={rightHeaderRowRef} style={{ minHeight: '43px' }}>
                   {daysArray.map((day) => {
                     const date = new Date(yearMonth[0], yearMonth[1] - 1, day);
                     const dayOfWeekIndex = date.getDay();
@@ -925,9 +940,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                         key={day} 
                         className={STYLES.DATE_HEADER_CLASSES}
                         style={{
-                          padding: STYLES.HEADER_PADDING, 
-                          color: textColorValue, 
-                          minHeight: '32px',
+                          padding: STYLES.HEADER_PADDING,
+                          color: textColorValue,
+                          minHeight: '43px',
                           verticalAlign: 'top',
                           ...(isTodayColumn && { backgroundColor: '#D1D5DB' })
                         }}

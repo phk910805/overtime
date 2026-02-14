@@ -327,65 +327,75 @@ const EmployeeManagement = memo(() => {
           <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+                <colgroup>
+                  <col style={{width: '15%'}} />
+                  <col style={{width: '15%'}} />
+                  <col style={{width: '15%'}} />
+                  <col style={{width: '15%'}} />
+                  <col style={{width: '25%'}} />
+                  <col style={{width: '15%'}} />
+                </colgroup>
                 <thead className="bg-gray-50">
                   <tr>
-                    <SortableHeader 
-                      field="createdAt" 
-                      sortConfig={employeeListPaging.sortConfig} 
+                    <SortableHeader
+                      field="createdAt"
+                      sortConfig={employeeListPaging.sortConfig}
                       onSort={employeeListPaging.handleSort}
-                      style={{width: '120px'}}
                     >
                       등록일
                     </SortableHeader>
-                    <SortableHeader 
-                      field="name" 
-                      sortConfig={employeeListPaging.sortConfig} 
+                    <SortableHeader
+                      field="name"
+                      sortConfig={employeeListPaging.sortConfig}
                       onSort={employeeListPaging.handleSort}
-                      style={{width: '120px'}}
                     >
                       직원명
                     </SortableHeader>
-                    <SortableHeader 
-                      field="department" 
-                      sortConfig={employeeListPaging.sortConfig} 
+                    <SortableHeader
+                      field="department"
+                      sortConfig={employeeListPaging.sortConfig}
                       onSort={employeeListPaging.handleSort}
-                      style={{width: '120px'}}
                     >
                       부서
                     </SortableHeader>
-                    <SortableHeader 
-                      field="hireDate" 
-                      sortConfig={employeeListPaging.sortConfig} 
+                    <SortableHeader
+                      field="hireDate"
+                      sortConfig={employeeListPaging.sortConfig}
                       onSort={employeeListPaging.handleSort}
-                      style={{width: '120px'}}
                     >
                       입사일
                     </SortableHeader>
-                    <TableHeader style={{width: '200px'}}>메모</TableHeader>
-                    <TableHeader className="text-right" style={{width: '100px'}}>작업</TableHeader>
+                    <TableHeader>메모</TableHeader>
+                    <TableHeader className="text-right">작업</TableHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedEmployees.map((employee) => (
                     <tr key={employee.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
-                        {new Date(employee.createdAt).toLocaleDateString('ko-KR')}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {new Date(employee.createdAt).toLocaleDateString('ko-KR')}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 truncate">
-                        {employee.name}
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.name}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
-                        {employee.department || '미지정'}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.department || '미지정'}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate">
-                        {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ko-KR') : '-'}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ko-KR') : '-'}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={employee.notes || ''}>
-                        {employee.notes ? (
-                          employee.notes.length > 10 
-                            ? `${employee.notes.substring(0, 10)}...` 
-                            : employee.notes
-                        ) : '-'}
+                      <td className="px-6 py-4 text-sm text-gray-500" title={employee.notes || ''}>
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {employee.notes || '-'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
@@ -424,26 +434,32 @@ const EmployeeManagement = memo(() => {
         {activeEmployeeTab === 'history' && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+                <colgroup>
+                  <col style={{width: '20%'}} />
+                  <col style={{width: '10%'}} />
+                  <col style={{width: '35%'}} />
+                  <col style={{width: '35%'}} />
+                </colgroup>
                 <thead className="bg-gray-50">
                   <tr>
-                    <SortableHeader 
-                      field="createdAt" 
-                      sortConfig={historyPaging.sortConfig} 
+                    <SortableHeader
+                      field="createdAt"
+                      sortConfig={historyPaging.sortConfig}
                       onSort={historyPaging.handleSort}
                     >
                       일시
                     </SortableHeader>
-                    <SortableHeader 
-                      field="action" 
-                      sortConfig={historyPaging.sortConfig} 
+                    <SortableHeader
+                      field="action"
+                      sortConfig={historyPaging.sortConfig}
                       onSort={historyPaging.handleSort}
                     >
                       동작
                     </SortableHeader>
-                    <SortableHeader 
-                      field="employeeName" 
-                      sortConfig={historyPaging.sortConfig} 
+                    <SortableHeader
+                      field="employeeName"
+                      sortConfig={historyPaging.sortConfig}
                       onSort={historyPaging.handleSort}
                     >
                       직원명
@@ -454,20 +470,28 @@ const EmployeeManagement = memo(() => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedHistoryRecords.map((record) => (
                     <tr key={record.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                        {new Date(record.createdAt).toLocaleString('ko-KR')}
+                      <td className="px-6 py-4 text-xs text-gray-500">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {new Date(record.createdAt).toLocaleString('ko-KR')}
+                        </div>
                       </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                        record.action === '생성' ? 'text-green-600' : 
+                      <td className={`px-6 py-4 text-sm font-medium ${
+                        record.action === '생성' ? 'text-green-600' :
                         record.action === '수정' ? 'text-orange-600' : 'text-red-600'
                       }`}>
-                        {record.action}
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {record.action}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {record.employeeName}
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {record.employeeName}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {record.details}
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                          {record.details}
+                        </div>
                       </td>
                     </tr>
                   ))}

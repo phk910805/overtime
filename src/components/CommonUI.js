@@ -63,26 +63,26 @@ export const InputField = memo(({
 });
 
 // ========== TABLE COMPONENTS ==========
-export const TableHeader = memo(({ children, className = "" }) => {
+export const TableHeader = memo(({ children, className = "", style }) => {
   return (
-    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`} style={style}>
       {children}
     </th>
   );
 });
 
-export const SortableHeader = memo(({ field, sortConfig, onSort, children, className = "" }) => {
+export const SortableHeader = memo(({ field, sortConfig, onSort, children, className = "", style }) => {
   const getSortIcon = () => {
     if (sortConfig.field === field) {
-      return sortConfig.direction === 'desc' ? 
-        <ChevronDown className="w-4 h-4" /> : 
+      return sortConfig.direction === 'desc' ?
+        <ChevronDown className="w-4 h-4" /> :
         <ChevronUp className="w-4 h-4" />;
     }
     return <ChevronDown className="w-4 h-4 text-gray-300" />;
   };
 
   return (
-    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+    <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`} style={style}>
       <button
         onClick={() => onSort(field)}
         className="flex items-center space-x-1 hover:text-gray-700"
