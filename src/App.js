@@ -1,16 +1,25 @@
 import React, { useState, useCallback, memo } from 'react';
-import { Calendar, Clock, Users, BarChart3, Settings } from 'lucide-react';
+import { Calendar, Clock, Users, BarChart3 } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
-import SettingsModal from './components/SettingsModal';
-import ProfileDropdown from './components/ProfileDropdown';
+import UnifiedSettingsModal from './components/UnifiedSettingsModal';
 import LoginButton from './components/LoginButton';
+
+// 이니셜 생성 유틸
+const getInitials = (name) => {
+  if (!name) return 'U';
+  const names = name.split(' ');
+  if (names.length >= 2) {
+    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+  }
+  return name[0].toUpperCase();
+};
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(() => {
     // sessionStorage에서 저장된 탭 확인
     const savedTab = sessionStorage.getItem('activeTabAfterDelete');
@@ -20,7 +29,7 @@ const OvertimeManagementApp = memo(() => {
     }
     return 'dashboard';
   });
-  
+
   // useEffect로 sessionStorage 정리
   React.useEffect(() => {
     const savedTab = sessionStorage.getItem('activeTabAfterDelete');
@@ -34,6 +43,8 @@ const OvertimeManagementApp = memo(() => {
     setActiveTab(tab);
   }, []);
 
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '사용자';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
@@ -43,22 +54,21 @@ const OvertimeManagementApp = memo(() => {
               <Clock className="w-8 h-8 text-blue-600" />
               <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리!</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                title="설정"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              
+            <div className="flex items-center">
               {/* 사용자 프로필 또는 로그인 버튼 */}
               {user ? (
-                <ProfileDropdown 
-                  user={user} 
-                  onSignOut={signOut}
-                  onProfileEdit={() => console.log('프로필 편집 클릭')}
-                />
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="설정"
+                >
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                    {getInitials(userName)}
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-32 truncate">
+                    {userName}
+                  </span>
+                </button>
               ) : (
                 <LoginButton onClick={() => console.log('로그인 버튼 클릭')} />
               )}
@@ -111,17 +121,17 @@ const OvertimeManagementApp = memo(() => {
         {activeTab === 'dashboard' && (
           <Dashboard />
         )}
-        
+
         {activeTab === 'records' && (
           <RecordHistory />
         )}
-        
+
         {activeTab === 'employees' && (
           <EmployeeManagement />
         )}
       </div>
 
-      <SettingsModal
+      <UnifiedSettingsModal
         show={showSettings}
         onClose={() => setShowSettings(false)}
       />

@@ -1,0 +1,281 @@
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { X, User, Building2, SlidersHorizontal, UserPlus, LogOut } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
+import { ConfirmModal } from './CommonUI';
+import SettingsProfile from './settings/SettingsProfile';
+import SettingsCompany from './settings/SettingsCompany';
+import SettingsMultiplier from './settings/SettingsMultiplier';
+import SettingsInvite from './settings/SettingsInvite';
+
+const MENU_ITEMS = [
+  { id: 'profile', label: '프로필 편집', icon: User },
+  { id: 'company', label: '회사 정보', icon: Building2 },
+  { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal },
+  { id: 'invite', label: '팀원 초대', icon: UserPlus },
+];
+
+const UnifiedSettingsModal = memo(({ show, onClose }) => {
+  const { user, signOut } = useAuth();
+  const [activeSection, setActiveSection] = useState('profile');
+  const [profileData, setProfileData] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // 사용자 이니셜 생성
+  const getInitials = useCallback((name) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }, []);
+
+  // 권한 한글 변환
+  const getRoleDisplayName = useCallback((role) => {
+    switch (role) {
+      case 'operator': return '운영자';
+      case 'admin': return '관리자';
+      case 'employee': return '일반';
+      default: return role || '일반';
+    }
+  }, []);
+
+  // 프로필 데이터 로드 (한 번 로드하여 하위 컴포넌트에 전달)
+  const loadProfile = useCallback(async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        setProfileData({
+          fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          companyName: user.user_metadata?.company_name || '',
+          businessNumber: user.user_metadata?.business_number || '',
+          role: user.user_metadata?.role || 'employee'
+        });
+        return;
+      }
+
+      setProfileData({
+        fullName: data.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        email: data.email || user.email || '',
+        companyName: data.company_name || user.user_metadata?.company_name || '',
+        businessNumber: data.business_number || user.user_metadata?.business_number || '',
+        role: data.role || user.user_metadata?.role || 'employee'
+      });
+    } catch (err) {
+      console.error('프로필 로드 실패:', err);
+      setProfileData({
+        fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        email: user.email || '',
+        companyName: user.user_metadata?.company_name || '',
+        businessNumber: user.user_metadata?.business_number || '',
+        role: user.user_metadata?.role || 'employee'
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [user]);
+
+  // 모달 열릴 때 초기화
+  useEffect(() => {
+    if (show) {
+      setActiveSection('profile');
+      loadProfile();
+    }
+  }, [show, loadProfile]);
+
+  // ESC 키로 닫기
+  useEffect(() => {
+    if (!show) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [show, onClose]);
+
+  // 로그아웃 처리
+  const handleLogout = useCallback(async () => {
+    setShowLogoutConfirm(false);
+    onClose();
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('로그아웃 에러:', err);
+    }
+  }, [signOut, onClose]);
+
+  if (!show) return null;
+
+  const userName = profileData?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || '사용자';
+  const userEmail = profileData?.email || user?.email || '';
+  const userRole = profileData?.role || user?.user_metadata?.role || 'employee';
+
+  return (
+    <>
+      {/* 배경 오버레이 */}
+      <div className="fixed inset-0 z-40 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* 모달 */}
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col sm:flex-row">
+
+            {/* 닫기 버튼 */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* === 모바일: 상단 유저 정보 + 가로 탭 === */}
+            <div className="sm:hidden border-b border-gray-200 bg-gray-50">
+              {/* 컴팩트 유저 정보 */}
+              <div className="flex items-center space-x-3 px-4 pt-4 pb-3">
+                <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
+                  {getInitials(userName)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-gray-900 truncate">{userName}</div>
+                  <div className="text-xs text-gray-500 truncate">{userEmail}</div>
+                </div>
+                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                  {getRoleDisplayName(userRole)}
+                </span>
+              </div>
+
+              {/* 가로 스크롤 탭 */}
+              <div className="flex overflow-x-auto px-2 pb-2 space-x-1 scrollbar-hide">
+                {MENU_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
+                        activeSection === item.id
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>로그아웃</span>
+                </button>
+              </div>
+            </div>
+
+            {/* === 데스크톱: 좌측 사이드바 === */}
+            <div className="hidden sm:flex sm:flex-col sm:w-56 bg-gray-50 border-r border-gray-200 flex-shrink-0">
+              {/* 유저 정보 */}
+              <div className="p-5 border-b border-gray-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-semibold mb-2">
+                    {getInitials(userName)}
+                  </div>
+                  <div className="text-sm font-medium text-gray-900 truncate max-w-full">{userName}</div>
+                  <div className="text-xs text-gray-500 truncate max-w-full">{userEmail}</div>
+                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
+                    {getRoleDisplayName(userRole)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 네비게이션 */}
+              <nav className="flex-1 py-3">
+                {MENU_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center space-x-3 px-5 py-2.5 text-sm transition-colors ${
+                        activeSection === item.id
+                          ? 'bg-blue-50 text-blue-700 font-semibold border-l-2 border-blue-600'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-700 border-l-2 border-transparent'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* 로그아웃 */}
+              <div className="border-t border-gray-200 py-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full flex items-center space-x-3 px-5 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>로그아웃</span>
+                </button>
+              </div>
+            </div>
+
+            {/* === 콘텐츠 영역 === */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+              {profileLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">프로필 정보 로딩 중...</span>
+                </div>
+              ) : (
+                <>
+                  {activeSection === 'profile' && (
+                    <SettingsProfile profileData={profileData} user={user} />
+                  )}
+                  {activeSection === 'company' && (
+                    <SettingsCompany profileData={profileData} />
+                  )}
+                  {activeSection === 'multiplier' && (
+                    <SettingsMultiplier />
+                  )}
+                  {activeSection === 'invite' && (
+                    <SettingsInvite />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 로그아웃 확인 모달 */}
+      <ConfirmModal
+        show={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="로그아웃"
+        message="정말 로그아웃하시겠습니까?"
+        confirmText="로그아웃"
+        cancelText="취소"
+        type="danger"
+      />
+    </>
+  );
+});
+
+export default UnifiedSettingsModal;
