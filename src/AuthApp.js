@@ -1,15 +1,19 @@
 /**
  * AuthApp.js
  * 인증 기능이 통합된 메인 애플리케이션
- * 기존 App.js를 래핑하여 인증 상태에 따라 로그인 폼 또는 메인 앱을 표시
+ * 라우트 구조: 공개/회사설정/보호 라우트 분리
  */
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import AuthWrapper from './components/AuthWrapper';
 import { OvertimeProvider } from './context';
 import App from './App';
+import LoginForm from './components/LoginForm';
+import ResetPasswordPage from './components/ResetPasswordPage';
+import CompanySetup from './components/CompanySetup';
+import SettingsPage from './components/SettingsPage';
 
 // 로딩 컴포넌트
 const LoadingScreen = () => (
@@ -21,6 +25,13 @@ const LoadingScreen = () => (
   </div>
 );
 
+// OvertimeProvider를 Layout Route로 — 보호된 라우트들이 동일 Provider 인스턴스 공유
+const ProtectedLayout = () => (
+  <OvertimeProvider>
+    <Outlet />
+  </OvertimeProvider>
+);
+
 // 인증이 통합된 메인 앱
 const AuthenticatedApp = () => {
   const { loading, initialized } = useAuth();
@@ -30,19 +41,33 @@ const AuthenticatedApp = () => {
     return <LoadingScreen />;
   }
 
-  // 인증 래퍼로 기존 앱을 감싸기
   return (
     <AuthWrapper>
-      <OvertimeProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Routes>
+        {/* 공개 라우트 */}
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/signup" element={<LoginForm />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* 회사 설정 라우트 (인증 필요, 회사 불필요) */}
+        <Route path="/setup" element={<CompanySetup />} />
+        <Route path="/setup/register" element={<CompanySetup />} />
+        <Route path="/setup/join" element={<CompanySetup />} />
+
+        {/* 보호된 라우트 (인증 + 회사 필요, OvertimeProvider 공유) */}
+        <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<App />} />
           <Route path="/records" element={<App />} />
           <Route path="/records/:tab" element={<App />} />
           <Route path="/employees" element={<App />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </OvertimeProvider>
+          <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+          <Route path="/settings/:section" element={<SettingsPage />} />
+        </Route>
+
+        {/* 폴백 */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </AuthWrapper>
   );
 };

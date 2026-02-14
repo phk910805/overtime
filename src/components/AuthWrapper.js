@@ -1,31 +1,34 @@
 /**
  * 인증 래퍼 컴포넌트
- * 로그인 상태 및 URL 라우팅에 따라 적절한 화면 표시
+ * 리다이렉트 기반 가드 — 모든 라우트를 감싸며 인증/회사 상태에 따라 Navigate
  */
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getDataService } from '../services/dataService';
-import LoginForm from './LoginForm';
-import ResetPasswordPage from './ResetPasswordPage';
-import CompanySetup from './CompanySetup';
+
+// 공개 경로 (인증 불필요)
+const PUBLIC_PATHS = ['/login', '/signup'];
+
+// 회사 설정 경로 (인증 필요, 회사 불필요)
+const SETUP_PATHS = ['/setup', '/setup/register', '/setup/join'];
 
 const AuthWrapper = ({ children }) => {
-  const { user, loading, initialized, signIn, signUp } = useAuth();
+  const { user, loading, initialized } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
 
   // 회사 설정 상태
   const [companyChecked, setCompanyChecked] = useState(false);
   const [hasCompany, setHasCompany] = useState(false);
 
   // URL에서 비밀번호 재설정 경로 판별
-  const isResetPassword = location.pathname.includes('reset-password')
+  const isResetPassword = location.pathname === '/reset-password'
     || location.hash.includes('reset-password')
     || location.hash.includes('access_token');
+
+  const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
+  const isSetupPath = SETUP_PATHS.includes(location.pathname);
 
   // 로그인 후 회사 정보 확인
   useEffect(() => {
@@ -44,20 +47,18 @@ const AuthWrapper = ({ children }) => {
         try {
           const dataService = getDataService();
           const company = await dataService.getMyCompany();
-          
+
           setHasCompany(!!company);
           setCompanyChecked(true);
-          return; // 성공 시 종료
+          return;
         } catch (error) {
-          // StorageAdapter 초기화 에러인 경우 재시도
           if (error.message?.includes('not initialized') && retries >= 1) {
             console.log(`StorageAdapter 초기화 대기 중... (재시도 ${4 - retries}/3)`);
             // eslint-disable-next-line no-loop-func
             await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2; // 지수 백오프
+            delay *= 2;
             retries--;
           } else {
-            // 다른 에러이거나 재시도 소진
             console.error('회사 정보 확인 실패:', error);
             setHasCompany(false);
             setCompanyChecked(true);
@@ -70,75 +71,7 @@ const AuthWrapper = ({ children }) => {
     checkCompany();
   }, [user]);
 
-  // 회사 설정 완료 처리
-  const handleCompanySetupComplete = (result) => {
-    console.log('회사 설정 완료:', result);
-    // 회사 설정 완료 후 다시 체크
-    setCompanyChecked(false);
-    setHasCompany(true);
-    
-    // 회사 정보 재확인
-    setTimeout(async () => {
-      try {
-        const dataService = getDataService();
-        const company = await dataService.getMyCompany();
-        setHasCompany(!!company);
-        setCompanyChecked(true);
-      } catch (error) {
-        console.error('회사 정보 재확인 실패:', error);
-        setCompanyChecked(true);
-      }
-    }, 500);
-  };
-
-  // 로그인 처리
-  const handleLogin = async (email, password) => {
-    setAuthLoading(true);
-    setAuthError('');
-    
-    try {
-      const result = await signIn(email, password);
-      
-      if (!result.success) {
-        setAuthError(result.error || '로그인에 실패했습니다');
-      }
-    } catch (error) {
-      setAuthError('로그인 중 오류가 발생했습니다');
-      console.error('Login error:', error);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // 회원가입 처리
-  const handleSignUp = async (email, password, userData) => {
-    setAuthLoading(true);
-    setAuthError('');
-    
-    try {
-      const result = await signUp(email, password, userData);
-      
-      if (result.success) {
-        // 회원가입 성공 시 안내 메시지
-        setAuthError(''); // 에러 초기화
-        alert('회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.');
-      } else {
-        setAuthError(result.error || '회원가입에 실패했습니다');
-      }
-    } catch (error) {
-      setAuthError('회원가입 중 오류가 발생했습니다');
-      console.error('Sign up error:', error);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // 비밀번호 재설정 완료 후 처리
-  const handleResetComplete = () => {
-    navigate('/', { replace: true });
-  };
-
-  // 로딩 중
+  // 1. 로딩/초기화 중 → 스피너
   if (loading || !initialized) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -150,14 +83,23 @@ const AuthWrapper = ({ children }) => {
     );
   }
 
-  // 비밀번호 재설정 페이지 (로그인 여부 무관)
+  // 2. 비밀번호 재설정 → 그대로 통과
   if (isResetPassword) {
-    return <ResetPasswordPage onComplete={handleResetComplete} />;
+    return <>{children}</>;
   }
 
-  // 로그인된 상태
-  if (user) {
-    // 회사 정보 체크 중
+  // 3. 미로그인 + 공개 경로 → 그대로 통과
+  if (!user && isPublicPath) {
+    return <>{children}</>;
+  }
+
+  // 4. 미로그인 + 비공개 경로 → /login으로 리다이렉트
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 5. 로그인 + 공개 경로 → 회사 유무에 따라 리다이렉트
+  if (user && isPublicPath) {
     if (!companyChecked) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -168,29 +110,38 @@ const AuthWrapper = ({ children }) => {
         </div>
       );
     }
+    return <Navigate to={hasCompany ? '/dashboard' : '/setup'} replace />;
+  }
 
-    // 회사 정보가 없는 경우 - 회사 설정 화면
-    if (!hasCompany) {
-      return <CompanySetup onComplete={handleCompanySetupComplete} />;
-    }
-
-    // 회사 정보가 있는 경우 - 기존 앱 표시
+  // 6. 로그인 + 회사 체크 중 → 스피너
+  if (!companyChecked) {
     return (
-      <>
-        {children}
-      </>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">회사 정보 확인 중...</p>
+        </div>
+      </div>
     );
   }
 
-  // 로그인되지 않은 상태 - 로그인 폼
-  return (
-    <LoginForm
-      onLogin={handleLogin}
-      onSignUp={handleSignUp}
-      loading={authLoading}
-      error={authError}
-    />
-  );
+  // 7. 로그인 + 회사 없음 + 설정 경로 → 그대로 통과
+  if (!hasCompany && isSetupPath) {
+    return <>{children}</>;
+  }
+
+  // 8. 로그인 + 회사 없음 + 기타 경로 → /setup으로 리다이렉트
+  if (!hasCompany) {
+    return <Navigate to="/setup" replace />;
+  }
+
+  // 9. 로그인 + 회사 있음 + 설정 경로 → /dashboard로 리다이렉트
+  if (hasCompany && isSetupPath) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // 10. 로그인 + 회사 있음 + 기타 경로 → 그대로 통과
+  return <>{children}</>;
 };
 
 export default AuthWrapper;

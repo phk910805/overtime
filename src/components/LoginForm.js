@@ -3,14 +3,18 @@
  * 기본 로그인/회원가입 폼
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Clock, Mail, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import FindEmailModal from './FindEmailModal';
 
 const LoginForm = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isLogin = location.pathname !== '/signup';
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,8 +27,15 @@ const LoginForm = () => {
   const [showFindEmail, setShowFindEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const { signIn, signUp, loading } = useAuth();
+
+  // pathname 변경 시 폼 초기화
+  useEffect(() => {
+    setFormData({ email: '', password: '', confirmPassword: '', fullName: '' });
+    setError('');
+    setMessage('');
+  }, [location.pathname]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -79,13 +90,8 @@ const LoginForm = () => {
           full_name: formData.fullName
         });
         setMessage('회원가입이 완료되었습니다. 이메일을 확인해주세요.');
-        setIsLogin(true); // 로그인 폼으로 전환
-        setFormData({
-          email: formData.email,
-          password: '',
-          confirmPassword: '',
-          fullName: ''
-        });
+        // 회원가입 성공 → 로그인 페이지로 이동
+        navigate('/login', { replace: true });
       }
     } catch (error) {
       console.error('Auth error:', error);
@@ -94,15 +100,7 @@ const LoginForm = () => {
   };
 
   const toggleMode = () => {
-    setIsLogin(!isLogin);
-    setError('');
-    setMessage('');
-    setFormData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      fullName: ''
-    });
+    navigate(isLogin ? '/signup' : '/login', { replace: true });
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Building2, Users, ArrowLeft, LogOut } from 'lucide-react';
 import { getDataService } from '../services/dataService';
 import { useAuth } from '../hooks/useAuth';
@@ -7,9 +8,17 @@ import { useAuth } from '../hooks/useAuth';
  * 회사 설정 메인 화면
  * - 새 회사 등록
  * - 기존 회사 참여
+ * URL: /setup, /setup/register, /setup/join
  */
-const CompanySetup = ({ onComplete }) => {
-  const [step, setStep] = useState('choice'); // 'choice' | 'register' | 'join'
+const CompanySetup = () => {
+  const location = useLocation();
+  const navigateTo = useNavigate();
+
+  // step을 URL에서 파생
+  const step = location.pathname === '/setup/register' ? 'register'
+    : location.pathname === '/setup/join' ? 'join'
+    : 'choice';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { signOut } = useAuth();
@@ -29,7 +38,7 @@ const CompanySetup = ({ onComplete }) => {
   };
 
   const handleBack = () => {
-    setStep('choice');
+    navigateTo('/setup');
     setError('');
   };
 
@@ -76,11 +85,9 @@ const CompanySetup = ({ onComplete }) => {
       const result = await dataService.createCompany(numbers, companyName);
       
       console.log('회사 등록 성공:', result);
-      
-      // 완료 콜백
-      if (onComplete) {
-        onComplete({ type: 'register', company: result });
-      }
+
+      // 전체 리로드로 회사 체크 재실행
+      window.location.replace('/dashboard');
     } catch (err) {
       setError(err.message || '회사 등록에 실패했습니다.');
     } finally {
@@ -109,11 +116,9 @@ const CompanySetup = ({ onComplete }) => {
       await dataService.useInviteCode(validation.inviteId);
       
       console.log('회사 참여 성공:', validation);
-      
-      // 완료 콜백
-      if (onComplete) {
-        onComplete({ type: 'join', company: validation });
-      }
+
+      // 전체 리로드로 회사 체크 재실행
+      window.location.replace('/dashboard');
     } catch (err) {
       setError(err.message || '회사 참여에 실패했습니다.');
     } finally {
@@ -145,7 +150,7 @@ const CompanySetup = ({ onComplete }) => {
           <div className="space-y-4">
             {/* 새 회사 등록 */}
             <button
-              onClick={() => setStep('register')}
+              onClick={() => navigateTo('/setup/register')}
               className="w-full bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
             >
               <div className="flex items-start">
@@ -166,7 +171,7 @@ const CompanySetup = ({ onComplete }) => {
 
             {/* 기존 회사 참여 */}
             <button
-              onClick={() => setStep('join')}
+              onClick={() => navigateTo('/setup/join')}
               className="w-full bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
             >
               <div className="flex items-start">

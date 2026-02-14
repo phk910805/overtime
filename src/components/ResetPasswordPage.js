@@ -161,7 +161,7 @@ const ResetPasswordPage = ({ onComplete }) => {
           if (onComplete) {
             onComplete();
           } else {
-            window.location.href = '/overtime/';
+            window.location.href = '/login';
           }
         });
       }, 3000);
@@ -178,7 +178,7 @@ const ResetPasswordPage = ({ onComplete }) => {
     if (onComplete) {
       onComplete();
     } else {
-      window.location.href = '/overtime/';
+      window.location.href = '/login';
     }
   };
 

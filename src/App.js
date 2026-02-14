@@ -5,7 +5,6 @@ import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
-import UnifiedSettingsModal from './components/UnifiedSettingsModal';
 import LoginButton from './components/LoginButton';
 
 // 이니셜 생성 유틸
@@ -32,8 +31,6 @@ const OvertimeManagementApp = memo(() => {
     return 'dashboard';
   }, [location.pathname]);
 
-  const [showSettings, setShowSettings] = React.useState(false);
-
   const handleTabChange = useCallback((tab) => {
     const paths = { dashboard: '/dashboard', records: '/records', employees: '/employees' };
     navigate(paths[tab] || '/dashboard');
@@ -54,7 +51,7 @@ const OvertimeManagementApp = memo(() => {
               {/* 사용자 프로필 또는 로그인 버튼 */}
               {user ? (
                 <button
-                  onClick={() => setShowSettings(true)}
+                  onClick={() => navigate('/settings')}
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label="설정"
                 >
@@ -66,7 +63,7 @@ const OvertimeManagementApp = memo(() => {
                   </span>
                 </button>
               ) : (
-                <LoginButton onClick={() => console.log('로그인 버튼 클릭')} />
+                <LoginButton onClick={() => navigate('/login')} />
               )}
             </div>
           </div>
@@ -127,10 +124,6 @@ const OvertimeManagementApp = memo(() => {
         )}
       </div>
 
-      <UnifiedSettingsModal
-        show={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
     </div>
   );
 });
