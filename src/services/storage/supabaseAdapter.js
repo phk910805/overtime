@@ -62,7 +62,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
     const { data: profile, error } = await this.supabase
       .from('profiles')
-      .select('company_id, company_name, business_number, role, is_platform_admin')
+      .select('company_id, company_name, business_number, role, is_platform_admin, permission')
       .eq('id', user.id)
       .single();
 
@@ -921,7 +921,7 @@ export class SupabaseAdapter extends StorageAdapter {
   /**
    * 초대 코드 생성
    */
-  async createInviteCode(email, role = 'employee') {
+  async createInviteCode(email, role = 'employee', permission = 'editor') {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
@@ -968,6 +968,7 @@ export class SupabaseAdapter extends StorageAdapter {
           invited_email: email,
           created_by: user.id,
           invited_role: role,
+          invited_permission: permission,
           expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
         })
         .select()
@@ -1087,11 +1088,58 @@ export class SupabaseAdapter extends StorageAdapter {
         inviteCode: invite.invite_code,
         email: invite.invited_email,
         invitedRole: invite.invited_role || 'employee',
+        invitedPermission: invite.invited_permission || 'editor',
         createdAt: invite.created_at,
         expiresAt: invite.expires_at
       }));
     } catch (error) {
       this._handleError(error, 'getActiveInviteCodes');
+    }
+  }
+
+  /**
+   * 회사 팀원 목록 조회
+   */
+  async getCompanyMembers() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data, error } = await this.supabase.rpc('get_company_members', {
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this._handleError(error, 'getCompanyMembers');
+    }
+  }
+
+  /**
+   * 팀원 역할/권한 변경 (소유자 전용)
+   */
+  async updateMemberRole(memberId, newRole, newPermission) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const { data, error } = await this.supabase.rpc('update_member_role', {
+        p_owner_id: user.id,
+        p_member_id: memberId,
+        p_new_role: newRole,
+        p_new_permission: newPermission
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      this._handleError(error, 'updateMemberRole');
     }
   }
 

@@ -453,11 +453,11 @@ export class DataService {
    * 초대 코드 생성
    * @param {string} email - 초대할 이메일
    */
-  async createInviteCode(email, role = 'employee') {
+  async createInviteCode(email, role = 'employee', permission = 'editor') {
     if (!email) {
       throw new Error('이메일은 필수입니다.');
     }
-    return await this._getAdapter().createInviteCode(email, role);
+    return await this._getAdapter().createInviteCode(email, role, permission);
   }
 
   /**
@@ -488,6 +488,23 @@ export class DataService {
    */
   async getActiveInviteCodes() {
     return await this._getAdapter().getActiveInviteCodes();
+  }
+
+  /**
+   * 회사 팀원 목록 조회
+   */
+  async getCompanyMembers() {
+    return await this._getAdapter().getCompanyMembers();
+  }
+
+  /**
+   * 팀원 역할/권한 변경 (소유자 전용)
+   * @param {string} memberId - 팀원 UUID
+   * @param {string} newRole - 새 역할 (admin/employee)
+   * @param {string} newPermission - 새 권한 (editor/viewer)
+   */
+  async updateMemberRole(memberId, newRole, newPermission) {
+    return await this._getAdapter().updateMemberRole(memberId, newRole, newPermission);
   }
 }
 

@@ -133,9 +133,13 @@ export function useAuth() {
     isPlatformAdmin: authService.isPlatformAdmin(), // 마스터
     isManager: authService.isManager(),
     userRole: authService.getUserRole(),
+    userPermission: authService.getPermission(),
     canInvite: authService.canInvite(),
     canEditSettings: authService.canEditSettings(),
+    canEditOvertime: authService.canEditOvertime(),
+    canEditEmployees: authService.canEditEmployees(),
     canManageEmployees: authService.canManageEmployees(),
+    canManageTeam: authService.canManageTeam(),
 
     // 액션
     signUp,

@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { getDataService } from '../../services/dataService';
+import { useAuth } from '../../hooks/useAuth';
 import InviteTeamMember from '../InviteTeamMember';
 import { Users, Clock, Mail } from 'lucide-react';
 import { Toast } from '../CommonUI';
 
+const getInviteBadgeLabel = (role, permission) => {
+  const roleName = role === 'admin' ? '관리자' : '구성원';
+  const permName = permission === 'viewer' ? '뷰어' : '편집';
+  return `${roleName}(${permName})`;
+};
+
 const SettingsInvite = memo(() => {
+  const { canInvite } = useAuth();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeInvites, setActiveInvites] = useState([]);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -59,13 +67,15 @@ const SettingsInvite = memo(() => {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-medium text-gray-700">활성 초대 코드</h4>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex items-center gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              초대 코드 생성
-            </button>
+            {canInvite && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                초대 코드 생성
+              </button>
+            )}
           </div>
 
           {activeInvites.length === 0 ? (
@@ -89,7 +99,7 @@ const SettingsInvite = memo(() => {
                             ? 'bg-purple-100 text-purple-700'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {invite.invitedRole === 'admin' ? '관리자' : '구성원'}
+                          {getInviteBadgeLabel(invite.invitedRole, invite.invitedPermission)}
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 mt-1">

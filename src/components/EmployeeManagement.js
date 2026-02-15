@@ -7,7 +7,7 @@ import { Modal, ConfirmModal, TableHeader, SortableHeader, EmptyState, Paginatio
 
 // ========== MAIN COMPONENT ==========
 const EmployeeManagement = memo(() => {
-  const { canManageEmployees } = useAuth();
+  const { canManageEmployees, canEditEmployees } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
   const [showModal, setShowModal] = useState(false);
@@ -296,7 +296,7 @@ const EmployeeManagement = memo(() => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">직원 관리</h2>
-        {activeEmployeeTab === 'list' && (
+        {activeEmployeeTab === 'list' && canEditEmployees && (
           <button
             onClick={() => setShowModal(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
@@ -410,20 +410,26 @@ const EmployeeManagement = memo(() => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(employee)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                          title="수정"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleResignClick(employee)}
-                          className="text-orange-600 hover:text-orange-900"
-                          title="퇴사 처리"
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </button>
+                        {canEditEmployees ? (
+                          <>
+                            <button
+                              onClick={() => handleEdit(employee)}
+                              className="text-blue-600 hover:text-blue-900 mr-4"
+                              title="수정"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleResignClick(employee)}
+                              className="text-orange-600 hover:text-orange-900"
+                              title="퇴사 처리"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-xs">조회만 가능</span>
+                        )}
                       </td>
                     </tr>
                   ))}

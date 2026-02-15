@@ -11,6 +11,7 @@ import { getDataService } from '../services/dataService';
 const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('employee');
+  const [permission, setPermission] = useState('editor');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -34,7 +35,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
 
     try {
       const dataService = getDataService();
-      const result = await dataService.createInviteCode(email, role);
+      const result = await dataService.createInviteCode(email, role, permission);
 
       setInviteData(result);
       setSuccess(true);
@@ -220,6 +221,49 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
               <div>
                 <div className="text-sm font-medium text-gray-900">관리자</div>
                 <div className="text-xs text-gray-500">직원 관리, 설정 변경, 초과근무 편집 권한</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* 권한 선택 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            권한 <span className="text-red-500">*</span>
+          </label>
+          <div className="space-y-2">
+            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
+              permission === 'editor' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+            }`}>
+              <input
+                type="radio"
+                name="permission"
+                value="editor"
+                checked={permission === 'editor'}
+                onChange={(e) => setPermission(e.target.value)}
+                className="mt-0.5 mr-3"
+                disabled={loading}
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">편집</div>
+                <div className="text-xs text-gray-500">데이터 편집 가능</div>
+              </div>
+            </label>
+            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
+              permission === 'viewer' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+            }`}>
+              <input
+                type="radio"
+                name="permission"
+                value="viewer"
+                checked={permission === 'viewer'}
+                onChange={(e) => setPermission(e.target.value)}
+                className="mt-0.5 mr-3"
+                disabled={loading}
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">뷰어</div>
+                <div className="text-xs text-gray-500">조회만 가능</div>
               </div>
             </label>
           </div>

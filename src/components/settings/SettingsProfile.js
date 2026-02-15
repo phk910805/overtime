@@ -25,13 +25,13 @@ const SettingsProfile = memo(({ profileData, user }) => {
     setToast({ show: false, message: '', type: 'success' });
   }, []);
 
-  const getRoleDisplayName = useCallback((role) => {
-    switch (role) {
-      case 'owner': return '소유자';
-      case 'admin': return '관리자';
-      case 'employee': return '구성원';
-      default: return role || '구성원';
+  const getRoleDisplayName = useCallback((role, permission) => {
+    if (role === 'owner') return '소유자';
+    const roleName = role === 'admin' ? '관리자' : '구성원';
+    if (permission && permission !== 'editor') {
+      return `${roleName}(뷰어)`;
     }
+    return `${roleName}(편집)`;
   }, []);
 
   // Reset password fields when component unmounts or profileData changes
@@ -162,7 +162,7 @@ const SettingsProfile = memo(({ profileData, user }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">권한</label>
             <input
               type="text"
-              value={getRoleDisplayName(profileData?.role)}
+              value={getRoleDisplayName(profileData?.role, profileData?.permission)}
               readOnly
               tabIndex={-1}
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"

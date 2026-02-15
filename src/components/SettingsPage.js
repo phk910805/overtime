@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, Users, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { ConfirmModal } from './CommonUI';
@@ -14,12 +14,14 @@ import SettingsProfile from './settings/SettingsProfile';
 import SettingsCompany from './settings/SettingsCompany';
 import SettingsMultiplier from './settings/SettingsMultiplier';
 import SettingsInvite from './settings/SettingsInvite';
+import SettingsTeamManagement from './settings/SettingsTeamManagement';
 
 const ALL_MENU_ITEMS = [
   { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
   { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
   { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
   { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
+  { id: 'team', label: '팀원 관리', icon: Users, minRole: 'owner' },
 ];
 
 const ROLE_LEVEL = { owner: 3, admin: 2, employee: 1 };
@@ -62,13 +64,13 @@ const SettingsPage = memo(() => {
   }, []);
 
   // 권한 한글 변환
-  const getRoleDisplayName = useCallback((role) => {
-    switch (role) {
-      case 'owner': return '소유자';
-      case 'admin': return '관리자';
-      case 'employee': return '구성원';
-      default: return role || '구성원';
+  const getRoleDisplayName = useCallback((role, permission) => {
+    if (role === 'owner') return '소유자';
+    const roleName = role === 'admin' ? '관리자' : '구성원';
+    if (permission && permission !== 'editor') {
+      return `${roleName}(뷰어)`;
     }
+    return `${roleName}(편집)`;
   }, []);
 
   // 프로필 데이터 로드
@@ -88,7 +90,8 @@ const SettingsPage = memo(() => {
           email: user.email || '',
           companyName: user.user_metadata?.company_name || '',
           businessNumber: user.user_metadata?.business_number || '',
-          role: user.user_metadata?.role || 'employee'
+          role: user.user_metadata?.role || 'employee',
+          permission: 'editor'
         });
         return;
       }
@@ -98,7 +101,8 @@ const SettingsPage = memo(() => {
         email: data.email || user.email || '',
         companyName: data.company_name || user.user_metadata?.company_name || '',
         businessNumber: data.business_number || user.user_metadata?.business_number || '',
-        role: data.role || user.user_metadata?.role || 'employee'
+        role: data.role || user.user_metadata?.role || 'employee',
+        permission: data.permission || 'editor'
       });
     } catch (err) {
       console.error('프로필 로드 실패:', err);
@@ -107,7 +111,8 @@ const SettingsPage = memo(() => {
         email: user.email || '',
         companyName: user.user_metadata?.company_name || '',
         businessNumber: user.user_metadata?.business_number || '',
-        role: user.user_metadata?.role || 'employee'
+        role: user.user_metadata?.role || 'employee',
+        permission: 'editor'
       });
     } finally {
       setProfileLoading(false);
@@ -137,6 +142,7 @@ const SettingsPage = memo(() => {
   const userName = profileData?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || '사용자';
   const userEmail = profileData?.email || user?.email || '';
   const userRole = profileData?.role || user?.user_metadata?.role || 'employee';
+  const userPermission = profileData?.permission || 'editor';
 
   return (
     <>
@@ -173,7 +179,7 @@ const SettingsPage = memo(() => {
                   <div className="text-xs text-gray-500 truncate">{userEmail}</div>
                 </div>
                 <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                  {getRoleDisplayName(userRole)}
+                  {getRoleDisplayName(userRole, userPermission)}
                 </span>
               </div>
 
@@ -217,7 +223,7 @@ const SettingsPage = memo(() => {
                   <div className="text-sm font-medium text-gray-900 truncate max-w-full">{userName}</div>
                   <div className="text-xs text-gray-500 truncate max-w-full">{userEmail}</div>
                   <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
-                    {getRoleDisplayName(userRole)}
+                    {getRoleDisplayName(userRole, userPermission)}
                   </span>
                 </div>
               </div>
@@ -275,6 +281,9 @@ const SettingsPage = memo(() => {
                   )}
                   {activeSection === 'invite' && (
                     <SettingsInvite />
+                  )}
+                  {activeSection === 'team' && (
+                    <SettingsTeamManagement />
                   )}
                 </>
               )}

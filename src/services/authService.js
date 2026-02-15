@@ -12,6 +12,7 @@ export class AuthService {
   constructor() {
     this.currentUser = null;
     this._profileRole = null;         // profiles 테이블의 role
+    this._profilePermission = null;   // profiles 테이블의 permission
     this._isPlatformAdmin = false;    // profiles 테이블의 is_platform_admin
     this.listeners = new Set();
     this.supabaseSubscription = null; // Supabase subscription 저장
@@ -176,6 +177,7 @@ export class AuthService {
 
       this.currentUser = null;
       this._profileRole = null;
+      this._profilePermission = null;
       this._isPlatformAdmin = false;
       this.notifyListeners('SIGNED_OUT', null);
 
@@ -230,6 +232,7 @@ export class AuthService {
       if (error && error.message === 'Auth session missing!') {
         this.currentUser = null;
         this._profileRole = null;
+        this._profilePermission = null;
         this._isPlatformAdmin = false;
         return null;
       }
@@ -247,6 +250,7 @@ export class AuthService {
       console.error('❌ 사용자 정보 가져오기 실패:', error.message);
       this.currentUser = null;
       this._profileRole = null;
+      this._profilePermission = null;
       this._isPlatformAdmin = false;
       return null;
     }
@@ -259,21 +263,24 @@ export class AuthService {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role, is_platform_admin')
+        .select('role, is_platform_admin, permission')
         .eq('id', userId)
         .single();
 
       if (error || !data) {
         this._profileRole = null;
+        this._profilePermission = null;
         this._isPlatformAdmin = false;
         return;
       }
 
       this._profileRole = data.role || 'employee';
+      this._profilePermission = data.permission || 'editor';
       this._isPlatformAdmin = data.is_platform_admin === true;
     } catch (err) {
       console.warn('프로필 역할 로드 실패:', err.message);
       this._profileRole = null;
+      this._profilePermission = null;
       this._isPlatformAdmin = false;
     }
   }
@@ -382,24 +389,55 @@ export class AuthService {
   }
 
   /**
-   * 초대 가능 여부 (owner + admin)
+   * 사용자 권한 확인 (editor/viewer)
    */
-  canInvite() {
-    return this.isAdmin();
+  getPermission() {
+    return this._profilePermission || this.currentUser?.user_metadata?.permission || 'editor';
   }
 
   /**
-   * 설정 변경 가능 여부 (owner + admin)
+   * 초과근무 편집 가능 (owner는 항상, 나머지는 editor만)
+   */
+  canEditOvertime() {
+    if (this.isOwner()) return true;
+    return this.getPermission() === 'editor';
+  }
+
+  /**
+   * 설정 편집 가능 여부 (owner + admin(editor))
    */
   canEditSettings() {
-    return this.isAdmin();
+    if (this.isOwner()) return true;
+    return this.isAdmin() && this.getPermission() === 'editor';
   }
 
   /**
-   * 직원 관리 가능 여부 (owner + admin)
+   * 초대 가능 여부 = 설정 편집과 동일
+   */
+  canInvite() {
+    return this.canEditSettings();
+  }
+
+  /**
+   * 직원 관리 탭 접근 (admin 이상이면 viewer도 조회 가능)
    */
   canManageEmployees() {
     return this.isAdmin();
+  }
+
+  /**
+   * 직원 편집 (추가/수정/퇴사) — owner + admin(editor)
+   */
+  canEditEmployees() {
+    if (this.isOwner()) return true;
+    return this.isAdmin() && this.getPermission() === 'editor';
+  }
+
+  /**
+   * 팀원 관리 (역할/권한 변경) — 소유자만
+   */
+  canManageTeam() {
+    return this.isOwner();
   }
 
   /**

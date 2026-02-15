@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { validators } from '../../utils';
 import { useOvertimeContext } from '../../context';
+import { useAuth } from '../../hooks/useAuth';
 import { Toast } from '../CommonUI';
 
 const SettingsMultiplier = memo(() => {
   const { multiplier: contextMultiplier, updateSettings } = useOvertimeContext();
+  const { canEditSettings } = useAuth();
   const [multiplier, setMultiplier] = useState('1.0');
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -98,9 +100,10 @@ const SettingsMultiplier = memo(() => {
               type="text"
               value={multiplier}
               onChange={handleMultiplierChange}
+              readOnly={!canEditSettings}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
-              }`}
+              } ${!canEditSettings ? 'bg-gray-50 cursor-not-allowed' : ''}`}
               placeholder="예: 1.5"
             />
             {error && (
@@ -117,11 +120,12 @@ const SettingsMultiplier = memo(() => {
                 <button
                   key={preset.value}
                   onClick={() => handlePresetClick(preset.value)}
+                  disabled={!canEditSettings}
                   className={`px-3 py-2 text-sm rounded-md border transition-colors ${
                     multiplier === preset.value
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  } ${!canEditSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {preset.label}
                 </button>
@@ -150,20 +154,26 @@ const SettingsMultiplier = memo(() => {
             </ul>
           </div>
 
-          <div className="flex justify-between pt-4 border-t border-gray-200">
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
-            >
-              기본값으로 재설정
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-            >
-              저장
-            </button>
-          </div>
+          {canEditSettings ? (
+            <div className="flex justify-between pt-4 border-t border-gray-200">
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+              >
+                기본값으로 재설정
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                저장
+              </button>
+            </div>
+          ) : (
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500">설정 변경은 편집 권한이 필요합니다.</p>
+            </div>
+          )}
         </div>
       </div>
     </>
