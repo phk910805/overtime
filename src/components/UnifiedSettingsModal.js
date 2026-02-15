@@ -47,8 +47,8 @@ const UnifiedSettingsModal = memo(({ show, onClose }) => {
     switch (role) {
       case 'owner': return '소유자';
       case 'admin': return '관리자';
-      case 'employee': return '일반';
-      default: return role || '일반';
+      case 'employee': return '구성원';
+      default: return role || '구성원';
     }
   }, []);
 

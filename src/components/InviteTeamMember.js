@@ -201,7 +201,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
                 disabled={loading}
               />
               <div>
-                <div className="text-sm font-medium text-gray-900">직원</div>
+                <div className="text-sm font-medium text-gray-900">구성원</div>
                 <div className="text-xs text-gray-500">본인 초과근무 조회만 가능</div>
               </div>
             </label>

@@ -89,7 +89,7 @@ const SettingsInvite = memo(() => {
                             ? 'bg-purple-100 text-purple-700'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {invite.invitedRole === 'admin' ? '관리자' : '직원'}
+                          {invite.invitedRole === 'admin' ? '관리자' : '구성원'}
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
