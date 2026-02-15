@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useLayoutEffect } from 'react';
 import { Plus, Calendar } from 'lucide-react';
 import { useOvertimeContext } from '../context';
+import { useAuth } from '../hooks/useAuth';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
 import { Toast, Modal } from './CommonUI';
 import BulkSettingModal from './BulkSettingModal';
@@ -378,6 +379,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     multiplier,
     selectedMonth: contextSelectedMonth
   } = useOvertimeContext();
+
+  const { isAdmin: canBulkEdit } = useAuth();
 
   // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -765,8 +768,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
               <span>오늘</span>
             </button>
           )}
-          {/* 일괄 설정 버튼 - 항상 표시 (읽기 전용 달에도) */}
-          {!customMonth && (
+          {/* 일괄 설정 버튼 - admin/owner만 표시 */}
+          {!customMonth && canBulkEdit && (
             <button
               onClick={() => setShowBulkSetting(true)}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"

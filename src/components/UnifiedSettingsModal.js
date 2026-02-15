@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { X, User, Building2, SlidersHorizontal, UserPlus, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -8,19 +8,29 @@ import SettingsCompany from './settings/SettingsCompany';
 import SettingsMultiplier from './settings/SettingsMultiplier';
 import SettingsInvite from './settings/SettingsInvite';
 
-const MENU_ITEMS = [
-  { id: 'profile', label: '프로필 편집', icon: User },
-  { id: 'company', label: '회사 정보', icon: Building2 },
-  { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal },
-  { id: 'invite', label: '팀원 초대', icon: UserPlus },
+const ALL_MENU_ITEMS = [
+  { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
+  { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
+  { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
+  { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
 ];
 
+const ROLE_LEVEL = { owner: 3, admin: 2, employee: 1 };
+
+const getFilteredMenuItems = (userRole) => {
+  const userLevel = ROLE_LEVEL[userRole] || 1;
+  return ALL_MENU_ITEMS.filter(item => userLevel >= (ROLE_LEVEL[item.minRole] || 1));
+};
+
 const UnifiedSettingsModal = memo(({ show, onClose }) => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userRole: authUserRole } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // 역할 기반 메뉴 필터링
+  const menuItems = useMemo(() => getFilteredMenuItems(authUserRole), [authUserRole]);
 
   // 사용자 이니셜 생성
   const getInitials = useCallback((name) => {
@@ -35,7 +45,7 @@ const UnifiedSettingsModal = memo(({ show, onClose }) => {
   // 권한 한글 변환
   const getRoleDisplayName = useCallback((role) => {
     switch (role) {
-      case 'operator': return '운영자';
+      case 'owner': return '소유자';
       case 'admin': return '관리자';
       case 'employee': return '일반';
       default: return role || '일반';
@@ -159,7 +169,7 @@ const UnifiedSettingsModal = memo(({ show, onClose }) => {
 
               {/* 가로 스크롤 탭 */}
               <div className="flex overflow-x-auto px-2 pb-2 space-x-1 scrollbar-hide">
-                {MENU_ITEMS.map((item) => {
+                {menuItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
@@ -204,7 +214,7 @@ const UnifiedSettingsModal = memo(({ show, onClose }) => {
 
               {/* 네비게이션 */}
               <nav className="flex-1 py-3">
-                {MENU_ITEMS.map((item) => {
+                {menuItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button

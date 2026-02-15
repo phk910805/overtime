@@ -10,6 +10,7 @@ import { getDataService } from '../services/dataService';
  */
 const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('employee');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -33,7 +34,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
 
     try {
       const dataService = getDataService();
-      const result = await dataService.createInviteCode(email);
+      const result = await dataService.createInviteCode(email, role);
 
       setInviteData(result);
       setSuccess(true);
@@ -179,6 +180,49 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
             disabled={loading}
             autoFocus
           />
+        </div>
+
+        {/* 역할 선택 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            역할 <span className="text-red-500">*</span>
+          </label>
+          <div className="space-y-2">
+            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
+              role === 'employee' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+            }`}>
+              <input
+                type="radio"
+                name="role"
+                value="employee"
+                checked={role === 'employee'}
+                onChange={(e) => setRole(e.target.value)}
+                className="mt-0.5 mr-3"
+                disabled={loading}
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">직원</div>
+                <div className="text-xs text-gray-500">본인 초과근무 조회만 가능</div>
+              </div>
+            </label>
+            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
+              role === 'admin' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+            }`}>
+              <input
+                type="radio"
+                name="role"
+                value="admin"
+                checked={role === 'admin'}
+                onChange={(e) => setRole(e.target.value)}
+                className="mt-0.5 mr-3"
+                disabled={loading}
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">관리자</div>
+                <div className="text-xs text-gray-500">직원 관리, 설정 변경, 초과근무 편집 권한</div>
+              </div>
+            </label>
+          </div>
         </div>
 
         {/* 안내 메시지 */}

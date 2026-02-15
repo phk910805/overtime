@@ -27,7 +27,7 @@ const SettingsProfile = memo(({ profileData, user }) => {
 
   const getRoleDisplayName = useCallback((role) => {
     switch (role) {
-      case 'operator': return '운영자';
+      case 'owner': return '소유자';
       case 'admin': return '관리자';
       case 'employee': return '일반';
       default: return role || '일반';

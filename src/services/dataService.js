@@ -453,11 +453,11 @@ export class DataService {
    * 초대 코드 생성
    * @param {string} email - 초대할 이메일
    */
-  async createInviteCode(email) {
+  async createInviteCode(email, role = 'employee') {
     if (!email) {
       throw new Error('이메일은 필수입니다.');
     }
-    return await this._getAdapter().createInviteCode(email);
+    return await this._getAdapter().createInviteCode(email, role);
   }
 
   /**

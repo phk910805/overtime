@@ -62,7 +62,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
     const { data: profile, error } = await this.supabase
       .from('profiles')
-      .select('company_id, company_name, business_number')
+      .select('company_id, company_name, business_number, role, is_platform_admin')
       .eq('id', user.id)
       .single();
 
@@ -921,7 +921,7 @@ export class SupabaseAdapter extends StorageAdapter {
   /**
    * 초대 코드 생성
    */
-  async createInviteCode(email) {
+  async createInviteCode(email, role = 'employee') {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
@@ -967,6 +967,7 @@ export class SupabaseAdapter extends StorageAdapter {
           invite_code: inviteCode,
           invited_email: email,
           created_by: user.id,
+          invited_role: role,
           expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
         })
         .select()
@@ -1032,36 +1033,18 @@ export class SupabaseAdapter extends StorageAdapter {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const { data: invite } = await this.supabase
-        .from('company_invites')
-        .select('company_id, is_used')
-        .eq('id', inviteId)
-        .single();
+      const { data, error } = await this.supabase
+        .rpc('use_invite_and_set_role', {
+          p_invite_id: inviteId,
+          p_user_id: user.id
+        });
 
-      if (!invite || invite.is_used) {
-        throw new Error('유효하지 않거나 이미 사용된 초대입니다.');
-      }
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
 
-      const { error: profileError } = await this.supabase
-        .from('profiles')
-        .update({ 
-          company_id: invite.company_id,
-          role: 'admin'
-        })
-        .eq('id', user.id);
-
-      if (profileError) throw profileError;
-
-      const { error: inviteError } = await this.supabase
-        .from('company_invites')
-        .update({
-          is_used: true,
-          used_at: new Date().toISOString(),
-          used_by: user.id
-        })
-        .eq('id', inviteId);
-
-      if (inviteError) throw inviteError;
+      // 프로필 캐시 무효화
+      this._profileCache = null;
+      this._profileCacheTime = 0;
 
       return { success: true };
     } catch (error) {
@@ -1103,6 +1086,7 @@ export class SupabaseAdapter extends StorageAdapter {
         id: invite.id,
         inviteCode: invite.invite_code,
         email: invite.invited_email,
+        invitedRole: invite.invited_role || 'employee',
         createdAt: invite.created_at,
         expiresAt: invite.expires_at
       }));

@@ -126,12 +126,17 @@ export function useAuth() {
     loading,
     initialized,
     isAuthenticated: !!user,
-    
+
     // 권한 확인
-    isAdmin: authService.isAdmin(),
+    isAdmin: authService.isAdmin(),           // owner + admin
+    isOwner: authService.isOwner(),           // owner만
+    isPlatformAdmin: authService.isPlatformAdmin(), // 마스터
     isManager: authService.isManager(),
     userRole: authService.getUserRole(),
-    
+    canInvite: authService.canInvite(),
+    canEditSettings: authService.canEditSettings(),
+    canManageEmployees: authService.canManageEmployees(),
+
     // 액션
     signUp,
     signIn,

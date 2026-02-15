@@ -1,11 +1,13 @@
 import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Users, Plus, Edit2, UserMinus, Calendar } from 'lucide-react';
 import { useOvertimeContext } from '../context';
+import { useAuth } from '../hooks/useAuth';
 import { useSortingPaging, useValidation } from '../utils';
 import { Modal, ConfirmModal, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
 
 // ========== MAIN COMPONENT ==========
 const EmployeeManagement = memo(() => {
+  const { canManageEmployees } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
   const [showModal, setShowModal] = useState(false);
@@ -279,6 +281,16 @@ const EmployeeManagement = memo(() => {
     const endIndex = startIndex + historyPaging.itemsPerPage;
     return sortedHistoryRecords.slice(startIndex, endIndex);
   }, [sortedHistoryRecords, historyPaging.currentPage, historyPaging.itemsPerPage]);
+
+  // 방어적 권한 체크: employee 역할은 접근 불가
+  if (!canManageEmployees) {
+    return (
+      <div className="text-center py-16">
+        <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-gray-600">접근 권한이 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

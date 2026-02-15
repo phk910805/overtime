@@ -80,8 +80,17 @@ const SettingsInvite = memo(() => {
                 <div key={invite.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-mono font-bold text-lg text-blue-600">
-                        {invite.inviteCode}
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono font-bold text-lg text-blue-600">
+                          {invite.inviteCode}
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          invite.invitedRole === 'admin'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {invite.invitedRole === 'admin' ? '관리자' : '직원'}
+                        </span>
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
                         <Mail className="w-3 h-3 inline mr-1" />

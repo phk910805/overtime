@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, memo } from 'react';
+import React, { useCallback, useEffect, useMemo, memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Users, BarChart3 } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
@@ -19,17 +19,27 @@ const getInitials = (name) => {
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { user } = useAuth();
+  const { user, canManageEmployees } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // URL → 활성 탭 매핑
+  // URL → 활성 탭 매핑 (권한 없는 탭 접근 시 dashboard로)
   const activeTab = useMemo(() => {
     const path = location.pathname;
     if (path.startsWith('/records')) return 'records';
-    if (path.startsWith('/employees')) return 'employees';
+    if (path.startsWith('/employees')) {
+      if (!canManageEmployees) return 'dashboard';
+      return 'employees';
+    }
     return 'dashboard';
-  }, [location.pathname]);
+  }, [location.pathname, canManageEmployees]);
+
+  // 권한 없는 탭 접근 시 리다이렉트
+  useEffect(() => {
+    if (location.pathname.startsWith('/employees') && !canManageEmployees) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.pathname, canManageEmployees, navigate]);
 
   const handleTabChange = useCallback((tab) => {
     const paths = { dashboard: '/dashboard', records: '/records', employees: '/employees' };
@@ -95,17 +105,19 @@ const OvertimeManagementApp = memo(() => {
               <Calendar className="w-4 h-4 inline-block mr-2" />
               히스토리
             </button>
-            <button
-              onClick={() => handleTabChange('employees')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'employees'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Users className="w-4 h-4 inline-block mr-2" />
-              직원 관리
-            </button>
+            {canManageEmployees && (
+              <button
+                onClick={() => handleTabChange('employees')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'employees'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="w-4 h-4 inline-block mr-2" />
+                직원 관리
+              </button>
+            )}
           </div>
         </div>
       </nav>

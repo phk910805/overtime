@@ -296,6 +296,17 @@ export class AuthService {
     return !!this.currentUser;
   }
 
+  // 역할 상수
+  static ROLES = {
+    MASTER: 'master',   // is_platform_admin 플래그로 판별
+    OWNER: 'owner',
+    ADMIN: 'admin',
+    EMPLOYEE: 'employee'
+  };
+
+  // 역할 계층 (높을수록 상위)
+  static ROLE_HIERARCHY = { owner: 3, admin: 2, employee: 1 };
+
   /**
    * 사용자 역할 확인
    */
@@ -304,18 +315,53 @@ export class AuthService {
   }
 
   /**
-   * 관리자 권한 확인
+   * 플랫폼 관리자 여부
    */
-  isAdmin() {
-    return this.getUserRole() === 'admin';
+  isPlatformAdmin() {
+    return this.currentUser?.user_metadata?.is_platform_admin === true;
   }
 
   /**
-   * 매니저 권한 확인
+   * 관리자 권한 확인 (owner + admin)
+   */
+  isAdmin() {
+    const role = this.getUserRole();
+    return role === 'admin' || role === 'owner';
+  }
+
+  /**
+   * 소유자 여부
+   */
+  isOwner() {
+    return this.getUserRole() === 'owner';
+  }
+
+  /**
+   * 매니저 권한 확인 (owner + admin)
    */
   isManager() {
-    const role = this.getUserRole();
-    return role === 'admin' || role === 'manager';
+    return this.isAdmin();
+  }
+
+  /**
+   * 초대 가능 여부 (owner + admin)
+   */
+  canInvite() {
+    return this.isAdmin();
+  }
+
+  /**
+   * 설정 변경 가능 여부 (owner + admin)
+   */
+  canEditSettings() {
+    return this.isAdmin();
+  }
+
+  /**
+   * 직원 관리 가능 여부 (owner + admin)
+   */
+  canManageEmployees() {
+    return this.isAdmin();
   }
 
   /**
