@@ -263,7 +263,7 @@ export class AuthService {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role, is_platform_admin, permission')
+        .select('role, permission')
         .eq('id', userId)
         .single();
 

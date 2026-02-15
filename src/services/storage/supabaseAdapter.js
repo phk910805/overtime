@@ -62,7 +62,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
     const { data: profile, error } = await this.supabase
       .from('profiles')
-      .select('company_id, company_name, business_number, role, is_platform_admin, permission')
+      .select('company_id, company_name, business_number, role, permission')
       .eq('id', user.id)
       .single();
 
