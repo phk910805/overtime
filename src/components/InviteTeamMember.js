@@ -1,59 +1,50 @@
 import React, { useState } from 'react';
-import { Mail, Clock, CheckCircle, Copy } from 'lucide-react';
+import { Clock, CheckCircle, Copy, Link } from 'lucide-react';
 import { getDataService } from '../services/dataService';
 
 /**
- * 팀원 초대 모달
- * - 이메일 입력
- * - 초대 코드 생성
- * - 초대 코드 표시 및 복사
+ * 팀원 초대 모달 (링크 기반)
+ * - 초대 링크 생성 버튼
+ * - 생성된 링크 표시 및 복사
  */
-const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('employee');
-  const [permission, setPermission] = useState('editor');
+const InviteTeamMember = ({ onClose, onInvite }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [inviteData, setInviteData] = useState(null);
+  const [linkData, setLinkData] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  const validateEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const handleSubmit = async () => {
+  const handleCreateLink = async () => {
     setError('');
-
-    // 검증
-    if (!email || !validateEmail(email)) {
-      setError('올바른 이메일 주소를 입력해주세요.');
-      return;
-    }
-
     setLoading(true);
 
     try {
       const dataService = getDataService();
-      const result = await dataService.createInviteCode(email, role, permission);
+      const result = await dataService.createInviteLink();
 
-      setInviteData(result);
+      setLinkData(result);
       setSuccess(true);
 
-      // 부모 컴포넌트에 알림
       if (onInvite) {
         onInvite(result);
       }
     } catch (err) {
-      setError(err.message || '초대 코드 생성에 실패했습니다.');
+      setError(err.message || '초대 링크 생성에 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyCode = () => {
-    if (inviteData?.inviteCode) {
-      navigator.clipboard.writeText(inviteData.inviteCode);
+  const getInviteUrl = () => {
+    if (!linkData?.token) return '';
+    const origin = window.location.origin;
+    return `${origin}/invite/${linkData.token}`;
+  };
+
+  const handleCopyLink = () => {
+    const url = getInviteUrl();
+    if (url) {
+      navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -70,7 +61,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
   };
 
   // 성공 화면
-  if (success && inviteData) {
+  if (success && linkData) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -78,26 +69,25 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            
+
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              초대 코드가 생성되었습니다!
+              초대 링크가 생성되었습니다!
             </h3>
-            
+
             <p className="text-gray-600 mb-6">
-              {inviteData.email}으로<br />
-              초대 코드를 전달해주세요
+              아래 링크를 팀원에게 공유해주세요
             </p>
 
-            {/* 초대 코드 표시 */}
+            {/* 초대 링크 표시 */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
-              <div className="text-sm text-gray-600 mb-2">초대 코드</div>
-              <div className="flex items-center justify-center gap-2">
-                <div className="text-3xl font-mono font-bold text-blue-600">
-                  {inviteData.inviteCode}
+              <div className="text-sm text-gray-600 mb-2">초대 링크</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 text-sm font-mono text-blue-600 break-all text-left">
+                  {getInviteUrl()}
                 </div>
                 <button
-                  onClick={handleCopyCode}
-                  className="p-2 hover:bg-blue-100 rounded-md transition-colors"
+                  onClick={handleCopyLink}
+                  className="p-2 hover:bg-blue-100 rounded-md transition-colors flex-shrink-0"
                   title="복사"
                 >
                   <Copy className="w-5 h-5 text-blue-600" />
@@ -105,7 +95,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
               </div>
               {copied && (
                 <div className="text-xs text-green-600 mt-2">
-                  ✓ 복사되었습니다
+                  복사되었습니다
                 </div>
               )}
             </div>
@@ -115,7 +105,7 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
               <div className="flex items-center justify-center gap-2 text-sm text-yellow-800">
                 <Clock className="w-4 h-4" />
                 <span>
-                  만료 시간: {formatExpiryTime(inviteData.expiresAt)}
+                  만료 시간: {formatExpiryTime(linkData.expiresAt)}
                 </span>
               </div>
               <p className="text-xs text-yellow-700 mt-1">
@@ -126,12 +116,12 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
             {/* 안내 메시지 */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
               <p className="text-sm text-gray-700 mb-2">
-                📧 <strong>다음 정보를 전달해주세요:</strong>
+                <strong>안내:</strong>
               </p>
               <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                <li>• 초대 코드: <span className="font-mono font-semibold">{inviteData.inviteCode}</span></li>
-                <li>• 가입 이메일: {inviteData.email}</li>
-                <li>• 만료 시간: 1시간</li>
+                <li>링크를 클릭하면 누구나 가입 신청할 수 있습니다</li>
+                <li>가입 신청 후 관리자가 역할/권한을 설정하여 승인합니다</li>
+                <li>1시간 내 여러 명이 같은 링크로 참여할 수 있습니다</li>
               </ul>
             </div>
 
@@ -147,14 +137,15 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
     );
   }
 
-  // 입력 화면
+  // 생성 화면
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-2">팀원 초대</h3>
-        
+
         <p className="text-gray-600 mb-6">
-          초대할 팀원의 이메일을 입력하세요
+          초대 링크를 생성하여 팀원에게 공유하세요.<br />
+          링크를 받은 사람은 가입 후 참여 신청할 수 있습니다.
         </p>
 
         {error && (
@@ -163,124 +154,18 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
           </div>
         )}
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            이메일 주소 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setError('');
-            }}
-            placeholder="user@example.com"
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
-            disabled={loading}
-            autoFocus
-          />
-        </div>
-
-        {/* 역할 선택 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            역할 <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-2">
-            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
-              role === 'employee' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
-            }`}>
-              <input
-                type="radio"
-                name="role"
-                value="employee"
-                checked={role === 'employee'}
-                onChange={(e) => setRole(e.target.value)}
-                className="mt-0.5 mr-3"
-                disabled={loading}
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">구성원</div>
-                <div className="text-xs text-gray-500">본인 초과근무 조회만 가능</div>
-              </div>
-            </label>
-            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
-              role === 'admin' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
-            }`}>
-              <input
-                type="radio"
-                name="role"
-                value="admin"
-                checked={role === 'admin'}
-                onChange={(e) => setRole(e.target.value)}
-                className="mt-0.5 mr-3"
-                disabled={loading}
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">관리자</div>
-                <div className="text-xs text-gray-500">직원 관리, 설정 변경, 초과근무 편집 권한</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {/* 권한 선택 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            권한 <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-2">
-            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
-              permission === 'editor' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
-            }`}>
-              <input
-                type="radio"
-                name="permission"
-                value="editor"
-                checked={permission === 'editor'}
-                onChange={(e) => setPermission(e.target.value)}
-                className="mt-0.5 mr-3"
-                disabled={loading}
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">편집</div>
-                <div className="text-xs text-gray-500">데이터 편집 가능</div>
-              </div>
-            </label>
-            <label className={`flex items-start p-3 border rounded-md cursor-pointer transition-colors ${
-              permission === 'viewer' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
-            }`}>
-              <input
-                type="radio"
-                name="permission"
-                value="viewer"
-                checked={permission === 'viewer'}
-                onChange={(e) => setPermission(e.target.value)}
-                className="mt-0.5 mr-3"
-                disabled={loading}
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">뷰어</div>
-                <div className="text-xs text-gray-500">조회만 가능</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
         {/* 안내 메시지 */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
           <div className="flex items-start gap-2 mb-2">
-            <Mail className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Link className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-800">
-              초대 코드가 생성되면 이메일로 전달해주세요
+              링크 1개로 여러 팀원을 초대할 수 있습니다
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Clock className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-800">
-              코드는 <strong>1시간 동안</strong> 유효합니다
+              링크는 <strong>1시간 동안</strong> 유효합니다
             </div>
           </div>
         </div>
@@ -294,11 +179,16 @@ const InviteTeamMember = ({ companyName, onClose, onInvite }) => {
             취소
           </button>
           <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={loading || !email}
+            onClick={handleCreateLink}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={loading}
           >
-            {loading ? '생성 중...' : '초대 코드 생성'}
+            {loading ? '생성 중...' : (
+              <>
+                <Link className="w-4 h-4" />
+                초대 링크 생성
+              </>
+            )}
           </button>
         </div>
       </div>

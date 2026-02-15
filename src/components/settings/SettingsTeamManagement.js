@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Users } from 'lucide-react';
+import { Users, UserMinus, Calendar } from 'lucide-react';
 import { getDataService } from '../../services/dataService';
 import { useAuth } from '../../hooks/useAuth';
-import { Toast } from '../CommonUI';
+import { Toast, ConfirmModal } from '../CommonUI';
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+};
 
 const SettingsTeamManagement = memo(() => {
   const { canManageTeam, user } = useAuth();
@@ -10,6 +19,7 @@ const SettingsTeamManagement = memo(() => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -24,6 +34,7 @@ const SettingsTeamManagement = memo(() => {
       setLoading(true);
       const dataService = getDataService();
       const data = await dataService.getCompanyMembers();
+      // RPC가 active만 반환하므로 추가 필터 불필요
       setMembers(data || []);
     } catch (err) {
       console.error('팀원 목록 로드 실패:', err);
@@ -67,6 +78,24 @@ const SettingsTeamManagement = memo(() => {
     }
   }, [showToast, loadMembers]);
 
+  const handleRemoveConfirm = useCallback(async () => {
+    if (!removeTarget) return;
+
+    setUpdating(removeTarget.id);
+    try {
+      const dataService = getDataService();
+      await dataService.removeMember(removeTarget.id);
+      showToast('팀원을 내보냈습니다.');
+      setRemoveTarget(null);
+      await loadMembers();
+    } catch (err) {
+      console.error('팀원 내보내기 실패:', err);
+      showToast(err.message || '팀원 내보내기에 실패했습니다.', 'error');
+    } finally {
+      setUpdating(null);
+    }
+  }, [removeTarget, showToast, loadMembers]);
+
   if (!canManageTeam) {
     return (
       <div className="text-center py-16">
@@ -84,8 +113,26 @@ const SettingsTeamManagement = memo(() => {
         onClose={hideToast}
         type={toast.type}
       />
+      <ConfirmModal
+        show={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={handleRemoveConfirm}
+        title="팀원 내보내기"
+        message={`${removeTarget?.name || '이 팀원'}을(를) 회사에서 내보내시겠습니까?\n내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다.`}
+        confirmText="내보내기"
+        cancelText="취소"
+        type="danger"
+        loading={!!updating}
+      />
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">팀원 관리</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">팀원 관리</h3>
+          {!loading && (
+            <span className="text-sm text-gray-500">
+              총 {members.length}명
+            </span>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -104,11 +151,12 @@ const SettingsTeamManagement = memo(() => {
               const isMe = member.id === user?.id;
               const isDisabled = isOwner || isMe;
               const isUpdating = updating === member.id;
+              const canRemove = !isOwner && !isMe;
 
               return (
                 <div key={member.id} className={`border rounded-lg p-4 ${isUpdating ? 'opacity-50' : ''} ${isOwner ? 'bg-blue-50 border-blue-200' : 'border-gray-200'}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    {/* 이름/이메일 */}
+                    {/* 이름/이메일/가입일 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900 truncate">
@@ -119,9 +167,22 @@ const SettingsTeamManagement = memo(() => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                      <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                        {formatDate(member.appliedAt) && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            신청 {formatDate(member.appliedAt)}
+                          </span>
+                        )}
+                        {formatDate(member.approvedAt) && (
+                          <span>
+                            승인 {formatDate(member.approvedAt)}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* 역할/권한 선택 */}
+                    {/* 역할/권한 선택 + 내보내기 */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {isDisabled ? (
                         <span className="text-sm text-blue-700 font-medium px-3 py-1.5 bg-blue-100 rounded-md">
@@ -149,6 +210,16 @@ const SettingsTeamManagement = memo(() => {
                           </select>
                         </>
                       )}
+                      {canRemove && (
+                        <button
+                          onClick={() => setRemoveTarget({ id: member.id, name: member.fullName })}
+                          disabled={isUpdating}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                          title="내보내기"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -165,6 +236,7 @@ const SettingsTeamManagement = memo(() => {
             <li>역할/권한 변경은 해당 팀원이 다음 로그인 시 적용됩니다</li>
             <li>소유자 역할은 변경할 수 없습니다</li>
             <li>뷰어 권한은 조회만 가능합니다</li>
+            <li>내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다</li>
           </ul>
         </div>
       </div>

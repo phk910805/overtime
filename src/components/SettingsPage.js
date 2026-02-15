@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, Users, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { getDataService } from '../services/dataService';
 import { ConfirmModal } from './CommonUI';
 import SettingsProfile from './settings/SettingsProfile';
 import SettingsCompany from './settings/SettingsCompany';
@@ -39,6 +40,7 @@ const SettingsPage = memo(() => {
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   // 역할 기반 메뉴 필터링
   const menuItems = useMemo(() => getFilteredMenuItems(authUserRole), [authUserRole]);
@@ -124,6 +126,23 @@ const SettingsPage = memo(() => {
     loadProfile();
   }, [loadProfile]);
 
+  // 대기 멤버 수 로드 (admin 이상)
+  const loadPendingCount = useCallback(async () => {
+    const level = ROLE_LEVEL[authUserRole] || 1;
+    if (level < ROLE_LEVEL['admin']) return;
+    try {
+      const dataService = getDataService();
+      const members = await dataService.getPendingMembers();
+      setPendingCount((members || []).length);
+    } catch {
+      // 실패 시 무시
+    }
+  }, [authUserRole]);
+
+  useEffect(() => {
+    loadPendingCount();
+  }, [loadPendingCount]);
+
   // 로그아웃 처리
   const handleLogout = useCallback(async () => {
     setShowLogoutConfirm(false);
@@ -187,6 +206,7 @@ const SettingsPage = memo(() => {
               <div className="flex overflow-x-auto px-2 pb-2 space-x-1 scrollbar-hide">
                 {menuItems.map((item) => {
                   const Icon = item.icon;
+                  const showBadge = item.id === 'invite' && pendingCount > 0;
                   return (
                     <button
                       key={item.id}
@@ -199,6 +219,11 @@ const SettingsPage = memo(() => {
                     >
                       <Icon className="w-3.5 h-3.5" />
                       <span>{item.label}</span>
+                      {showBadge && (
+                        <span className="bg-red-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full">
+                          {pendingCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -232,6 +257,7 @@ const SettingsPage = memo(() => {
               <nav className="flex-1 py-3">
                 {menuItems.map((item) => {
                   const Icon = item.icon;
+                  const showBadge = item.id === 'invite' && pendingCount > 0;
                   return (
                     <button
                       key={item.id}
@@ -244,6 +270,11 @@ const SettingsPage = memo(() => {
                     >
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>
+                      {showBadge && (
+                        <span className="bg-red-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full ml-auto">
+                          {pendingCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -280,7 +311,7 @@ const SettingsPage = memo(() => {
                     <SettingsMultiplier />
                   )}
                   {activeSection === 'invite' && (
-                    <SettingsInvite />
+                    <SettingsInvite onPendingChange={loadPendingCount} />
                   )}
                   {activeSection === 'team' && (
                     <SettingsTeamManagement />

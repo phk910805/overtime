@@ -506,6 +506,73 @@ export class DataService {
   async updateMemberRole(memberId, newRole, newPermission) {
     return await this._getAdapter().updateMemberRole(memberId, newRole, newPermission);
   }
+
+  /**
+   * 팀원 내보내기 (소유자 전용)
+   * @param {string} memberId - 팀원 UUID
+   */
+  async removeMember(memberId) {
+    return await this._getAdapter().removeMember(memberId);
+  }
+
+  // ========== 초대 링크 기반 메서드 ==========
+
+  /**
+   * 초대 링크 생성 (또는 갱신)
+   */
+  async createInviteLink() {
+    return await this._getAdapter().createInviteLink();
+  }
+
+  /**
+   * 초대 토큰 유효성 검증
+   * @param {string} token - UUID 토큰
+   */
+  async validateInviteToken(token) {
+    if (!token) throw new Error('토큰은 필수입니다.');
+    return await this._getAdapter().validateInviteToken(token);
+  }
+
+  /**
+   * 초대 링크로 회사 참여 (pending 상태)
+   * @param {string} token - UUID 토큰
+   */
+  async joinViaInvite(token) {
+    if (!token) throw new Error('토큰은 필수입니다.');
+    return await this._getAdapter().joinViaInvite(token);
+  }
+
+  /**
+   * 현재 활성 초대 링크 조회
+   */
+  async getActiveInviteLink() {
+    return await this._getAdapter().getActiveInviteLink();
+  }
+
+  /**
+   * 참여 대기 중인 멤버 목록 조회
+   */
+  async getPendingMembers() {
+    return await this._getAdapter().getPendingMembers();
+  }
+
+  /**
+   * 참여 요청 승인
+   * @param {string} memberId - 멤버 UUID
+   * @param {string} role - 역할
+   * @param {string} permission - 권한
+   */
+  async approveJoinRequest(memberId, role, permission) {
+    return await this._getAdapter().approveJoinRequest(memberId, role, permission);
+  }
+
+  /**
+   * 참여 요청 거절
+   * @param {string} memberId - 멤버 UUID
+   */
+  async rejectJoinRequest(memberId) {
+    return await this._getAdapter().rejectJoinRequest(memberId);
+  }
 }
 
 // 싱글톤 인스턴스

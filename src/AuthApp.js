@@ -14,6 +14,8 @@ import LoginForm from './components/LoginForm';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import CompanySetup from './components/CompanySetup';
 import SettingsPage from './components/SettingsPage';
+import InviteAccept from './components/InviteAccept';
+import PendingApproval from './components/PendingApproval';
 
 // 로딩 컴포넌트
 const LoadingScreen = () => (
@@ -48,11 +50,14 @@ const AuthenticatedApp = () => {
         <Route path="/login" element={<LoginForm />} />
         <Route path="/signup" element={<LoginForm />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/invite/:token" element={<InviteAccept />} />
+
+        {/* 승인 대기 라우트 (인증 필요, pending 상태) */}
+        <Route path="/pending" element={<PendingApproval />} />
 
         {/* 회사 설정 라우트 (인증 필요, 회사 불필요) */}
         <Route path="/setup" element={<CompanySetup />} />
         <Route path="/setup/register" element={<CompanySetup />} />
-        <Route path="/setup/join" element={<CompanySetup />} />
 
         {/* 보호된 라우트 (인증 + 회사 필요, OvertimeProvider 공유) */}
         <Route element={<ProtectedLayout />}>

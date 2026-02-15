@@ -84,7 +84,13 @@ const LoginForm = () => {
     try {
       if (isLogin) {
         await signIn(formData.email, formData.password);
-        // 로그인 성공 시 자동으로 AuthContext에서 처리됨
+        // 로그인 성공 시 pendingInviteToken 확인 → 초대 수락 페이지로 이동
+        const pendingToken = sessionStorage.getItem('pendingInviteToken');
+        if (pendingToken) {
+          navigate(`/invite/${pendingToken}`, { replace: true });
+          return;
+        }
+        // 그 외 자동으로 AuthContext에서 처리됨
       } else {
         await signUp(formData.email, formData.password, {
           full_name: formData.fullName

@@ -140,6 +140,8 @@ export function useAuth() {
     canEditEmployees: authService.canEditEmployees(),
     canManageEmployees: authService.canManageEmployees(),
     canManageTeam: authService.canManageTeam(),
+    membershipStatus: authService.getMembershipStatus(),
+    isPending: authService.isPending(),
 
     // 액션
     signUp,

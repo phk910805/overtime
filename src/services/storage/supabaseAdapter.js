@@ -1144,6 +1144,187 @@ export class SupabaseAdapter extends StorageAdapter {
   }
 
   /**
+   * 팀원 내보내기 (소유자 전용)
+   */
+  async removeMember(memberId) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('remove_company_member', {
+        p_owner_id: user.id,
+        p_member_id: memberId
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      this._handleError(error, 'removeMember');
+    }
+  }
+
+  // ========== 초대 링크 기반 메서드 ==========
+
+  /**
+   * 초대 링크 생성 (또는 갱신)
+   */
+  async createInviteLink() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('create_or_refresh_invite_link', {
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      return { token: data.token, expiresAt: data.expires_at };
+    } catch (error) {
+      this._handleError(error, 'createInviteLink');
+    }
+  }
+
+  /**
+   * 초대 토큰 유효성 검증 (공개 — 로그인 불필요)
+   */
+  async validateInviteToken(token) {
+    try {
+      const { data, error } = await this.supabase.rpc('validate_invite_token', {
+        p_token: token
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this._handleError(error, 'validateInviteToken');
+    }
+  }
+
+  /**
+   * 초대 링크로 회사 참여 (pending 상태)
+   */
+  async joinViaInvite(token) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('join_company_via_invite', {
+        p_user_id: user.id,
+        p_token: token
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      // 프로필 캐시 무효화
+      this._profileCache = null;
+      this._profileCacheTime = 0;
+
+      return data;
+    } catch (error) {
+      this._handleError(error, 'joinViaInvite');
+    }
+  }
+
+  /**
+   * 현재 활성 초대 링크 조회
+   */
+  async getActiveInviteLink() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const profile = await this._getProfileInfo();
+      if (!profile?.company_id) return null;
+
+      const { data, error } = await this.supabase
+        .from('company_invites')
+        .select('invite_token, expires_at')
+        .eq('company_id', profile.company_id)
+        .eq('is_used', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      return { token: data.invite_token, expiresAt: data.expires_at };
+    } catch (error) {
+      this._handleError(error, 'getActiveInviteLink');
+    }
+  }
+
+  /**
+   * 참여 대기 중인 멤버 목록 조회
+   */
+  async getPendingMembers() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('get_pending_members', {
+        p_admin_id: user.id
+      });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this._handleError(error, 'getPendingMembers');
+    }
+  }
+
+  /**
+   * 참여 요청 승인
+   */
+  async approveJoinRequest(memberId, role, permission) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('approve_join_request', {
+        p_admin_id: user.id,
+        p_member_id: memberId,
+        p_role: role,
+        p_permission: permission
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      return data;
+    } catch (error) {
+      this._handleError(error, 'approveJoinRequest');
+    }
+  }
+
+  /**
+   * 참여 요청 거절
+   */
+  async rejectJoinRequest(memberId) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase.rpc('reject_join_request', {
+        p_admin_id: user.id,
+        p_member_id: memberId
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      return data;
+    } catch (error) {
+      this._handleError(error, 'rejectJoinRequest');
+    }
+  }
+
+  /**
    * 초대 코드 생성 헬퍼
    */
   _generateInviteCode() {

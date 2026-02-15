@@ -14,6 +14,7 @@ export class AuthService {
     this._profileRole = null;         // profiles 테이블의 role
     this._profilePermission = null;   // profiles 테이블의 permission
     this._isPlatformAdmin = false;    // profiles 테이블의 is_platform_admin
+    this._membershipStatus = null;    // profiles 테이블의 membership_status
     this.listeners = new Set();
     this.supabaseSubscription = null; // Supabase subscription 저장
     
@@ -179,6 +180,7 @@ export class AuthService {
       this._profileRole = null;
       this._profilePermission = null;
       this._isPlatformAdmin = false;
+      this._membershipStatus = null;
       this.notifyListeners('SIGNED_OUT', null);
 
       // 전체 캐시 초기화
@@ -234,6 +236,7 @@ export class AuthService {
         this._profileRole = null;
         this._profilePermission = null;
         this._isPlatformAdmin = false;
+        this._membershipStatus = null;
         return null;
       }
 
@@ -252,6 +255,7 @@ export class AuthService {
       this._profileRole = null;
       this._profilePermission = null;
       this._isPlatformAdmin = false;
+      this._membershipStatus = null;
       return null;
     }
   }
@@ -263,7 +267,7 @@ export class AuthService {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role, permission')
+        .select('role, permission, membership_status')
         .eq('id', userId)
         .single();
 
@@ -271,17 +275,20 @@ export class AuthService {
         this._profileRole = null;
         this._profilePermission = null;
         this._isPlatformAdmin = false;
+        this._membershipStatus = null;
         return;
       }
 
       this._profileRole = data.role || 'employee';
       this._profilePermission = data.permission || 'editor';
       this._isPlatformAdmin = data.is_platform_admin === true;
+      this._membershipStatus = data.membership_status || null;
     } catch (err) {
       console.warn('프로필 역할 로드 실패:', err.message);
       this._profileRole = null;
       this._profilePermission = null;
       this._isPlatformAdmin = false;
+      this._membershipStatus = null;
     }
   }
 
@@ -339,6 +346,20 @@ export class AuthService {
    */
   isAuthenticated() {
     return !!this.currentUser;
+  }
+
+  /**
+   * 멤버십 상태 가져오기
+   */
+  getMembershipStatus() {
+    return this._membershipStatus;
+  }
+
+  /**
+   * 승인 대기 상태인지 확인
+   */
+  isPending() {
+    return this._membershipStatus === 'pending';
   }
 
   // 역할 상수

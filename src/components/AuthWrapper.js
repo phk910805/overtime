@@ -7,12 +7,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getDataService } from '../services/dataService';
+import { getAuthService } from '../services/authService';
 
 // 공개 경로 (인증 불필요)
 const PUBLIC_PATHS = ['/login', '/signup'];
 
 // 회사 설정 경로 (인증 필요, 회사 불필요)
-const SETUP_PATHS = ['/setup', '/setup/register', '/setup/join'];
+const SETUP_PATHS = ['/setup', '/setup/register'];
 
 const AuthWrapper = ({ children }) => {
   const { user, loading, initialized } = useAuth();
@@ -21,6 +22,7 @@ const AuthWrapper = ({ children }) => {
   // 회사 설정 상태
   const [companyChecked, setCompanyChecked] = useState(false);
   const [hasCompany, setHasCompany] = useState(false);
+  const [membershipPending, setMembershipPending] = useState(false);
 
   // URL에서 비밀번호 재설정 경로 판별
   const isResetPassword = location.pathname === '/reset-password'
@@ -29,13 +31,16 @@ const AuthWrapper = ({ children }) => {
 
   const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
   const isSetupPath = SETUP_PATHS.includes(location.pathname);
+  const isInvitePath = location.pathname.startsWith('/invite/');
+  const isPendingPath = location.pathname === '/pending';
 
-  // 로그인 후 회사 정보 확인
+  // 로그인 후 회사 정보 + 멤버십 상태 확인
   useEffect(() => {
     const checkCompany = async () => {
       if (!user) {
         setCompanyChecked(false);
         setHasCompany(false);
+        setMembershipPending(false);
         return;
       }
 
@@ -49,6 +54,11 @@ const AuthWrapper = ({ children }) => {
           const company = await dataService.getMyCompany();
 
           setHasCompany(!!company);
+
+          // authService에서 membership_status 확인 (DB에서 이미 로드됨)
+          const authService = getAuthService();
+          setMembershipPending(authService.isPending());
+
           setCompanyChecked(true);
           return;
         } catch (error) {
@@ -61,6 +71,7 @@ const AuthWrapper = ({ children }) => {
           } else {
             console.error('회사 정보 확인 실패:', error);
             setHasCompany(false);
+            setMembershipPending(false);
             setCompanyChecked(true);
             return;
           }
@@ -88,6 +99,11 @@ const AuthWrapper = ({ children }) => {
     return <>{children}</>;
   }
 
+  // 2.5. 초대 링크 경로 → 항상 통과 (InviteAccept가 자체 인증 처리)
+  if (isInvitePath) {
+    return <>{children}</>;
+  }
+
   // 3. 미로그인 + 공개 경로 → 그대로 통과
   if (!user && isPublicPath) {
     return <>{children}</>;
@@ -110,6 +126,9 @@ const AuthWrapper = ({ children }) => {
         </div>
       );
     }
+    if (hasCompany && membershipPending) {
+      return <Navigate to="/pending" replace />;
+    }
     return <Navigate to={hasCompany ? '/dashboard' : '/setup'} replace />;
   }
 
@@ -123,6 +142,19 @@ const AuthWrapper = ({ children }) => {
         </div>
       </div>
     );
+  }
+
+  // 6.5. 로그인 + 회사 있음 + pending 상태 → /pending으로
+  if (hasCompany && membershipPending) {
+    if (isPendingPath) {
+      return <>{children}</>;
+    }
+    return <Navigate to="/pending" replace />;
+  }
+
+  // 6.6. /pending 경로인데 pending이 아님 → /dashboard로
+  if (isPendingPath && !membershipPending) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // 7. 로그인 + 회사 없음 + 설정 경로 → 그대로 통과
