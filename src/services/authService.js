@@ -11,6 +11,8 @@ import { getDataService } from './dataService';
 export class AuthService {
   constructor() {
     this.currentUser = null;
+    this._profileRole = null;         // profiles 테이블의 role
+    this._isPlatformAdmin = false;    // profiles 테이블의 is_platform_admin
     this.listeners = new Set();
     this.supabaseSubscription = null; // Supabase subscription 저장
     
@@ -173,6 +175,8 @@ export class AuthService {
       if (error) throw error;
 
       this.currentUser = null;
+      this._profileRole = null;
+      this._isPlatformAdmin = false;
       this.notifyListeners('SIGNED_OUT', null);
 
       // 전체 캐시 초기화
@@ -221,22 +225,56 @@ export class AuthService {
   async getCurrentUser() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      
+
       // 'Auth session missing!' 는 정상적인 비로그인 상태
       if (error && error.message === 'Auth session missing!') {
         this.currentUser = null;
+        this._profileRole = null;
+        this._isPlatformAdmin = false;
         return null;
       }
-      
+
       if (error) throw error;
-      
+
       this.currentUser = user;
+
+      // profiles 테이블에서 role/is_platform_admin 로드
+      await this._loadProfileRole(user.id);
+
       return user;
 
     } catch (error) {
       console.error('❌ 사용자 정보 가져오기 실패:', error.message);
       this.currentUser = null;
+      this._profileRole = null;
+      this._isPlatformAdmin = false;
       return null;
+    }
+  }
+
+  /**
+   * profiles 테이블에서 역할 정보 로드
+   */
+  async _loadProfileRole(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role, is_platform_admin')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        this._profileRole = null;
+        this._isPlatformAdmin = false;
+        return;
+      }
+
+      this._profileRole = data.role || 'employee';
+      this._isPlatformAdmin = data.is_platform_admin === true;
+    } catch (err) {
+      console.warn('프로필 역할 로드 실패:', err.message);
+      this._profileRole = null;
+      this._isPlatformAdmin = false;
     }
   }
 
@@ -308,17 +346,17 @@ export class AuthService {
   static ROLE_HIERARCHY = { owner: 3, admin: 2, employee: 1 };
 
   /**
-   * 사용자 역할 확인
+   * 사용자 역할 확인 (profiles 테이블 우선, fallback: user_metadata)
    */
   getUserRole() {
-    return this.currentUser?.user_metadata?.role || 'employee';
+    return this._profileRole || this.currentUser?.user_metadata?.role || 'employee';
   }
 
   /**
-   * 플랫폼 관리자 여부
+   * 플랫폼 관리자 여부 (profiles 테이블 우선)
    */
   isPlatformAdmin() {
-    return this.currentUser?.user_metadata?.is_platform_admin === true;
+    return this._isPlatformAdmin || this.currentUser?.user_metadata?.is_platform_admin === true;
   }
 
   /**
