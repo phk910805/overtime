@@ -392,6 +392,9 @@ const EmployeeManagement = memo(() => {
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {employee.name}
+                          {employee.linkedUserId && (
+                            <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full ml-1">✓ 연결됨</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
