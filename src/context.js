@@ -486,19 +486,23 @@ const useOvertimeData = () => {
   }, [updateOvertimeRecord, updateVacationRecord]);
 
   const [multiplier, setMultiplier] = useState(1.0);
+  const [approvalMode, setApprovalMode] = useState('manual');
+  const [employeeInputScope, setEmployeeInputScope] = useState('self');
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const settings = await dataService.getSettings();
         setMultiplier(settings.multiplier || 1.0);
+        setApprovalMode(settings.approvalMode || 'manual');
+        setEmployeeInputScope(settings.employeeInputScope || 'self');
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error('Failed to load settings:', error);
         }
       }
     };
-    
+
     if (!isLoading) {
       loadSettings();
     }
@@ -509,6 +513,12 @@ const useOvertimeData = () => {
       await dataService.updateSettings(newSettings);
       if (newSettings.multiplier !== undefined) {
         setMultiplier(newSettings.multiplier);
+      }
+      if (newSettings.approvalMode !== undefined) {
+        setApprovalMode(newSettings.approvalMode);
+      }
+      if (newSettings.employeeInputScope !== undefined) {
+        setEmployeeInputScope(newSettings.employeeInputScope);
       }
       return true;
     } catch (error) {
@@ -878,6 +888,8 @@ const useOvertimeData = () => {
 
     // 설정 관리
     updateSettings,
+    approvalMode,
+    employeeInputScope,
 
     clearCache: () => dataService.clearCache()
   };

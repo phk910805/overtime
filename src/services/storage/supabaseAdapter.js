@@ -158,15 +158,15 @@ export class SupabaseAdapter extends StorageAdapter {
       
       const newEmployee = {
         name: employeeData.name.trim(),
-        birth_date: employeeData.birthDate, // 필수
-        department: employeeData.department, // 필수
-        hire_date: employeeData.hireDate, // 필수
-        notes: employeeData.notes || null, // 선택
-        company_id: profile?.company_id, // 회사 ID 추가
+        birth_date: employeeData.birthDate,
+        department: employeeData.department,
+        hire_date: employeeData.hireDate,
+        notes: employeeData.notes || null,
+        company_id: profile?.company_id,
         company_name: profile?.company_name,
         business_number: profile?.business_number,
-        user_id: user.id // 로그인한 사용자 ID
-        // created_at과 last_updated_name은 DB default/trigger로 자동 생성
+        user_id: user.id,
+        linked_user_id: employeeData.linkedUserId || null
       };
 
       const { data, error } = await this.supabase
@@ -399,11 +399,14 @@ export class SupabaseAdapter extends StorageAdapter {
         employee_id: employeeId,
         date: date,
         total_minutes: totalMinutes,
-        employee_name: employeeName, // 직원 이름 추가
-        company_id: profile?.company_id, // 회사 ID 추가
-        user_id: user.id, // 사용자 ID 추가
+        employee_name: employeeName,
+        company_id: profile?.company_id,
+        user_id: user.id,
         description: historyRecord.description || null,
-        created_at: historyRecord.createdAt
+        created_at: historyRecord.createdAt,
+        status: recordData.status || 'approved',
+        submitted_by: recordData.submittedBy || user.id,
+        submit_reason: recordData.submitReason || null
       };
 
       const { data, error } = await this.supabase
@@ -458,11 +461,14 @@ export class SupabaseAdapter extends StorageAdapter {
         employee_id: record.employeeId,
         date: record.date,
         total_minutes: record.totalMinutes,
-        employee_name: employeeNameMap[record.employeeId] || '알 수 없는 직원', // 직원 이름 추가
-        company_id: profile?.company_id, // 회사 ID 추가
-        user_id: user.id, // 사용자 ID 추가
+        employee_name: employeeNameMap[record.employeeId] || '알 수 없는 직원',
+        company_id: profile?.company_id,
+        user_id: user.id,
         description: record.description,
-        created_at: record.createdAt
+        created_at: record.createdAt,
+        status: record.status || 'approved',
+        submitted_by: record.submittedBy || user.id,
+        submit_reason: record.submitReason || null
       }));
 
       const { data, error } = await this.supabase
@@ -559,9 +565,9 @@ export class SupabaseAdapter extends StorageAdapter {
 
       const { data, error } = await this.supabase
         .from(this.tables.settings)
-        .select('multiplier')
+        .select('multiplier, value')
         .eq('key', 'app_settings')
-        .eq('company_id', profile?.company_id) // 회사 ID로 필터링
+        .eq('company_id', profile?.company_id)
         .limit(1)
         .single();
 
@@ -569,7 +575,12 @@ export class SupabaseAdapter extends StorageAdapter {
         throw error;
       }
 
-      const settings = data ? { multiplier: data.multiplier } : { multiplier: 1.0 };
+      const jsonValue = data?.value || {};
+      const settings = data ? {
+        multiplier: data.multiplier,
+        approvalMode: jsonValue.approval_mode || 'manual',
+        employeeInputScope: jsonValue.employee_input_scope || 'self'
+      } : { multiplier: 1.0, approvalMode: 'manual', employeeInputScope: 'self' };
       
       // 캐시 저장
       this._settingsCache = settings;
@@ -599,23 +610,34 @@ export class SupabaseAdapter extends StorageAdapter {
       // 회사 ID 가져오기 (캐시 사용)
       const profile = await this._getProfileInfo();
 
+      const valueJsonb = {
+        multiplier: settings.multiplier,
+        approval_mode: settings.approvalMode || 'manual',
+        employee_input_scope: settings.employeeInputScope || 'self'
+      };
+
       const { data, error } = await this.supabase
         .from(this.tables.settings)
-        .upsert({ 
+        .upsert({
           key: 'app_settings',
           multiplier: settings.multiplier,
-          value: { multiplier: settings.multiplier },
-          company_id: profile?.company_id, // 회사 ID 추가
-          updated_at: TimeUtils.getKoreanTimeAsUTC() // 한국시간 기준 UTC 사용
+          value: valueJsonb,
+          company_id: profile?.company_id,
+          updated_at: TimeUtils.getKoreanTimeAsUTC()
         }, {
-          onConflict: 'key,company_id' // company_id도 충돌 체크에 포함
+          onConflict: 'key,company_id'
         })
-        .select('multiplier')
+        .select('multiplier, value')
         .single();
 
       if (error) throw error;
 
-      return { multiplier: data.multiplier };
+      const jsonValue = data?.value || {};
+      return {
+        multiplier: data.multiplier,
+        approvalMode: jsonValue.approval_mode || 'manual',
+        employeeInputScope: jsonValue.employee_input_scope || 'self'
+      };
     } catch (error) {
       console.warn('Supabase settings save failed, using localStorage fallback:', error.message);
       // localStorage 폴백
@@ -775,7 +797,8 @@ export class SupabaseAdapter extends StorageAdapter {
       businessNumber: supabaseData.business_number,
       createdAt: supabaseData.created_at,
       deletedAt: supabaseData.deleted_at,
-      lastUpdatedName: supabaseData.last_updated_name
+      lastUpdatedName: supabaseData.last_updated_name,
+      linkedUserId: supabaseData.linked_user_id || null
     };
   }
 
@@ -783,11 +806,17 @@ export class SupabaseAdapter extends StorageAdapter {
     return {
       id: supabaseData.id,
       employeeId: supabaseData.employee_id,
-      employeeName: supabaseData.employee_name, // 직원 이름 추가
+      employeeName: supabaseData.employee_name,
       date: supabaseData.date,
       totalMinutes: supabaseData.total_minutes,
       description: supabaseData.description,
-      createdAt: supabaseData.created_at
+      createdAt: supabaseData.created_at,
+      status: supabaseData.status || 'approved',
+      submittedBy: supabaseData.submitted_by || null,
+      reviewedBy: supabaseData.reviewed_by || null,
+      reviewedAt: supabaseData.reviewed_at || null,
+      reviewNote: supabaseData.review_note || null,
+      submitReason: supabaseData.submit_reason || null
     };
   }
 
@@ -1322,6 +1351,214 @@ export class SupabaseAdapter extends StorageAdapter {
     } catch (error) {
       this._handleError(error, 'rejectJoinRequest');
     }
+  }
+
+  // ========== 직원-프로필 연결 메서드 ==========
+
+  /**
+   * 직원을 사용자 프로필에 연결
+   */
+  async linkEmployeeToProfile(employeeId, userId) {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tables.employees)
+        .update({ linked_user_id: userId })
+        .eq('id', employeeId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return this._convertSupabaseEmployee(data);
+    } catch (error) {
+      this._handleError(error, 'linkEmployeeToProfile');
+    }
+  }
+
+  /**
+   * 직원-프로필 연결 해제
+   */
+  async unlinkEmployeeFromProfile(employeeId) {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tables.employees)
+        .update({ linked_user_id: null })
+        .eq('id', employeeId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return this._convertSupabaseEmployee(data);
+    } catch (error) {
+      this._handleError(error, 'unlinkEmployeeFromProfile');
+    }
+  }
+
+  /**
+   * 사용자 ID로 연결된 직원 조회
+   */
+  async getLinkedEmployeeForUser(userId) {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tables.employees)
+        .select('*')
+        .eq('linked_user_id', userId)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+      return this._convertSupabaseEmployee(data);
+    } catch (error) {
+      this._handleError(error, 'getLinkedEmployeeForUser');
+    }
+  }
+
+  // ========== 알림 메서드 ==========
+
+  /**
+   * 알림 생성
+   */
+  async createNotification(notificationData) {
+    try {
+      const profile = await this._getProfileInfo();
+
+      const { data, error } = await this.supabase
+        .from('notifications')
+        .insert({
+          recipient_id: notificationData.recipientId,
+          sender_id: notificationData.senderId || null,
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message || null,
+          related_record_id: notificationData.relatedRecordId || null,
+          related_record_type: notificationData.relatedRecordType || null,
+          company_id: profile?.company_id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return this._convertSupabaseNotification(data);
+    } catch (error) {
+      this._handleError(error, 'createNotification');
+    }
+  }
+
+  /**
+   * 알림 목록 조회
+   */
+  async getNotifications(userId, options = {}) {
+    try {
+      let query = this.supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (options.unreadOnly) {
+        query = query.eq('is_read', false);
+      }
+
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 20) - 1);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(n => this._convertSupabaseNotification(n));
+    } catch (error) {
+      this._handleError(error, 'getNotifications');
+    }
+  }
+
+  /**
+   * 알림 읽음 처리
+   */
+  async markNotificationRead(notificationId) {
+    try {
+      const { data, error } = await this.supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return this._convertSupabaseNotification(data);
+    } catch (error) {
+      this._handleError(error, 'markNotificationRead');
+    }
+  }
+
+  /**
+   * 안읽은 알림 수 조회
+   */
+  async getUnreadNotificationCount(userId) {
+    try {
+      const { count, error } = await this.supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      this._handleError(error, 'getUnreadNotificationCount');
+    }
+  }
+
+  /**
+   * 시간 기록 승인/거절 처리
+   */
+  async reviewTimeRecord(recordId, type, status, reviewNote) {
+    const tableName = type === 'overtime' ? this.tables.overtimeRecords : this.tables.vacationRecords;
+
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) throw new Error('로그인이 필요합니다.');
+
+      const { data, error } = await this.supabase
+        .from(tableName)
+        .update({
+          status,
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          review_note: reviewNote || null
+        })
+        .eq('id', recordId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return this._convertSupabaseTimeRecord(data);
+    } catch (error) {
+      this._handleError(error, 'reviewTimeRecord');
+    }
+  }
+
+  /**
+   * 알림 데이터 변환
+   */
+  _convertSupabaseNotification(data) {
+    return {
+      id: data.id,
+      recipientId: data.recipient_id,
+      senderId: data.sender_id,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      relatedRecordId: data.related_record_id,
+      relatedRecordType: data.related_record_type,
+      isRead: data.is_read,
+      createdAt: data.created_at,
+      companyId: data.company_id
+    };
   }
 
   /**

@@ -573,6 +573,105 @@ export class DataService {
   async rejectJoinRequest(memberId) {
     return await this._getAdapter().rejectJoinRequest(memberId);
   }
+
+  // ========== 직원-프로필 연결 ==========
+
+  /**
+   * 직원을 사용자 프로필에 연결
+   */
+  async linkEmployeeToProfile(employeeId, userId) {
+    const result = await this._getAdapter().linkEmployeeToProfile(employeeId, userId);
+    this._invalidateCache('employees', 'allEmployees');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('linkedEmployee:');
+    return result;
+  }
+
+  /**
+   * 직원-프로필 연결 해제
+   */
+  async unlinkEmployeeFromProfile(employeeId) {
+    const result = await this._getAdapter().unlinkEmployeeFromProfile(employeeId);
+    this._invalidateCache('employees', 'allEmployees');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('linkedEmployee:');
+    return result;
+  }
+
+  /**
+   * 사용자 ID로 연결된 직원 조회
+   */
+  async getLinkedEmployee(userId) {
+    const cacheKey = `linkedEmployee:${userId}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+    const result = await this._getAdapter().getLinkedEmployeeForUser(userId);
+    if (result) {
+      this._setCache(cacheKey, result);
+    }
+    return result;
+  }
+
+  // ========== 알림 ==========
+
+  /**
+   * 알림 생성
+   */
+  async createNotification(data) {
+    const result = await this._getAdapter().createNotification(data);
+    this._invalidateCacheByPrefix('notifications:');
+    this._invalidateCacheByPrefix('unreadCount:');
+    return result;
+  }
+
+  /**
+   * 알림 목록 조회
+   */
+  async getNotifications(userId, options = {}) {
+    const cacheKey = `notifications:${userId}:${JSON.stringify(options)}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+    const result = await this._getAdapter().getNotifications(userId, options);
+    this._setCache(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * 알림 읽음 처리
+   */
+  async markNotificationRead(notificationId) {
+    const result = await this._getAdapter().markNotificationRead(notificationId);
+    this._invalidateCacheByPrefix('notifications:');
+    this._invalidateCacheByPrefix('unreadCount:');
+    return result;
+  }
+
+  /**
+   * 안읽은 알림 수 조회
+   */
+  async getUnreadNotificationCount(userId) {
+    const cacheKey = `unreadCount:${userId}`;
+    const cached = this._getCached(cacheKey);
+    if (cached !== null) return cached;
+    const result = await this._getAdapter().getUnreadNotificationCount(userId);
+    this._setCache(cacheKey, result);
+    return result;
+  }
+
+  // ========== 시간 기록 승인 ==========
+
+  /**
+   * 시간 기록 승인/거절
+   * @param {number} recordId - 기록 ID
+   * @param {string} type - 'overtime' | 'vacation'
+   * @param {string} status - 'approved' | 'rejected'
+   * @param {string} reviewNote - 사유
+   */
+  async reviewTimeRecord(recordId, type, status, reviewNote) {
+    const result = await this._getAdapter().reviewTimeRecord(recordId, type, status, reviewNote);
+    this._invalidateCache('allRecords');
+    return result;
+  }
 }
 
 // 싱글톤 인스턴스

@@ -462,6 +462,15 @@ export class AuthService {
   }
 
   /**
+   * 구성원 본인 시간 제출 가능 여부 — employee + editor
+   */
+  canSubmitOwnTime() {
+    const role = this.getUserRole();
+    const permission = this.getPermission();
+    return role === 'employee' && permission === 'editor';
+  }
+
+  /**
    * 현재 비밀번호 검증
    * @param {string} password - 검증할 비밀번호
    * @returns {Promise<boolean>} - 검증 성공 여부

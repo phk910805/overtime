@@ -356,17 +356,19 @@ class DataCalculator {
     const employeeVacation = filterByEmployee(monthlyVacation);
 
     const calculateLatestTotals = (records) => {
+      // approved 레코드만 집계 (하위 호환: status 없는 기존 레코드 포함)
+      const approvedRecords = records.filter(r => !r.status || r.status === 'approved');
       const latestRecords = new Map();
-      
-      records.forEach(record => {
+
+      approvedRecords.forEach(record => {
         const key = `${record.employeeId}-${record.date}`;
         const existing = latestRecords.get(key);
-        
+
         if (!existing || new Date(record.createdAt) > new Date(existing.createdAt)) {
           latestRecords.set(key, record);
         }
       });
-      
+
       return Array.from(latestRecords.values()).reduce((sum, record) => sum + record.totalMinutes, 0);
     };
 
@@ -396,10 +398,11 @@ class DataCalculator {
     if (cached) return cached;
 
     const records = type === 'overtime' ? overtimeRecords : vacationRecords;
+    // approved 레코드만 집계 (하위 호환: status 없는 기존 레코드 포함)
     const dayRecords = records
-      .filter(record => record.employeeId === employeeId && record.date === date)
+      .filter(record => record.employeeId === employeeId && record.date === date && (!record.status || record.status === 'approved'))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+
     const result = dayRecords[0]?.totalMinutes || 0;
     
     this._setCacheEntry(this.dailyDataCache, cacheKey, result);
