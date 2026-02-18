@@ -145,8 +145,8 @@ CREATE TABLE IF NOT EXISTS settings_history (
 CREATE TABLE IF NOT EXISTS company_invites (
     id SERIAL PRIMARY KEY,
     company_id INTEGER REFERENCES companies(id),
-    invite_code VARCHAR(8) NOT NULL,
-    invited_email VARCHAR(255) NOT NULL,
+    invite_code VARCHAR(8),              -- nullable (링크 기반 초대 시 NULL)
+    invited_email VARCHAR(255),           -- nullable (링크 기반 초대 시 NULL)
     created_by UUID,
     expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '1 hour'),
     is_used BOOLEAN DEFAULT FALSE,
@@ -208,6 +208,9 @@ ON notifications(recipient_id, is_read, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_company_invites_token
 ON company_invites(invite_token) WHERE is_used = FALSE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_company_invites_code_unique
+ON company_invites(invite_code) WHERE invite_code IS NOT NULL;
 
 -- ================================================================
 -- Part 3: RLS 활성화 + 헬퍼 함수 + 정책
