@@ -189,7 +189,6 @@ const ApprovalManagement = memo(() => {
       // 제출자에게 알림 생성
       try {
         const record = allSubmittedRecords.find(r => r.id === recordId && r.recordType === recordType);
-        console.log('알림 대상 레코드:', recordId, recordType, 'found:', !!record, 'submittedBy:', record?.submittedBy);
         if (record?.submittedBy && user?.id) {
           const dataService = getDataService();
           const typeLabel = recordType === 'overtime' ? '초과근무' : '휴가';
@@ -201,12 +200,11 @@ const ApprovalManagement = memo(() => {
             message: status === 'approved'
               ? `${record.date} ${typeLabel} 기록이 승인되었습니다.`
               : `${record.date} ${typeLabel} 기록이 반려되었습니다.${reviewNote ? ' 사유: ' + reviewNote : ''}`,
-            relatedRecordId: recordId,
             relatedRecordType: recordType,
           });
           window.dispatchEvent(new Event('notification-created'));
         }
-      } catch (e) { console.warn('승인 알림 생성 실패:', e); }
+      } catch (e) { /* 알림 실패는 무시 */ }
 
       setReviewModal(null);
       setToast({
