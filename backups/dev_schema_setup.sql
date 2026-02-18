@@ -4,6 +4,7 @@
 -- 대상: maoliyexnvbamcjbmfsc (overtime-dev)
 -- 목적: 프로덕션 스키마 정확히 복제 (데이터 제외)
 -- 출처: 프로덕션 pg_policies + 스키마 덤프 (2026-02-07 기준)
+-- 업데이트: Phase 2/3/B 승인 워크플로우 + 초대 링크 + 알림 (2026-02-18)
 -- 실행: Supabase Dashboard > SQL Editor > 전체 복사 붙여넣기 > Run
 -- ================================================================
 -- 주의: Part 3 실행 전 반드시 Part 1, 2가 완료되어야 합니다.
@@ -27,12 +28,16 @@ CREATE TABLE IF NOT EXISTS profiles (
     email VARCHAR(255),
     full_name VARCHAR(255),
     role VARCHAR(50) DEFAULT 'employee',
+    permission VARCHAR(50) DEFAULT 'editor',
     department VARCHAR(100),
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()),
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()),
     company_name VARCHAR(50),
     business_number VARCHAR(10),
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER REFERENCES companies(id),
+    pending_company_id INTEGER REFERENCES companies(id),
+    applied_at TIMESTAMPTZ,
+    approved_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS employees (
@@ -48,7 +53,8 @@ CREATE TABLE IF NOT EXISTS employees (
     notes TEXT,
     company_name VARCHAR(200),
     business_number VARCHAR(50),
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER REFERENCES companies(id),
+    linked_user_id UUID
 );
 
 CREATE TABLE IF NOT EXISTS overtime_records (
@@ -60,7 +66,13 @@ CREATE TABLE IF NOT EXISTS overtime_records (
     description TEXT,
     employee_name VARCHAR(255),
     user_id UUID,
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER REFERENCES companies(id),
+    status VARCHAR(20) DEFAULT 'approved',
+    submitted_by UUID,
+    submit_reason TEXT,
+    reviewed_by UUID,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT
 );
 
 CREATE TABLE IF NOT EXISTS vacation_records (
@@ -72,7 +84,13 @@ CREATE TABLE IF NOT EXISTS vacation_records (
     description TEXT,
     employee_name VARCHAR(255),
     user_id UUID,
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER REFERENCES companies(id),
+    status VARCHAR(20) DEFAULT 'approved',
+    submitted_by UUID,
+    submit_reason TEXT,
+    reviewed_by UUID,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT
 );
 
 CREATE TABLE IF NOT EXISTS carryover_records (
@@ -134,7 +152,24 @@ CREATE TABLE IF NOT EXISTS company_invites (
     is_used BOOLEAN DEFAULT FALSE,
     used_at TIMESTAMPTZ,
     used_by UUID,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    invited_role VARCHAR(50) DEFAULT 'employee',
+    invited_permission VARCHAR(50) DEFAULT 'editor',
+    invite_token UUID DEFAULT gen_random_uuid()
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    recipient_id UUID NOT NULL,
+    sender_id UUID,
+    type VARCHAR(50) NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT,
+    related_record_id BIGINT,
+    related_record_type VARCHAR(50),
+    company_id INTEGER REFERENCES companies(id),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW())
 );
 
 -- ================================================================
@@ -159,6 +194,21 @@ ON vacation_records(company_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_carryover_employee_year_month
 ON carryover_records(employee_id, year DESC, month DESC);
 
+CREATE INDEX IF NOT EXISTS idx_employees_linked_user
+ON employees(linked_user_id) WHERE linked_user_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_overtime_status
+ON overtime_records(status) WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_vacation_status
+ON vacation_records(status) WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient
+ON notifications(recipient_id, is_read, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_company_invites_token
+ON company_invites(invite_token) WHERE is_used = FALSE;
+
 -- ================================================================
 -- Part 3: RLS 활성화 + 헬퍼 함수 + 정책
 -- (프로덕션 pg_policies 2026-02-07 기준 정확히 복제)
@@ -174,6 +224,7 @@ ALTER TABLE employee_changes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE company_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- RLS 헬퍼 함수 (SECURITY DEFINER로 profiles 자기참조 재귀 방지)
 CREATE OR REPLACE FUNCTION get_user_company_id()
@@ -274,6 +325,14 @@ CREATE POLICY "Users can update their company invites" ON company_invites FOR UP
 CREATE POLICY "Users can delete their company invites" ON company_invites FOR DELETE TO authenticated
   USING (company_id = (SELECT profiles.company_id FROM profiles WHERE profiles.id = auth.uid()));
 
+-- notifications (본인 알림만 조회, 회사 단위 생성)
+CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT TO authenticated
+  USING (recipient_id = auth.uid());
+CREATE POLICY "Users can insert company notifications" ON notifications FOR INSERT TO authenticated
+  WITH CHECK (company_id = get_user_company_id());
+CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE TO authenticated
+  USING (recipient_id = auth.uid());
+
 -- ================================================================
 -- Part 4: 함수 & 트리거
 -- ================================================================
@@ -308,6 +367,10 @@ CREATE TRIGGER set_carryover_company_id
 
 CREATE TRIGGER set_employee_changes_company_id
   BEFORE INSERT ON employee_changes
+  FOR EACH ROW EXECUTE FUNCTION set_company_id_from_user();
+
+CREATE TRIGGER set_notifications_company_id
+  BEFORE INSERT ON notifications
   FOR EACH ROW EXECUTE FUNCTION set_company_id_from_user();
 
 -- ================================================================
@@ -389,6 +452,42 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ================================================================
+-- Part 7: Phase 2/3/B RPC 함수 (초대 링크 + 팀원 관리 + 승인)
+-- ================================================================
+-- 아래 RPC 함수들은 Supabase SQL Editor에서 직접 생성됨.
+-- 새 프로젝트 세팅 시 dev Supabase에서 아래 함수들을 생성해야 합니다.
+-- 기존 dev/prod에는 이미 존재합니다.
+--
+-- 초대 링크:
+--   create_or_refresh_invite_link(p_user_id UUID)
+--     → 회사 초대 링크 생성/갱신, invite_token UUID 반환
+--   validate_invite_token(p_token UUID)
+--     → 초대 토큰 유효성 검증 (로그인 불필요)
+--   join_company_via_invite(p_user_id UUID, p_token UUID)
+--     → 초대 링크로 회사 참여 (pending 상태로 profiles 업데이트)
+--
+-- 팀원 관리:
+--   get_company_members(p_user_id UUID)
+--     → 회사 팀원 목록 조회 (id, email, fullName, role, permission, appliedAt, approvedAt)
+--   update_member_role(p_owner_id UUID, p_member_id UUID, p_new_role VARCHAR, p_new_permission VARCHAR)
+--     → 팀원 역할/권한 변경 (소유자 전용)
+--   remove_company_member(p_owner_id UUID, p_member_id UUID)
+--     → 팀원 내보내기 (소유자 전용, company_id/role 초기화)
+--
+-- 승인 워크플로우:
+--   get_pending_members(p_admin_id UUID)
+--     → 참여 대기 중인 멤버 목록 (pending_company_id 기반)
+--   approve_join_request(p_admin_id UUID, p_member_id UUID, p_role VARCHAR, p_permission VARCHAR)
+--     → 참여 요청 승인 (pending_company_id → company_id 이동, role/permission 설정)
+--   reject_join_request(p_admin_id UUID, p_member_id UUID)
+--     → 참여 요청 거절 (pending_company_id 초기화)
+--
+-- 코드 기반 초대 (레거시):
+--   use_invite_and_set_role(p_invite_id INTEGER, p_user_id UUID)
+--     → 초대 코드 사용 및 역할 설정
+-- ================================================================
 
 -- ================================================================
 -- 완료! 테이블 확인
