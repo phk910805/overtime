@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, BarChart3, Edit3 } from 'lucide-react';
+import { Calendar, Clock, Users, BarChart3, Edit3, ClipboardCheck } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
 import MyTimeEntry from './components/MyTimeEntry';
+import ApprovalManagement from './components/ApprovalManagement';
 import LoginButton from './components/LoginButton';
 
 // 이니셜 생성 유틸
@@ -20,7 +21,7 @@ const getInitials = (name) => {
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { user, canManageEmployees, canSubmitOwnTime } = useAuth();
+  const { user, canManageEmployees, canSubmitOwnTime, isAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -28,6 +29,10 @@ const OvertimeManagementApp = memo(() => {
   const activeTab = useMemo(() => {
     const path = location.pathname;
     if (path.startsWith('/records')) return 'records';
+    if (path.startsWith('/approvals')) {
+      if (!isAdmin) return 'dashboard';
+      return 'approvals';
+    }
     if (path.startsWith('/my-time')) {
       if (!canSubmitOwnTime) return 'dashboard';
       return 'my-time';
@@ -37,7 +42,7 @@ const OvertimeManagementApp = memo(() => {
       return 'employees';
     }
     return 'dashboard';
-  }, [location.pathname, canManageEmployees, canSubmitOwnTime]);
+  }, [location.pathname, canManageEmployees, canSubmitOwnTime, isAdmin]);
 
   // 권한 없는 탭 접근 시 리다이렉트
   useEffect(() => {
@@ -47,10 +52,13 @@ const OvertimeManagementApp = memo(() => {
     if (location.pathname.startsWith('/my-time') && !canSubmitOwnTime) {
       navigate('/dashboard', { replace: true });
     }
-  }, [location.pathname, canManageEmployees, canSubmitOwnTime, navigate]);
+    if (location.pathname.startsWith('/approvals') && !isAdmin) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.pathname, canManageEmployees, canSubmitOwnTime, isAdmin, navigate]);
 
   const handleTabChange = useCallback((tab) => {
-    const paths = { dashboard: '/dashboard', records: '/records', 'my-time': '/my-time', employees: '/employees' };
+    const paths = { dashboard: '/dashboard', records: '/records', approvals: '/approvals', 'my-time': '/my-time', employees: '/employees' };
     navigate(paths[tab] || '/dashboard');
   }, [navigate]);
 
@@ -113,6 +121,19 @@ const OvertimeManagementApp = memo(() => {
               <Calendar className="w-4 h-4 inline-block mr-2" />
               히스토리
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => handleTabChange('approvals')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'approvals'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <ClipboardCheck className="w-4 h-4 inline-block mr-2" />
+                승인 관리
+              </button>
+            )}
             {canSubmitOwnTime && (
               <button
                 onClick={() => handleTabChange('my-time')}
@@ -150,6 +171,10 @@ const OvertimeManagementApp = memo(() => {
 
         {activeTab === 'records' && (
           <RecordHistory />
+        )}
+
+        {activeTab === 'approvals' && (
+          <ApprovalManagement />
         )}
 
         {activeTab === 'my-time' && (
