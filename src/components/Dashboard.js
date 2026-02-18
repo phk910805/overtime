@@ -380,7 +380,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     selectedMonth: contextSelectedMonth
   } = useOvertimeContext();
 
-  const { canEditOvertime, canEditSettings: canBulkEdit } = useAuth();
+  const { canEditOvertime, canEditSettings: canBulkEdit, canManageEmployees } = useAuth();
 
   // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -407,7 +407,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     return dateUtils.getEditPermission(selectedMonth);
   }, [customMonth, selectedMonth]);
   
-  const isEditable = editable && editPermission.editable && canEditOvertime;
+  const isEditable = editable && editPermission.editable && canEditOvertime && canManageEmployees;
   // 직전 달(편집 가능) 또는 편집 불가능한 달에 메시지 표시
   const shouldShowEditNotice = !customMonth && editPermission.message;
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { X, User, Building2, SlidersHorizontal, UserPlus, Users, LogOut } from 'lucide-react';
+import { X, User, Building2, SlidersHorizontal, UserPlus, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { ConfirmModal } from './CommonUI';
@@ -7,14 +7,12 @@ import SettingsProfile from './settings/SettingsProfile';
 import SettingsCompany from './settings/SettingsCompany';
 import SettingsMultiplier from './settings/SettingsMultiplier';
 import SettingsInvite from './settings/SettingsInvite';
-import SettingsTeamManagement from './settings/SettingsTeamManagement';
 
 const ALL_MENU_ITEMS = [
   { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
   { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
   { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
   { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
-  { id: 'team', label: '팀원 관리', icon: Users, minRole: 'owner' },
 ];
 
 const ROLE_LEVEL = { owner: 3, admin: 2, employee: 1 };
@@ -271,9 +269,6 @@ const UnifiedSettingsModal = memo(({ show, onClose }) => {
                   )}
                   {activeSection === 'invite' && (
                     <SettingsInvite />
-                  )}
-                  {activeSection === 'team' && (
-                    <SettingsTeamManagement />
                   )}
                 </>
               )}

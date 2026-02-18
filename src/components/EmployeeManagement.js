@@ -1,20 +1,31 @@
-import React, { useState, useCallback, memo, useMemo } from 'react';
-import { Users, Plus, Edit2, UserMinus, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { Users, Plus, Edit2, UserMinus, Calendar, Link2 } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { useAuth } from '../hooks/useAuth';
 import { useSortingPaging, useValidation } from '../utils';
-import { Modal, ConfirmModal, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
+import { getDataService } from '../services/dataService';
+import { Modal, ConfirmModal, Toast, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
+import EmployeeLinkModal from './EmployeeLinkModal';
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+};
 
 // ========== MAIN COMPONENT ==========
 const EmployeeManagement = memo(() => {
-  const { canManageEmployees, canEditEmployees } = useAuth();
+  const { canManageEmployees, canEditEmployees, canManageTeam, user } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
   const [showModal, setShowModal] = useState(false);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [employeeToResign, setEmployeeToResign] = useState(null);
-  
+
   // 폼 상태
   const [employeeName, setEmployeeName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -24,23 +35,129 @@ const EmployeeManagement = memo(() => {
 
   // 검증 훅 사용
   const { errors, validate, clearError, clearAllErrors } = useValidation();
-  
+
   // 추가 에러 상태 (생년월일, 부서, 메모용)
   const [customErrors, setCustomErrors] = useState({});
-  
+
   // 직원 목록용 정렬/페이징 훅
   const employeeListPaging = useSortingPaging(
-    { field: 'name', direction: 'asc' }, 
-    10, 
+    { field: 'name', direction: 'asc' },
+    10,
     'employeeManagement_employeeList_sort'
   );
-  
+
   // 관리 이력용 정렬/페이징 훅
   const historyPaging = useSortingPaging(
-    { field: 'createdAt', direction: 'desc' }, 
-    10, 
+    { field: 'createdAt', direction: 'desc' },
+    10,
     'employeeManagement_history_sort'
   );
+
+  // ===== 팀원 관리 탭 상태 =====
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [memberUpdating, setMemberUpdating] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [linkingMember, setLinkingMember] = useState(null);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+  }, []);
+
+  const hideToast = useCallback(() => {
+    setToast({ show: false, message: '', type: 'success' });
+  }, []);
+
+  const loadMembers = useCallback(async () => {
+    try {
+      setMembersLoading(true);
+      const dataService = getDataService();
+      const data = await dataService.getCompanyMembers();
+      setMembers(data || []);
+    } catch (err) {
+      console.error('팀원 목록 로드 실패:', err);
+      showToast('팀원 목록을 불러오는데 실패했습니다.', 'error');
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (canManageTeam && activeEmployeeTab === 'team') {
+      loadMembers();
+    }
+  }, [canManageTeam, activeEmployeeTab, loadMembers]);
+
+  const handleRoleChange = useCallback(async (memberId, newRole, currentPermission) => {
+    setMemberUpdating(memberId);
+    try {
+      const dataService = getDataService();
+      await dataService.updateMemberRole(memberId, newRole, currentPermission);
+      showToast('역할이 변경되었습니다.');
+      await loadMembers();
+    } catch (err) {
+      console.error('역할 변경 실패:', err);
+      showToast(err.message || '역할 변경에 실패했습니다.', 'error');
+    } finally {
+      setMemberUpdating(null);
+    }
+  }, [showToast, loadMembers]);
+
+  const handlePermissionChange = useCallback(async (memberId, currentRole, newPermission) => {
+    setMemberUpdating(memberId);
+    try {
+      const dataService = getDataService();
+      await dataService.updateMemberRole(memberId, currentRole, newPermission);
+      showToast('권한이 변경되었습니다.');
+      await loadMembers();
+    } catch (err) {
+      console.error('권한 변경 실패:', err);
+      showToast(err.message || '권한 변경에 실패했습니다.', 'error');
+    } finally {
+      setMemberUpdating(null);
+    }
+  }, [showToast, loadMembers]);
+
+  const handleRemoveConfirm = useCallback(async () => {
+    if (!removeTarget) return;
+
+    setMemberUpdating(removeTarget.id);
+    try {
+      const dataService = getDataService();
+      await dataService.removeMember(removeTarget.id);
+      showToast('팀원을 내보냈습니다.');
+      setRemoveTarget(null);
+      await loadMembers();
+    } catch (err) {
+      console.error('팀원 내보내기 실패:', err);
+      showToast(err.message || '팀원 내보내기에 실패했습니다.', 'error');
+    } finally {
+      setMemberUpdating(null);
+    }
+  }, [removeTarget, showToast, loadMembers]);
+
+  const linkedEmployeeMap = useMemo(() => {
+    const map = {};
+    employees.forEach(emp => {
+      if (emp.linkedUserId) {
+        map[emp.linkedUserId] = emp;
+      }
+    });
+    return map;
+  }, [employees]);
+
+  const openLinkingModal = useCallback((member) => {
+    setLinkingMember(member);
+  }, []);
+
+  const handleLinkModalClose = useCallback(() => {
+    setLinkingMember(null);
+  }, []);
+
+  const handleLinked = useCallback((message, type = 'success') => {
+    showToast(message, type);
+  }, [showToast]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const validateForm = useCallback(() => {
@@ -161,7 +278,7 @@ const EmployeeManagement = memo(() => {
   // 직원 관리 기록 계산
   const employeeManagementRecords = useMemo(() => {
     const records = [];
-    
+
     employeeChangeRecords.forEach(changeRecord => {
       if (changeRecord.action === '생성') {
         records.push({
@@ -294,8 +411,15 @@ const EmployeeManagement = memo(() => {
 
   return (
     <div className="space-y-6">
+      <Toast
+        message={toast.message}
+        show={toast.show}
+        onClose={hideToast}
+        type={toast.type}
+      />
+
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">직원 관리</h2>
+        <h2 className="text-2xl font-bold text-gray-900">구성원 관리</h2>
         {activeEmployeeTab === 'list' && canEditEmployees && (
           <button
             onClick={() => setShowModal(true)}
@@ -320,6 +444,19 @@ const EmployeeManagement = memo(() => {
             <Users className="w-4 h-4 inline-block mr-2" />
             직원 목록 ({employees.length})
           </button>
+          {canManageTeam && (
+            <button
+              onClick={() => handleEmployeeTabChange('team')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeEmployeeTab === 'team'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Link2 className="w-4 h-4 inline-block mr-2" />
+              팀원 관리 ({members.length})
+            </button>
+          )}
           <button
             onClick={() => handleEmployeeTabChange('history')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -452,6 +589,156 @@ const EmployeeManagement = memo(() => {
           </>
         )}
 
+        {activeEmployeeTab === 'team' && canManageTeam && (
+          <div className="p-6">
+            <ConfirmModal
+              show={!!removeTarget}
+              onClose={() => setRemoveTarget(null)}
+              onConfirm={handleRemoveConfirm}
+              title="팀원 내보내기"
+              message={`${removeTarget?.name || '이 팀원'}을(를) 회사에서 내보내시겠습니까?\n내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다.`}
+              confirmText="내보내기"
+              cancelText="취소"
+              type="danger"
+              loading={!!memberUpdating}
+            />
+
+            <EmployeeLinkModal
+              member={linkingMember}
+              onClose={handleLinkModalClose}
+              onLinked={handleLinked}
+            />
+
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">팀원 관리</h3>
+              {!membersLoading && (
+                <span className="text-sm text-gray-500">
+                  총 {members.length}명
+                </span>
+              )}
+            </div>
+
+            {membersLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">팀원 목록 로딩 중...</span>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">팀원이 없습니다.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {members.map((member) => {
+                  const isOwner = member.role === 'owner';
+                  const isMe = member.id === user?.id;
+                  const isDisabled = isOwner || isMe;
+                  const isUpdating = memberUpdating === member.id;
+                  const canRemove = !isOwner && !isMe;
+
+                  return (
+                    <div key={member.id} className={`border rounded-lg p-4 ${isUpdating ? 'opacity-50' : ''} ${isOwner ? 'bg-blue-50 border-blue-200' : 'border-gray-200'}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {member.fullName || '이름 없음'}
+                            </span>
+                            {isMe && (
+                              <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">나</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                          <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                            {formatDate(member.appliedAt) && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                신청 {formatDate(member.appliedAt)}
+                              </span>
+                            )}
+                            {formatDate(member.approvedAt) && (
+                              <span>
+                                승인 {formatDate(member.approvedAt)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            {linkedEmployeeMap[member.id] ? (
+                              <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                                ✓ {linkedEmployeeMap[member.id].name} 연결됨
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => openLinkingModal(member)}
+                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                직원 연결
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isDisabled ? (
+                            <span className="text-sm text-blue-700 font-medium px-3 py-1.5 bg-blue-100 rounded-md">
+                              {isOwner ? '소유자' : member.role === 'admin' ? '관리자' : '구성원'}
+                            </span>
+                          ) : (
+                            <>
+                              <select
+                                value={member.role}
+                                onChange={(e) => handleRoleChange(member.id, e.target.value, member.permission)}
+                                disabled={isUpdating}
+                                className="text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="admin">관리자</option>
+                                <option value="employee">구성원</option>
+                              </select>
+                              <select
+                                value={member.permission}
+                                onChange={(e) => handlePermissionChange(member.id, member.role, e.target.value)}
+                                disabled={isUpdating}
+                                className="text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="editor">편집</option>
+                                <option value="viewer">뷰어</option>
+                              </select>
+                            </>
+                          )}
+                          {canRemove && (
+                            <button
+                              onClick={() => setRemoveTarget({ id: member.id, name: member.fullName })}
+                              disabled={isUpdating}
+                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                              title="내보내기"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+              <p className="text-sm text-blue-800">
+                <strong>안내:</strong>
+              </p>
+              <ul className="text-xs text-blue-700 mt-2 space-y-1 ml-4">
+                <li>역할/권한 변경은 해당 팀원이 다음 로그인 시 적용됩니다</li>
+                <li>소유자 역할은 변경할 수 없습니다</li>
+                <li>뷰어 권한은 조회만 가능합니다</li>
+                <li>내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
         {activeEmployeeTab === 'history' && (
           <>
             <div className="overflow-x-auto">
@@ -541,7 +828,7 @@ const EmployeeManagement = memo(() => {
                 <p className="text-sm text-red-800">{customErrors.general}</p>
               </div>
             )}
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 직원명 <span className="text-red-500">*</span>
@@ -553,7 +840,7 @@ const EmployeeManagement = memo(() => {
                   const value = e.target.value;
                   setEmployeeName(value);
                   clearError('employeeName');
-                  
+
                   // 실시간 길이 검증
                   if (value.length > 50) {
                     setCustomErrors(prev => ({
@@ -585,7 +872,7 @@ const EmployeeManagement = memo(() => {
                 </p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 부서 <span className="text-red-500">*</span>
@@ -596,7 +883,7 @@ const EmployeeManagement = memo(() => {
                 onChange={(e) => {
                   const value = e.target.value;
                   setDepartment(value);
-                  
+
                   // 실시간 길이 검증
                   if (value.length > 100) {
                     setCustomErrors(prev => ({
@@ -623,7 +910,7 @@ const EmployeeManagement = memo(() => {
                 </p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 입사일 <span className="text-red-500">*</span>
@@ -656,7 +943,7 @@ const EmployeeManagement = memo(() => {
                 <p className="mt-1 text-sm text-red-600">{customErrors.hireDate}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 생년월일
@@ -691,7 +978,7 @@ const EmployeeManagement = memo(() => {
                 <p className="mt-1 text-sm text-red-600">{customErrors.birthDate}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 메모
@@ -701,7 +988,7 @@ const EmployeeManagement = memo(() => {
                 onChange={(e) => {
                   const value = e.target.value;
                   setNotes(value);
-                  
+
                   // 실시간 길이 검증
                   if (value.length > 1000) {
                     setCustomErrors(prev => ({
@@ -729,7 +1016,7 @@ const EmployeeManagement = memo(() => {
               )}
             </div>
           </div>
-          
+
           <div className="flex justify-end space-x-2 mt-6">
             <button
               onClick={resetForm}

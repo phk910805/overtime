@@ -64,6 +64,7 @@ const AuthenticatedApp = () => {
           <Route path="/dashboard" element={<App />} />
           <Route path="/records" element={<App />} />
           <Route path="/records/:tab" element={<App />} />
+          <Route path="/my-time" element={<App />} />
           <Route path="/employees" element={<App />} />
           <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route path="/settings/:section" element={<SettingsPage />} />

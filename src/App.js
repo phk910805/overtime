@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, BarChart3 } from 'lucide-react';
+import { Calendar, Clock, Users, BarChart3, Edit3 } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import EmployeeManagement from './components/EmployeeManagement';
 import Dashboard from './components/Dashboard';
 import RecordHistory from './components/RecordHistory';
+import MyTimeEntry from './components/MyTimeEntry';
 import LoginButton from './components/LoginButton';
 
 // 이니셜 생성 유틸
@@ -19,7 +20,7 @@ const getInitials = (name) => {
 
 // ========== MAIN APP COMPONENT ==========
 const OvertimeManagementApp = memo(() => {
-  const { user, canManageEmployees } = useAuth();
+  const { user, canManageEmployees, canSubmitOwnTime } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -27,22 +28,29 @@ const OvertimeManagementApp = memo(() => {
   const activeTab = useMemo(() => {
     const path = location.pathname;
     if (path.startsWith('/records')) return 'records';
+    if (path.startsWith('/my-time')) {
+      if (!canSubmitOwnTime) return 'dashboard';
+      return 'my-time';
+    }
     if (path.startsWith('/employees')) {
       if (!canManageEmployees) return 'dashboard';
       return 'employees';
     }
     return 'dashboard';
-  }, [location.pathname, canManageEmployees]);
+  }, [location.pathname, canManageEmployees, canSubmitOwnTime]);
 
   // 권한 없는 탭 접근 시 리다이렉트
   useEffect(() => {
     if (location.pathname.startsWith('/employees') && !canManageEmployees) {
       navigate('/dashboard', { replace: true });
     }
-  }, [location.pathname, canManageEmployees, navigate]);
+    if (location.pathname.startsWith('/my-time') && !canSubmitOwnTime) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.pathname, canManageEmployees, canSubmitOwnTime, navigate]);
 
   const handleTabChange = useCallback((tab) => {
-    const paths = { dashboard: '/dashboard', records: '/records', employees: '/employees' };
+    const paths = { dashboard: '/dashboard', records: '/records', 'my-time': '/my-time', employees: '/employees' };
     navigate(paths[tab] || '/dashboard');
   }, [navigate]);
 
@@ -105,6 +113,19 @@ const OvertimeManagementApp = memo(() => {
               <Calendar className="w-4 h-4 inline-block mr-2" />
               히스토리
             </button>
+            {canSubmitOwnTime && (
+              <button
+                onClick={() => handleTabChange('my-time')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'my-time'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Edit3 className="w-4 h-4 inline-block mr-2" />
+                내 근무
+              </button>
+            )}
             {canManageEmployees && (
               <button
                 onClick={() => handleTabChange('employees')}
@@ -115,7 +136,7 @@ const OvertimeManagementApp = memo(() => {
                 }`}
               >
                 <Users className="w-4 h-4 inline-block mr-2" />
-                직원 관리
+                구성원 관리
               </button>
             )}
           </div>
@@ -129,6 +150,10 @@ const OvertimeManagementApp = memo(() => {
 
         {activeTab === 'records' && (
           <RecordHistory />
+        )}
+
+        {activeTab === 'my-time' && (
+          <MyTimeEntry />
         )}
 
         {activeTab === 'employees' && (

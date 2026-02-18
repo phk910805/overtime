@@ -394,6 +394,18 @@ const useOvertimeData = () => {
     }
   }, [dataService]);
 
+  const submitOwnTimeRecord = useCallback(async (type, employeeId, date, totalMinutes, submitReason) => {
+    const newRecord = await dataService.submitOwnTimeRecord(type, employeeId, date, totalMinutes, submitReason);
+    if (newRecord) {
+      if (type === 'overtime') {
+        setOvertimeRecords(prev => [...prev, newRecord]);
+      } else {
+        setVacationRecords(prev => [...prev, newRecord]);
+      }
+    }
+    return newRecord;
+  }, [dataService]);
+
   const getEmployeeNameFromRecord = useCallback(async (record) => {
     return await dataService.getEmployeeNameFromRecord(record);
   }, [dataService]);
@@ -864,6 +876,7 @@ const useOvertimeData = () => {
     deleteEmployee,
 
     // 시간 기록 관리
+    submitOwnTimeRecord,
     updateOvertimeRecord,
     updateVacationRecord,
     bulkUpdateOvertimeRecords,
