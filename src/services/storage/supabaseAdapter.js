@@ -1469,8 +1469,7 @@ export class SupabaseAdapter extends StorageAdapter {
    */
   async createNotification(notificationData) {
     try {
-      const profile = await this._getProfileInfo();
-
+      // company_id는 BEFORE INSERT 트리거(set_company_id_from_user)가 자동 설정
       const { error } = await this.supabase
         .from('notifications')
         .insert({
@@ -1481,7 +1480,6 @@ export class SupabaseAdapter extends StorageAdapter {
           message: notificationData.message || null,
           related_record_id: notificationData.relatedRecordId || null,
           related_record_type: notificationData.relatedRecordType || null,
-          company_id: profile?.company_id
         });
 
       if (error) throw error;
