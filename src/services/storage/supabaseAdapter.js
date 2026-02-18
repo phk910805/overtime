@@ -1422,7 +1422,7 @@ export class SupabaseAdapter extends StorageAdapter {
     try {
       const profile = await this._getProfileInfo();
 
-      const { data, error } = await this.supabase
+      const { error } = await this.supabase
         .from('notifications')
         .insert({
           recipient_id: notificationData.recipientId,
@@ -1433,12 +1433,10 @@ export class SupabaseAdapter extends StorageAdapter {
           related_record_id: notificationData.relatedRecordId || null,
           related_record_type: notificationData.relatedRecordType || null,
           company_id: profile?.company_id
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
-      return this._convertSupabaseNotification(data);
+      return true;
     } catch (error) {
       this._handleError(error, 'createNotification');
     }
@@ -1492,6 +1490,24 @@ export class SupabaseAdapter extends StorageAdapter {
       return this._convertSupabaseNotification(data);
     } catch (error) {
       this._handleError(error, 'markNotificationRead');
+    }
+  }
+
+  /**
+   * 전체 알림 읽음 처리
+   */
+  async markAllNotificationsRead(userId) {
+    try {
+      const { error } = await this.supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('recipient_id', userId)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this._handleError(error, 'markAllNotificationsRead');
     }
   }
 

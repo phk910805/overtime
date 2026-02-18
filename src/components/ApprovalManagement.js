@@ -4,6 +4,7 @@ import { useOvertimeContext } from '../context';
 import { useAuth } from '../hooks/useAuth';
 import { Toast, Modal, Pagination } from './CommonUI';
 import { timeUtils } from '../utils';
+import { getDataService } from '../services/dataService';
 
 const STATUS_CONFIG = {
   pending: { label: '대기', bgClass: 'bg-yellow-100', textClass: 'text-yellow-800', Icon: Clock },
@@ -116,7 +117,7 @@ const ReviewModal = memo(({ record, action, onConfirm, onClose, isLoading }) => 
 
 const ApprovalManagement = memo(() => {
   const { overtimeRecords, vacationRecords, reviewTimeRecord } = useOvertimeContext();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState('pending');
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,6 +185,28 @@ const ApprovalManagement = memo(() => {
     setIsReviewing(true);
     try {
       await reviewTimeRecord(recordId, recordType, status, reviewNote);
+
+      // 제출자에게 알림 생성
+      try {
+        const record = allSubmittedRecords.find(r => r.id === recordId && r.recordType === recordType);
+        if (record?.submittedBy && user?.id) {
+          const dataService = getDataService();
+          const typeLabel = recordType === 'overtime' ? '초과근무' : '휴가';
+          await dataService.createNotification({
+            recipientId: record.submittedBy,
+            senderId: user.id,
+            type: status === 'approved' ? 'time_approved' : 'time_rejected',
+            title: status === 'approved' ? '시간 기록 승인' : '시간 기록 반려',
+            message: status === 'approved'
+              ? `${record.date} ${typeLabel} 기록이 승인되었습니다.`
+              : `${record.date} ${typeLabel} 기록이 반려되었습니다.${reviewNote ? ' 사유: ' + reviewNote : ''}`,
+            relatedRecordId: recordId,
+            relatedRecordType: recordType,
+          });
+          window.dispatchEvent(new Event('notification-created'));
+        }
+      } catch (e) { /* 알림 실패는 무시 */ }
+
       setReviewModal(null);
       setToast({
         show: true,
@@ -199,7 +222,7 @@ const ApprovalManagement = memo(() => {
     } finally {
       setIsReviewing(false);
     }
-  }, [reviewTimeRecord]);
+  }, [reviewTimeRecord, allSubmittedRecords, user]);
 
   if (!isAdmin) {
     return (

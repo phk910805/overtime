@@ -647,6 +647,16 @@ export class DataService {
   }
 
   /**
+   * 전체 알림 읽음 처리
+   */
+  async markAllNotificationsRead(userId) {
+    const result = await this._getAdapter().markAllNotificationsRead(userId);
+    this._invalidateCacheByPrefix('notifications:');
+    this._invalidateCacheByPrefix('unreadCount:');
+    return result;
+  }
+
+  /**
    * 안읽은 알림 수 조회
    */
   async getUnreadNotificationCount(userId) {

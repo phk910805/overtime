@@ -16,7 +16,7 @@ const formatDate = (dateStr) => {
 };
 
 const SettingsInvite = memo(({ onPendingChange }) => {
-  const { canInvite, isAdmin } = useAuth();
+  const { canInvite, isAdmin, user } = useAuth();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeLink, setActiveLink] = useState(null);
   const [pendingMembers, setPendingMembers] = useState([]);
@@ -130,6 +130,21 @@ const SettingsInvite = memo(({ onPendingChange }) => {
       const dataService = getDataService();
       await dataService.approveJoinRequest(memberId, settings.role, settings.permission);
       showToast('참여 요청을 승인했습니다.');
+
+      // 가입 승인 알림
+      try {
+        if (user?.id) {
+          await dataService.createNotification({
+            recipientId: memberId,
+            senderId: user.id,
+            type: 'join_approved',
+            title: '참여 요청 승인',
+            message: '회사 참여 요청이 승인되었습니다.',
+          });
+          window.dispatchEvent(new Event('notification-created'));
+        }
+      } catch (e) { /* 알림 실패는 무시 */ }
+
       await loadPendingMembers();
       onPendingChange?.();
 
@@ -142,7 +157,7 @@ const SettingsInvite = memo(({ onPendingChange }) => {
     } finally {
       setProcessingMember(null);
     }
-  }, [memberSettings, pendingMembers, showToast, loadPendingMembers, onPendingChange]);
+  }, [memberSettings, pendingMembers, showToast, loadPendingMembers, onPendingChange, user]);
 
   const handleRejectConfirm = useCallback(async () => {
     if (!rejectTarget) return;
@@ -152,6 +167,21 @@ const SettingsInvite = memo(({ onPendingChange }) => {
       const dataService = getDataService();
       await dataService.rejectJoinRequest(rejectTarget.id);
       showToast('참여 요청을 거절했습니다.');
+
+      // 가입 거절 알림
+      try {
+        if (user?.id) {
+          await dataService.createNotification({
+            recipientId: rejectTarget.id,
+            senderId: user.id,
+            type: 'join_rejected',
+            title: '참여 요청 거절',
+            message: '회사 참여 요청이 거절되었습니다.',
+          });
+          window.dispatchEvent(new Event('notification-created'));
+        }
+      } catch (e) { /* 알림 실패는 무시 */ }
+
       setRejectTarget(null);
       await loadPendingMembers();
       onPendingChange?.();
@@ -160,7 +190,7 @@ const SettingsInvite = memo(({ onPendingChange }) => {
     } finally {
       setProcessingMember(null);
     }
-  }, [rejectTarget, showToast, loadPendingMembers, onPendingChange]);
+  }, [rejectTarget, showToast, loadPendingMembers, onPendingChange, user]);
 
   const handleLinkModalClose = useCallback(() => {
     setLinkingMember(null);

@@ -8,6 +8,7 @@ import RecordHistory from './components/RecordHistory';
 import MyTimeEntry from './components/MyTimeEntry';
 import ApprovalManagement from './components/ApprovalManagement';
 import LoginButton from './components/LoginButton';
+import NotificationBell from './components/NotificationBell';
 
 // 이니셜 생성 유틸
 const getInitials = (name) => {
@@ -73,7 +74,8 @@ const OvertimeManagementApp = memo(() => {
               <Clock className="w-8 h-8 text-blue-600" />
               <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리!</h1>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
+              {user && <NotificationBell />}
               {/* 사용자 프로필 또는 로그인 버튼 */}
               {user ? (
                 <button
