@@ -152,10 +152,45 @@ export class SupabaseAdapter extends StorageAdapter {
       if (!user) {
         throw new Error('로그인이 필요합니다.');
       }
-      
+
       // 회사 정보 가져오기 (캐시 사용)
       const profile = await this._getProfileInfo();
-      
+
+      // linked_user_id가 있으면 soft-deleted된 기존 직원 확인 → 복원
+      if (employeeData.linkedUserId) {
+        const { data: deletedEmp } = await this.supabase
+          .from(this.tables.employees)
+          .select('*')
+          .eq('linked_user_id', employeeData.linkedUserId)
+          .eq('company_id', profile?.company_id)
+          .not('deleted_at', 'is', null)
+          .maybeSingle();
+
+        if (deletedEmp) {
+          const { data: restored, error: restoreErr } = await this.supabase
+            .from(this.tables.employees)
+            .update({
+              deleted_at: null,
+              name: employeeData.name.trim(),
+              department: employeeData.department,
+              hire_date: employeeData.hireDate,
+              notes: employeeData.notes || null
+            })
+            .eq('id', deletedEmp.id)
+            .select()
+            .single();
+
+          if (restoreErr) throw restoreErr;
+
+          const changeRecord = HistoryPolicy.createEmployeeChangeRecord(
+            restored.id, '복원', restored.name
+          );
+          await this.saveEmployeeChangeRecord(changeRecord);
+
+          return this._convertSupabaseEmployee(restored);
+        }
+      }
+
       const newEmployee = {
         name: employeeData.name.trim(),
         birth_date: employeeData.birthDate,
@@ -179,8 +214,8 @@ export class SupabaseAdapter extends StorageAdapter {
 
       // 직원 변경 이력 기록
       const changeRecord = HistoryPolicy.createEmployeeChangeRecord(
-        data.id, 
-        '생성', 
+        data.id,
+        '생성',
         data.name
       );
       await this.saveEmployeeChangeRecord(changeRecord);
