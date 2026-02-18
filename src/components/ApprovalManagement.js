@@ -189,6 +189,7 @@ const ApprovalManagement = memo(() => {
       // 제출자에게 알림 생성
       try {
         const record = allSubmittedRecords.find(r => r.id === recordId && r.recordType === recordType);
+        console.log('알림 대상 레코드:', recordId, recordType, 'found:', !!record, 'submittedBy:', record?.submittedBy);
         if (record?.submittedBy && user?.id) {
           const dataService = getDataService();
           const typeLabel = recordType === 'overtime' ? '초과근무' : '휴가';
@@ -205,7 +206,7 @@ const ApprovalManagement = memo(() => {
           });
           window.dispatchEvent(new Event('notification-created'));
         }
-      } catch (e) { /* 알림 실패는 무시 */ }
+      } catch (e) { console.warn('승인 알림 생성 실패:', e); }
 
       setReviewModal(null);
       setToast({
