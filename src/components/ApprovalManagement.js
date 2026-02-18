@@ -60,7 +60,7 @@ const ReviewModal = memo(({ record, action, onConfirm, onClose, isLoading }) => 
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">시간</span>
-            <span className="font-medium text-gray-900">{timeUtils.formatMinutesToHM(record.totalMinutes)}</span>
+            <span className="font-medium text-gray-900">{timeUtils.formatTime(record.totalMinutes)}</span>
           </div>
           {record.submitReason && (
             <div className="flex justify-between text-sm">
@@ -299,7 +299,7 @@ const ApprovalManagement = memo(() => {
                       {record.recordType === 'overtime' ? '초과근무' : '휴가'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {timeUtils.formatMinutesToHM(record.totalMinutes)}
+                      {timeUtils.formatTime(record.totalMinutes)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px]">
                       <div style={{
