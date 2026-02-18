@@ -177,6 +177,28 @@ const MyTimeEntry = memo(() => {
     try {
       await submitOwnTimeRecord(type, linkedEmployee.id, date, validation.totalMinutes, reason);
       showToast('시간이 제출되었습니다. 관리자 승인을 기다려주세요.');
+
+      // 회사 owner에게 제출 알림
+      try {
+        const dataService = getDataService();
+        const company = await dataService.getMyCompany();
+        if (company?.ownerId && user?.id && company.ownerId !== user.id) {
+          const typeLabel = type === 'overtime' ? '초과근무' : '휴가';
+          const h = Math.floor(validation.totalMinutes / 60);
+          const m = validation.totalMinutes % 60;
+          const timeStr = m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+          await dataService.createNotification({
+            recipientId: company.ownerId,
+            senderId: user.id,
+            type: 'time_submitted',
+            title: '초과근무 시간 제출',
+            message: `${linkedEmployee.name}님이 ${date} ${typeLabel} ${timeStr}을 제출했습니다.`,
+            relatedRecordType: type,
+          });
+          window.dispatchEvent(new Event('notification-created'));
+        }
+      } catch (e) { /* 알림 실패는 무시 */ }
+
       // Reset form
       setHours('');
       setMinutes('');
@@ -186,7 +208,8 @@ const MyTimeEntry = memo(() => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [linkedEmployee, hours, minutes, date, type, reason, submitOwnTimeRecord, showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedEmployee, hours, minutes, date, type, reason, submitOwnTimeRecord, showToast, user]);
 
   if (!canSubmitOwnTime) {
     return null;
