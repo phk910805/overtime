@@ -156,8 +156,22 @@ export class SupabaseAdapter extends StorageAdapter {
       // 회사 정보 가져오기 (캐시 사용)
       const profile = await this._getProfileInfo();
 
-      // linked_user_id가 있으면 soft-deleted된 기존 직원 확인 → 복원
+      // linked_user_id가 있으면 기존 직원 확인 (활성 → 반환, 삭제 → 복원)
       if (employeeData.linkedUserId) {
+        // 활성 직원이 이미 연결되어 있으면 그대로 반환
+        const { data: activeEmp } = await this.supabase
+          .from(this.tables.employees)
+          .select('*')
+          .eq('linked_user_id', employeeData.linkedUserId)
+          .eq('company_id', profile?.company_id)
+          .is('deleted_at', null)
+          .maybeSingle();
+
+        if (activeEmp) {
+          return this._convertSupabaseEmployee(activeEmp);
+        }
+
+        // soft-deleted된 직원이 있으면 복원
         const { data: deletedEmp } = await this.supabase
           .from(this.tables.employees)
           .select('*')
