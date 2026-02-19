@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { createStorageAdapter } from './storage';
 import { dataCalculator } from '../dataManager';
 import { getDataService } from './dataService';
+import { getSubscriptionService } from './subscriptionService';
 
 export class AuthService {
   constructor() {
@@ -203,6 +204,13 @@ export class AuthService {
         getDataService().clearCache();
       } catch (dsError) {
         // DataService 미초기화 시 무시
+      }
+
+      // 3.5 SubscriptionService 캐시
+      try {
+        getSubscriptionService().clearCache();
+      } catch (subError) {
+        // SubscriptionService 미초기화 시 무시
       }
 
       // 4. sessionStorage 초기화

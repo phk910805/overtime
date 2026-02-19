@@ -928,7 +928,9 @@ export class SupabaseAdapter extends StorageAdapter {
         businessNumber: company.business_number,
         companyName: company.company_name,
         ownerId: company.owner_id,
-        createdAt: company.created_at
+        createdAt: company.created_at,
+        trialStartedAt: company.trial_started_at,
+        trialEndsAt: company.trial_ends_at
       };
     } catch (error) {
       this._handleError(error, 'getMyCompany');

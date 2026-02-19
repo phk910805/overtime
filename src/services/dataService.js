@@ -1,5 +1,6 @@
 import { getStorageAdapter } from './storage/index.js';
 import HistoryPolicy from './historyPolicy.js';
+import { getSubscriptionService } from './subscriptionService.js';
 
 /**
  * 통합 데이터 서비스
@@ -700,6 +701,27 @@ export class DataService {
   async reviewTimeRecord(recordId, type, status, reviewNote) {
     const result = await this._getAdapter().reviewTimeRecord(recordId, type, status, reviewNote);
     this._invalidateCache('allRecords');
+    return result;
+  }
+
+  // ========== 구독 관리 ==========
+
+  async getSubscription() {
+    const cached = this._getCached('subscription');
+    if (cached) return cached;
+    const companyId = await this.getCompanyId();
+    if (!companyId) return null;
+    const result = await getSubscriptionService().getSubscription(companyId);
+    if (result) this._setCache('subscription', result);
+    return result;
+  }
+
+  async updateSubscription(updates) {
+    const companyId = await this.getCompanyId();
+    if (!companyId) throw new Error('회사 정보가 없습니다.');
+    const result = await getSubscriptionService().updateSubscription(companyId, updates);
+    this._invalidateCache('subscription');
+    getSubscriptionService().clearCache();
     return result;
   }
 }
