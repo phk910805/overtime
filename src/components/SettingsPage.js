@@ -151,6 +151,17 @@ const SettingsPage = memo(() => {
     }
   }, [signOut]);
 
+  // ESC 키로 설정 페이지 닫기
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !showLogoutConfirm) {
+        navigate(-1);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, showLogoutConfirm]);
+
   // 섹션 전환
   const handleSectionChange = useCallback((sectionId) => {
     navigate(`/settings/${sectionId}`, { replace: true });

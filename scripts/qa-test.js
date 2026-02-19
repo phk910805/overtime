@@ -119,15 +119,15 @@ function check(label, result) {
   await desktopSidebar.getByText('팀원 초대', { exact: true }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/05-settings-invite.png`, fullPage: false });
-  check('초대 코드 생성 버튼', await page.getByText('초대 코드 생성').isVisible().catch(() => false));
+  check('초대 링크 생성 버튼', await page.getByText('초대 링크 생성').isVisible().catch(() => false));
 
-  // === 7. ESC 키로 모달 닫기 ===
-  console.log('\n=== 7. ESC 키로 모달 닫기 ===');
+  // === 7. ESC 키로 설정 페이지 닫기 ===
+  console.log('\n=== 7. ESC 키로 설정 페이지 닫기 ===');
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(500);
-  check('ESC 후 아바타 버튼 표시', await avatarBtn.isVisible());
-  const modalClosed = !(await desktopSidebar.isVisible().catch(() => false));
-  check('모달 닫힘', modalClosed);
+  await page.waitForTimeout(1500);
+  check('ESC 후 아바타 버튼 표시', await avatarBtn.isVisible().catch(() => false));
+  const settingsClosed = !(await desktopSidebar.isVisible().catch(() => false));
+  check('설정 페이지 닫힘', settingsClosed);
 
   // === 8. 로그아웃 확인 모달 ===
   console.log('\n=== 8. 로그아웃 확인 모달 ===');
