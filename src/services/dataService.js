@@ -1,7 +1,5 @@
 import { getStorageAdapter } from './storage/index.js';
 import HistoryPolicy from './historyPolicy.js';
-import { getSubscriptionService } from './subscriptionService.js';
-
 /**
  * 통합 데이터 서비스
  * 비즈니스 로직과 스토리지 계층 사이의 인터페이스
@@ -711,6 +709,7 @@ export class DataService {
     if (cached) return cached;
     const companyId = await this.getCompanyId();
     if (!companyId) return null;
+    const { getSubscriptionService } = require('./subscriptionService.js');
     const result = await getSubscriptionService().getSubscription(companyId);
     if (result) this._setCache('subscription', result);
     return result;
@@ -719,6 +718,7 @@ export class DataService {
   async updateSubscription(updates) {
     const companyId = await this.getCompanyId();
     if (!companyId) throw new Error('회사 정보가 없습니다.');
+    const { getSubscriptionService } = require('./subscriptionService.js');
     const result = await getSubscriptionService().updateSubscription(companyId, updates);
     this._invalidateCache('subscription');
     getSubscriptionService().clearCache();
