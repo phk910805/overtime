@@ -370,6 +370,150 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
   );
 });
 
+const MobileEmployeeCard = memo(({
+  employee, stats, carryoverMinutes, adjustedRemaining,
+  daysArray, yearMonth, holidays, todayColumnIndex,
+  getDailyData, isEditable, onTimeInputClick,
+  isExpanded, onToggle
+}) => {
+  return (
+    <div className="bg-white rounded-lg shadow">
+      {/* 요약 영역 - 탭으로 펼침/접힘 */}
+      <div className="p-4 cursor-pointer active:bg-gray-50" onClick={onToggle}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-semibold text-gray-900 text-sm truncate">
+              {employee.lastUpdatedName || employee.name}
+            </span>
+            {!employee.isActive && (
+              <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                삭제
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-gray-500">{employee.department || ''}</span>
+            {isExpanded && <span className="text-gray-400 text-xs">▲</span>}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <div>
+            <span className="text-gray-500">초과 </span>
+            <span className="text-blue-600 font-medium">+{timeUtils.formatTime(stats.totalOvertime)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">사용 </span>
+            <span className="text-green-600 font-medium">-{timeUtils.formatTime(stats.totalVacation)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">이월 </span>
+            <span className={carryoverMinutes > 0 ? "text-orange-600 font-medium" : carryoverMinutes < 0 ? "text-red-600 font-medium" : "text-gray-500"}>
+              {carryoverMinutes > 0 && '+'}{carryoverMinutes < 0 && '-'}{timeUtils.formatTime(Math.abs(carryoverMinutes))}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">잔여 </span>
+            <span className={`font-medium ${adjustedRemaining >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+              {adjustedRemaining >= 0 ? '+' : '-'}{timeUtils.formatTime(Math.abs(adjustedRemaining))}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 펼친 상태: 일별 리스트 */}
+      {isExpanded && (
+        <div className="border-t border-gray-200">
+          <div className="max-h-[400px] overflow-y-auto">
+            {daysArray.map((day) => {
+              const dateString = dateUtils.formatDateString(yearMonth[0], yearMonth[1], day);
+              const dayDate = new Date(yearMonth[0], yearMonth[1] - 1, day);
+              const dayOfWeekIndex = dayDate.getDay();
+              const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeekIndex];
+              const isHolidayDate = holidayUtils.isHoliday(dateString, holidays);
+              const isWeekend = dayOfWeekIndex === 0 || dayOfWeekIndex === 6;
+              const holidayName = isHolidayDate ? holidayUtils.getHolidayName(dateString, holidays) : '';
+              const isTodayRow = day === todayColumnIndex;
+              const dailyMinutes = getDailyData(employee.id, dateString, 'overtime');
+              const vacationMinutes = getDailyData(employee.id, dateString, 'vacation');
+              const canEdit = isEditable && employee.isActive;
+              const dateColorClass = (isHolidayDate || isWeekend) ? 'text-violet-600' : 'text-gray-700';
+
+              return (
+                <div
+                  key={day}
+                  className={`flex items-center justify-between px-4 py-2 text-xs border-b border-gray-100 last:border-b-0${isTodayRow ? ' bg-blue-50' : ''}`}
+                >
+                  <div className={`flex-shrink-0 ${dateColorClass}`} style={{width: '80px'}}>
+                    <span className="font-medium">{String(day).padStart(2, '0')}({dayOfWeek})</span>
+                    {isTodayRow && <span className="ml-0.5 text-blue-500">★</span>}
+                    {holidayName && <div className="text-[10px] text-gray-400 truncate">{holidayName}</div>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`${canEdit ? 'cursor-pointer active:bg-gray-100 rounded px-1.5 py-0.5' : ''} ${dailyMinutes > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}`}
+                      onClick={canEdit ? () => onTimeInputClick(employee.id, day, dailyMinutes, 'overtime') : undefined}
+                    >
+                      초과 {dailyMinutes > 0 ? timeUtils.formatTimeInput(dailyMinutes) : '00:00'}
+                    </span>
+                    <span
+                      className={`${canEdit ? 'cursor-pointer active:bg-gray-100 rounded px-1.5 py-0.5' : ''} ${vacationMinutes > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}`}
+                      onClick={canEdit ? () => onTimeInputClick(employee.id, day, vacationMinutes, 'vacation') : undefined}
+                    >
+                      사용 {vacationMinutes > 0 ? timeUtils.formatTimeInput(vacationMinutes) : '00:00'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const MobileCardList = memo(({
+  employees, selectedMonth, multiplier,
+  getMonthlyStats, getCarryoverForEmployee, getDailyData,
+  daysArray, yearMonth, holidays, todayColumnIndex,
+  isEditable, onTimeInputClick
+}) => {
+  const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
+
+  const handleToggle = useCallback((employeeId) => {
+    setExpandedEmployeeId(prev => prev === employeeId ? null : employeeId);
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      {employees.map((employee) => {
+        const stats = getMonthlyStats(employee.id, selectedMonth, multiplier);
+        const carryoverMinutes = getCarryoverForEmployee(employee.id, selectedMonth);
+        const adjustedRemaining = carryoverMinutes + stats.remaining;
+
+        return (
+          <MobileEmployeeCard
+            key={employee.id}
+            employee={employee}
+            stats={stats}
+            carryoverMinutes={carryoverMinutes}
+            adjustedRemaining={adjustedRemaining}
+            daysArray={daysArray}
+            yearMonth={yearMonth}
+            holidays={holidays}
+            todayColumnIndex={todayColumnIndex}
+            getDailyData={getDailyData}
+            isEditable={isEditable}
+            onTimeInputClick={onTimeInputClick}
+            isExpanded={expandedEmployeeId === employee.id}
+            onToggle={() => handleToggle(employee.id)}
+          />
+        );
+      })}
+    </div>
+  );
+});
+
 const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryMode = false, customMonth = null } = {}) => {
   const {
     updateDailyTime,
@@ -888,6 +1032,21 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 직원이 없습니다</h3>
           <p className="text-sm text-gray-500">구성원 관리 탭에서 직원을 추가해 주세요.</p>
         </div>
+      ) : isMobile ? (
+        <MobileCardList
+          employees={employees}
+          selectedMonth={selectedMonth}
+          multiplier={multiplier}
+          getMonthlyStats={getMonthlyStats}
+          getCarryoverForEmployee={getCarryoverForEmployee}
+          getDailyData={getDailyData}
+          daysArray={daysArray}
+          yearMonth={yearMonth}
+          holidays={holidays}
+          todayColumnIndex={todayColumnIndex}
+          isEditable={isEditable}
+          onTimeInputClick={handleTimeInputClick}
+        />
       ) : (
       <>
       <div className="bg-white rounded-lg shadow overflow-hidden" style={{
