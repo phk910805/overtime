@@ -141,8 +141,9 @@ export class AuthService {
       if (error) throw error;
 
       this.currentUser = data.user;
+      await this._loadProfileRole(data.user.id);
       this.notifyListeners('SIGNED_IN', data.user);
-      
+
       console.log('✅ 로그인 성공:', data.user.email);
       return { success: true, user: data.user, session: data.session };
 
