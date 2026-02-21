@@ -15,17 +15,22 @@ export function useAuth() {
   const authService = authServiceRef.current;
 
   // authService 싱글톤에 이미 유저가 있으면 동기적으로 초기값 설정 (FOUC 방지)
+  // 단, 프로필 역할도 로드된 경우에만 initialized=true (역할 없이 렌더하면 탭 깜빡임)
   const [user, setUser] = useState(() => authService.currentUser || null);
   const [loading, setLoading] = useState(() => !authService.currentUser);
-  const [initialized, setInitialized] = useState(() => !!authService.currentUser);
+  const [initialized, setInitialized] = useState(() => !!authService.currentUser && !!authService._profileRole);
 
   // 초기 사용자 상태 확인
   useEffect(() => {
     let isMounted = true;
 
     const initializeAuth = async () => {
-      // authService에 이미 유저가 있으면 async 호출 스킵
+      // authService에 이미 유저가 있으면 FOUC 방지 경로
       if (authService.currentUser) {
+        // 프로필 역할이 아직 로드되지 않았으면 먼저 로드
+        if (!authService._profileRole) {
+          await authService._loadProfileRole(authService.currentUser.id);
+        }
         if (isMounted) {
           setUser(authService.currentUser);
           setInitialized(true);
