@@ -9,6 +9,7 @@ import MyTimeEntry from './components/MyTimeEntry';
 import ApprovalManagement from './components/ApprovalManagement';
 import LoginButton from './components/LoginButton';
 import NotificationBell from './components/NotificationBell';
+import TrialBanner from './components/TrialBanner';
 
 // 이니셜 생성 유틸
 const getInitials = (name) => {
@@ -97,6 +98,8 @@ const OvertimeManagementApp = memo(() => {
           </div>
         </div>
       </header>
+
+      {user && <TrialBanner />}
 
       <nav className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

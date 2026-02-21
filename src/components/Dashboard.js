@@ -10,6 +10,8 @@ import MonthChangeNotification from './MonthChangeNotification';
 import HorizontalScrollContainer, { ScrollControlBar } from './HorizontalScrollContainer';
 import TimeInputValidator from '../utils/timeInputValidator.js';
 import MonthSelector from './MonthSelector';
+import UpgradeModal from './UpgradeModal';
+import { useSubscription } from '../hooks/useSubscription';
 
 // 스타일 상수
 const STYLES = {
@@ -381,6 +383,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   } = useOvertimeContext();
 
   const { canEditOvertime, canEditSettings: canBulkEdit, canManageEmployees } = useAuth();
+  const { canViewMonth } = useSubscription();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -391,13 +396,18 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   // customMonth가 제공되면 사용, 아니면 내부 state 사용
   const selectedMonth = customMonth || internalMonth;
 
-  // 월 변경 핸들러 (context 업데이트 제거 - 중복 렌더링 방지)
+  // 월 변경 핸들러 (구독 체크 포함)
   const handleMonthChange = useCallback((newMonth) => {
     if (!customMonth) {
+      const check = canViewMonth(newMonth);
+      if (!check.allowed) {
+        setUpgradeMessage(check.reason);
+        setShowUpgradeModal(true);
+        return;
+      }
       setInternalMonth(newMonth);
-      // context 업데이트 제거: Dashboard가 자체 state로 관리하므로 불필요
     }
-  }, [customMonth]);
+  }, [customMonth, canViewMonth]);
 
   // 편집 권한 계산
   const editPermission = React.useMemo(() => {
@@ -1058,6 +1068,13 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         lastMonth={monthChangeData?.lastMonth}
         carryoverList={monthChangeData?.carryoverList || []}
         editDeadline={monthChangeData?.editDeadline}
+      />
+
+      <UpgradeModal
+        show={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title="이전 달 조회 제한"
+        message={upgradeMessage || '무료 플랜은 당월 데이터만 조회할 수 있습니다. 이전 기록을 확인하려면 플랜을 업그레이드하세요.'}
       />
     </div>
   );

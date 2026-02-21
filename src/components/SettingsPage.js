@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, CreditCard, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { getDataService } from '../services/dataService';
@@ -15,12 +15,14 @@ import SettingsProfile from './settings/SettingsProfile';
 import SettingsCompany from './settings/SettingsCompany';
 import SettingsMultiplier from './settings/SettingsMultiplier';
 import SettingsInvite from './settings/SettingsInvite';
+import SettingsPlan from './settings/SettingsPlan';
 
 const ALL_MENU_ITEMS = [
   { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
   { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
   { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
   { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
+  { id: 'plan', label: '플랜/결제', icon: CreditCard, minRole: 'owner' },
 ];
 
 const ROLE_LEVEL = { owner: 3, admin: 2, employee: 1 };
@@ -321,6 +323,9 @@ const SettingsPage = memo(() => {
                   )}
                   {activeSection === 'invite' && (
                     <SettingsInvite onPendingChange={loadPendingCount} />
+                  )}
+                  {activeSection === 'plan' && (
+                    <SettingsPlan />
                   )}
                 </>
               )}

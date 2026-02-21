@@ -6,6 +6,8 @@ import { useSortingPaging, useValidation } from '../utils';
 import { getDataService } from '../services/dataService';
 import { Modal, ConfirmModal, Toast, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
 import EmployeeLinkModal from './EmployeeLinkModal';
+import UpgradeModal from './UpgradeModal';
+import { useSubscription } from '../hooks/useSubscription';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
@@ -20,7 +22,9 @@ const formatDate = (dateStr) => {
 const EmployeeManagement = memo(() => {
   const { canManageEmployees, canEditEmployees, canManageTeam, user } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
+  const { canAddEmployee: canAddEmployeeCheck } = useSubscription();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -422,7 +426,13 @@ const EmployeeManagement = memo(() => {
         <h2 className="text-2xl font-bold text-gray-900">구성원 관리</h2>
         {activeEmployeeTab === 'list' && canEditEmployees && (
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              if (!canAddEmployeeCheck.allowed) {
+                setShowUpgradeModal(true);
+                return;
+              }
+              setShowModal(true);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
@@ -1059,6 +1069,13 @@ const EmployeeManagement = memo(() => {
           confirmColor="bg-orange-600 hover:bg-orange-700"
         />
       )}
+
+      <UpgradeModal
+        show={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title="직원 추가 제한"
+        message={canAddEmployeeCheck.reason || '무료 플랜은 직원 3명까지 등록할 수 있습니다. 더 많은 직원을 관리하려면 플랜을 업그레이드하세요.'}
+      />
     </div>
   );
 });

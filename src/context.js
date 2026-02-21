@@ -80,6 +80,7 @@ const useOvertimeData = () => {
   const [vacationRecords, setVacationRecords] = useState([]);
   const [employeeChangeRecords, setEmployeeChangeRecords] = useState([]);
   const [carryoverRecords, setCarryoverRecords] = useState([]); // 이월 기록
+  const [subscription, setSubscription] = useState(null); // 구독 정보
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -126,7 +127,8 @@ const useOvertimeData = () => {
           allEmployeesData,
           employeeChangesData,
           allRecords,
-          carryoverData
+          carryoverData,
+          subscriptionData
         ] = await Promise.all([
           isCurrentMonth
             ? dataService.getEmployees()
@@ -134,7 +136,8 @@ const useOvertimeData = () => {
           dataService.getAllEmployeesIncludingDeleted(),
           dataService.getEmployeeChangeRecords(),
           dataService.getAllRecords(),
-          dataService.getCarryoverRecords()
+          dataService.getCarryoverRecords(),
+          dataService.getSubscription().catch(() => null)
         ]);
 
         setEmployees(employeesData || []);
@@ -143,6 +146,7 @@ const useOvertimeData = () => {
         setOvertimeRecords(allRecords.overtimeRecords || []);
         setVacationRecords(allRecords.vacationRecords || []);
         setCarryoverRecords(carryoverData || []);
+        setSubscription(subscriptionData);
 
         isDataLoadedRef.current = true;
         lastLoadTimeRef.current = Date.now();
@@ -204,7 +208,8 @@ const useOvertimeData = () => {
           allEmployeesData,
           employeeChangesData,
           allRecords,
-          carryoverData
+          carryoverData,
+          subscriptionData
         ] = await Promise.all([
           isCurrentMonth
             ? dataService.getEmployees()
@@ -212,7 +217,8 @@ const useOvertimeData = () => {
           dataService.getAllEmployeesIncludingDeleted(),
           dataService.getEmployeeChangeRecords(),
           dataService.getAllRecords(),
-          dataService.getCarryoverRecords()
+          dataService.getCarryoverRecords(),
+          dataService.getSubscription().catch(() => null)
         ]);
 
         setEmployees(employeesData || []);
@@ -221,6 +227,7 @@ const useOvertimeData = () => {
         setOvertimeRecords(allRecords.overtimeRecords || []);
         setVacationRecords(allRecords.vacationRecords || []);
         setCarryoverRecords(carryoverData || []);
+        setSubscription(subscriptionData);
 
         lastLoadTimeRef.current = Date.now();
 
@@ -876,6 +883,7 @@ const useOvertimeData = () => {
     vacationRecords,
     employeeChangeRecords,
     carryoverRecords,
+    subscription,
     isLoading,
     error,
     multiplier,
