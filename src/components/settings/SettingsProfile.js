@@ -1,14 +1,57 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Save } from 'lucide-react';
+import { Save, Lock } from 'lucide-react';
 import { getAuthService } from '../../services/authService';
+import { supabase } from '../../lib/supabase';
 import PasswordField from '../PasswordField';
 import { Toast } from '../CommonUI';
 
-const SettingsProfile = memo(({ profileData, user }) => {
+const getPasswordStrength = (password) => {
+  if (!password) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const levels = [
+    { label: '', color: '' },
+    { label: '매우 약함', color: 'bg-red-500' },
+    { label: '약함', color: 'bg-orange-500' },
+    { label: '보통', color: 'bg-yellow-500' },
+    { label: '강함', color: 'bg-green-500' },
+    { label: '매우 강함', color: 'bg-green-700' },
+  ];
+  return { score, ...levels[score] };
+};
+
+const PasswordStrengthBar = memo(({ password }) => {
+  const strength = getPasswordStrength(password);
+  if (!password) return null;
+
+  return (
+    <div className="mt-2">
+      <div className="flex space-x-1 mb-1">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div
+            key={i}
+            className={`h-1.5 flex-1 rounded-full ${i <= strength.score ? strength.color : 'bg-gray-200'}`}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-gray-500">{strength.label}</span>
+    </div>
+  );
+});
+
+const SettingsProfile = memo(({ profileData, user, onProfileUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [currentPasswordVerified, setCurrentPasswordVerified] = useState(false);
   const [passwordVerifying, setPasswordVerifying] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -39,6 +82,8 @@ const SettingsProfile = memo(({ profileData, user }) => {
     setCurrentPasswordVerified(false);
     setPasswordVerifying(false);
     setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setNameValue(profileData?.fullName || '');
+    setEditingName(false);
   }, [profileData]);
 
   const handleInputChange = useCallback((e) => {
@@ -48,6 +93,43 @@ const SettingsProfile = memo(({ profileData, user }) => {
       setCurrentPasswordVerified(false);
     }
   }, [currentPasswordVerified]);
+
+  // 이름 저장
+  const handleSaveName = useCallback(async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed) {
+      showToast('이름을 입력해주세요.', 'error');
+      return;
+    }
+    if (trimmed === profileData?.fullName) {
+      setEditingName(false);
+      return;
+    }
+    setNameSaving(true);
+    try {
+      // Supabase Auth 메타데이터 업데이트
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { full_name: trimmed }
+      });
+      if (authError) throw authError;
+
+      // profiles 테이블 업데이트
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ full_name: trimmed })
+        .eq('id', user.id);
+      if (dbError) throw dbError;
+
+      showToast('이름이 변경되었습니다.');
+      setEditingName(false);
+      if (onProfileUpdate) onProfileUpdate();
+    } catch (err) {
+      console.error('이름 변경 실패:', err);
+      showToast('이름 변경에 실패했습니다.', 'error');
+    } finally {
+      setNameSaving(false);
+    }
+  }, [nameValue, profileData, user, showToast, onProfileUpdate]);
 
   const verifyCurrentPassword = useCallback(async () => {
     if (!formData.currentPassword) {
@@ -127,27 +209,58 @@ const SettingsProfile = memo(({ profileData, user }) => {
         onClose={hideToast}
         type={toast.type}
         duration={3000}
-        position="bottom-center"
       />
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-6">프로필 편집</h3>
 
         <div className="space-y-4">
-          {/* 이름 (읽기전용) */}
+          {/* 이름 (편집 가능) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-            <input
-              type="text"
-              value={profileData?.fullName || ''}
-              readOnly
-              tabIndex={-1}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
-            />
+            {editingName ? (
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName();
+                    if (e.key === 'Escape') { setEditingName(false); setNameValue(profileData?.fullName || ''); }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveName}
+                  disabled={nameSaving}
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {nameSaving ? '저장 중...' : '저장'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingName(false); setNameValue(profileData?.fullName || ''); }}
+                  className="px-3 py-2 text-gray-600 border border-gray-300 text-sm rounded-md hover:bg-gray-50"
+                >
+                  취소
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => setEditingName(true)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 cursor-pointer hover:bg-gray-50"
+              >
+                {profileData?.fullName || ''}
+              </div>
+            )}
           </div>
 
           {/* 이메일 (읽기전용) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="flex items-center gap-1">이메일 <Lock className="w-3 h-3 text-gray-400" /><span className="text-xs text-gray-400 font-normal">수정 불가</span></span>
+            </label>
             <input
               type="text"
               value={profileData?.email || ''}
@@ -159,7 +272,9 @@ const SettingsProfile = memo(({ profileData, user }) => {
 
           {/* 권한 (읽기전용) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">권한</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="flex items-center gap-1">권한 <Lock className="w-3 h-3 text-gray-400" /><span className="text-xs text-gray-400 font-normal">수정 불가</span></span>
+            </label>
             <input
               type="text"
               value={getRoleDisplayName(profileData?.role, profileData?.permission)}
@@ -231,6 +346,7 @@ const SettingsProfile = memo(({ profileData, user }) => {
                     placeholder="새 비밀번호 (6자리 이상)"
                     autoComplete="new-password"
                   />
+                  <PasswordStrengthBar password={formData.newPassword} />
                 </div>
 
                 <div className="mb-3">

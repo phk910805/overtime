@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
-import { Users, Plus, Edit2, UserMinus, Calendar, Link2 } from 'lucide-react';
+import { Users, Plus, Edit2, UserMinus, Calendar, Link2, Search } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { useAuth } from '../hooks/useAuth';
 import { useSortingPaging, useValidation } from '../utils';
@@ -24,6 +24,7 @@ const EmployeeManagement = memo(() => {
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
   const { canAddEmployee: canAddEmployeeCheck } = useSubscription();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
@@ -389,12 +390,22 @@ const EmployeeManagement = memo(() => {
     });
   }, [employeeManagementRecords, historyPaging.sortConfig]);
 
+  // 검색 필터 적용된 직원 목록
+  const filteredEmployees = useMemo(() => {
+    if (!employeeSearchTerm.trim()) return sortedEmployees;
+    const term = employeeSearchTerm.trim().toLowerCase();
+    return sortedEmployees.filter(emp =>
+      emp.name.toLowerCase().includes(term) ||
+      (emp.department || '').toLowerCase().includes(term)
+    );
+  }, [sortedEmployees, employeeSearchTerm]);
+
   // 페이징된 직원 목록
   const paginatedEmployees = useMemo(() => {
     const startIndex = (employeeListPaging.currentPage - 1) * employeeListPaging.itemsPerPage;
     const endIndex = startIndex + employeeListPaging.itemsPerPage;
-    return sortedEmployees.slice(startIndex, endIndex);
-  }, [sortedEmployees, employeeListPaging.currentPage, employeeListPaging.itemsPerPage]);
+    return filteredEmployees.slice(startIndex, endIndex);
+  }, [filteredEmployees, employeeListPaging.currentPage, employeeListPaging.itemsPerPage]);
 
   // 페이징된 관리 기록
   const paginatedHistoryRecords = useMemo(() => {
@@ -480,6 +491,20 @@ const EmployeeManagement = memo(() => {
           </button>
         </nav>
       </div>
+
+      {/* 직원 검색 (목록 탭에서만) */}
+      {activeEmployeeTab === 'list' && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={employeeSearchTerm}
+            onChange={(e) => { setEmployeeSearchTerm(e.target.value); employeeListPaging.setCurrentPage(1); }}
+            placeholder="이름 또는 부서로 검색..."
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {activeEmployeeTab === 'list' && (
@@ -591,10 +616,10 @@ const EmployeeManagement = memo(() => {
             </div>
             <Pagination
               currentPage={employeeListPaging.currentPage}
-              totalPages={Math.max(1, Math.ceil(sortedEmployees.length / employeeListPaging.itemsPerPage))}
+              totalPages={Math.max(1, Math.ceil(filteredEmployees.length / employeeListPaging.itemsPerPage))}
               onPageChange={employeeListPaging.setCurrentPage}
               itemsPerPage={employeeListPaging.itemsPerPage}
-              totalItems={sortedEmployees.length}
+              totalItems={filteredEmployees.length}
             />
           </>
         )}

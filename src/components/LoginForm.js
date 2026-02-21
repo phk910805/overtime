@@ -10,6 +10,26 @@ import { useAuth } from '../hooks/useAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import FindEmailModal from './FindEmailModal';
 
+const getPasswordStrength = (password) => {
+  if (!password) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const levels = [
+    { label: '', color: '' },
+    { label: '매우 약함', color: 'bg-red-500' },
+    { label: '약함', color: 'bg-orange-500' },
+    { label: '보통', color: 'bg-yellow-500' },
+    { label: '강함', color: 'bg-green-500' },
+    { label: '매우 강함', color: 'bg-green-700' },
+  ];
+  return { score, ...levels[score] };
+};
+
 const LoginForm = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -190,6 +210,23 @@ const LoginForm = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {/* 비밀번호 강도 (회원가입만) */}
+                {!isLogin && formData.password && (() => {
+                  const strength = getPasswordStrength(formData.password);
+                  return (
+                    <div className="mt-2">
+                      <div className="flex space-x-1 mb-1">
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <div
+                            key={i}
+                            className={`h-1.5 flex-1 rounded-full ${i <= strength.score ? strength.color : 'bg-gray-200'}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-500">{strength.label}</span>
+                    </div>
+                  );
+                })()}
               </div>
 
               {!isLogin && (
@@ -252,6 +289,17 @@ const LoginForm = () => {
                 </button>
               </div>
             </form>
+
+            {/* 약관/개인정보 링크 (회원가입만) */}
+            {!isLogin && (
+              <div className="mt-4 text-center text-xs text-gray-500">
+                회원가입 시{' '}
+                <button type="button" onClick={() => alert('서비스 이용약관은 준비 중입니다.')} className="text-blue-600 hover:underline">이용약관</button>
+                {' '}및{' '}
+                <button type="button" onClick={() => alert('개인정보 처리방침은 준비 중입니다.')} className="text-blue-600 hover:underline">개인정보 처리방침</button>
+                에 동의하게 됩니다.
+              </div>
+            )}
 
             <div className="mt-6 space-y-3">
               {/* 로그인/회원가입 전환 */}

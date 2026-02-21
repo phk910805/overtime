@@ -306,8 +306,19 @@ const ApprovalManagement = memo(() => {
             <tbody className="divide-y divide-gray-200">
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    {statusFilter === 'pending' ? '대기 중인 제출이 없습니다.' : '해당 상태의 기록이 없습니다.'}
+                  <td colSpan={7} className="px-4 py-12 text-center">
+                    {statusFilter === 'pending' ? (
+                      <div>
+                        <CheckCircle className="w-10 h-10 text-green-300 mx-auto mb-3" />
+                        <p className="text-gray-600 font-medium">모든 제출을 처리했습니다</p>
+                        <p className="text-sm text-gray-400 mt-1">대기 중인 제출이 없습니다.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">해당 상태의 기록이 없습니다.</p>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (

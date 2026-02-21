@@ -13,8 +13,8 @@ export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
-      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40" onClick={onClose}>
+      <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`} onClick={(e) => e.stopPropagation()}>
         {title && (
           <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
         )}
@@ -105,7 +105,7 @@ export const EmptyState = memo(({ message, colSpan }) => {
 });
 
 // ========== ENHANCED TOAST COMPONENT ==========
-export const Toast = memo(({ message, show, onClose, type = 'success', duration = 3000, position = 'bottom-center' }) => {
+export const Toast = memo(({ message, show, onClose, type = 'success', duration = 3000, position = 'top-right' }) => {
   useEffect(() => {
     if (show && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -411,7 +411,7 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
     }
   }, [currentPage, onPageChange]);
 
-  if (totalItems === 0) return null;
+  if (totalItems === 0 || totalPages <= 1) return null;
 
   return (
     <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200" style={{minHeight: '60px'}}>

@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, CreditCard, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Building2, SlidersHorizontal, UserPlus, CreditCard, LogOut, Mail, Bell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { getDataService } from '../services/dataService';
@@ -16,9 +16,11 @@ import SettingsCompany from './settings/SettingsCompany';
 import SettingsMultiplier from './settings/SettingsMultiplier';
 import SettingsInvite from './settings/SettingsInvite';
 import SettingsPlan from './settings/SettingsPlan';
+import SettingsNotifications from './settings/SettingsNotifications';
 
 const ALL_MENU_ITEMS = [
   { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
+  { id: 'notifications', label: '알림 설정', icon: Bell, minRole: 'employee' },
   { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
   { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
   { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
@@ -238,6 +240,13 @@ const SettingsPage = memo(() => {
                     </button>
                   );
                 })}
+                <a
+                  href="mailto:support@overtime.pages.dev"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>문의하기</span>
+                </a>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
                   className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap text-red-600 hover:bg-red-50 transition-colors"
@@ -291,8 +300,15 @@ const SettingsPage = memo(() => {
                 })}
               </nav>
 
-              {/* 로그아웃 */}
+              {/* 문의하기 + 로그아웃 */}
               <div className="border-t border-gray-200 py-3">
+                <a
+                  href="mailto:support@overtime.pages.dev"
+                  className="w-full flex items-center space-x-3 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-100 transition-colors border-l-2 border-transparent"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>문의하기</span>
+                </a>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
                   className="w-full flex items-center space-x-3 px-5 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
@@ -313,7 +329,10 @@ const SettingsPage = memo(() => {
               ) : (
                 <>
                   {activeSection === 'profile' && (
-                    <SettingsProfile profileData={profileData} user={user} />
+                    <SettingsProfile profileData={profileData} user={user} onProfileUpdate={loadProfile} />
+                  )}
+                  {activeSection === 'notifications' && (
+                    <SettingsNotifications />
                   )}
                   {activeSection === 'company' && (
                     <SettingsCompany profileData={profileData} />
@@ -329,6 +348,13 @@ const SettingsPage = memo(() => {
                   )}
                 </>
               )}
+
+              {/* 하단 문의사항 */}
+              <div className="mt-12 pt-6 border-t border-gray-200 text-center">
+                <p className="text-xs text-gray-400">
+                  문의사항이 있으시면 <a href="mailto:support@overtime.pages.dev" className="text-blue-500 hover:underline">support@overtime.pages.dev</a>로 연락해 주세요.
+                </p>
+              </div>
             </div>
           </div>
         </div>

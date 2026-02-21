@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useLayoutEffect } from 'react';
-import { Plus, Calendar } from 'lucide-react';
+import { Plus, Calendar, Search, Download, Users } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { useAuth } from '../hooks/useAuth';
 import { timeUtils, dateUtils, holidayUtils } from '../utils';
@@ -441,6 +441,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [holidays, setHolidays] = useState({});
   
+  // 직원 검색
+  const [searchTerm, setSearchTerm] = useState('');
+
   // 간단한 로딩 상태 (고정 딜레이)
   const [isReady, setIsReady] = useState(false);
   const [currentTimeInput, setCurrentTimeInput] = useState({
@@ -532,10 +535,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   }, []); // 초기 로드 시에만 실행
 
   // 직원 데이터 캠싱 (불필요한 재계산 방지)
-  const employees = React.useMemo(() => 
+  const allEmployees = React.useMemo(() =>
     getAllEmployeesWithRecords(selectedMonth),
     [getAllEmployeesWithRecords, selectedMonth]
   );
+
+  // 검색 필터 적용
+  const employees = React.useMemo(() => {
+    if (!searchTerm.trim()) return allEmployees;
+    const term = searchTerm.trim().toLowerCase();
+    return allEmployees.filter(emp =>
+      (emp.lastUpdatedName || emp.name || '').toLowerCase().includes(term) ||
+      (emp.department || '').toLowerCase().includes(term)
+    );
+  }, [allEmployees, searchTerm]);
   
   useEffect(() => {
     if (leftTableRef.current) {
@@ -557,7 +570,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     // 처음 방문이거나 다른 달에서 돌아온 경우
     if (lastVisitMonth && lastVisitMonth !== selectedMonth) {
       // 이월 데이터 준비
-      const carryoverList = employees
+      const carryoverList = allEmployees
         .map(emp => ({
           employeeName: emp.lastUpdatedName || emp.name,
           carryoverMinutes: getCarryoverForEmployee(emp.id, selectedMonth)
@@ -586,7 +599,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
 
     // 현재 월로 업데이트
     localStorage.setItem(LAST_VISIT_MONTH_KEY, selectedMonth);
-  }, [selectedMonth, currentYearMonth, customMonth, employees, getCarryoverForEmployee]);
+  }, [selectedMonth, currentYearMonth, customMonth, allEmployees, getCarryoverForEmployee]);
 
   // 헤더 높이 동기화 (setTimeout 방식 - 안정적)
   useLayoutEffect(() => {
@@ -614,7 +627,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }, 50);
 
     return () => clearTimeout(timerId);
-  }, [selectedMonth, holidays, employees.length]);
+  }, [selectedMonth, holidays, allEmployees.length]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -627,6 +640,33 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   const handleBulkApplySuccess = useCallback((message) => {
     showToast(message);
   }, [showToast]);
+
+  // CSV 내보내기
+  const handleExportCSV = useCallback(() => {
+    if (allEmployees.length === 0) return;
+    const headers = ['이름', '부서', '이월', `초과시간(×${multiplier})`, '사용시간', '잔여시간'];
+    const rows = allEmployees.map(emp => {
+      const stats = getMonthlyStats(emp.id, selectedMonth, multiplier);
+      const carryover = getCarryoverForEmployee(emp.id, selectedMonth);
+      const remaining = carryover + stats.remaining;
+      return [
+        emp.lastUpdatedName || emp.name,
+        emp.department || '-',
+        timeUtils.formatTime(Math.abs(carryover)),
+        timeUtils.formatTime(stats.totalOvertime),
+        timeUtils.formatTime(stats.totalVacation),
+        timeUtils.formatTime(Math.abs(remaining))
+      ].map(v => `"${v}"`).join(',');
+    });
+    const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `초과근무_${selectedMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [allEmployees, selectedMonth, multiplier, getMonthlyStats, getCarryoverForEmployee]);
 
   const handleCloseMonthChangeNotification = useCallback(() => {
     setShowMonthChangeNotification(false);
@@ -772,17 +812,28 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
           {!customMonth && (
             <button
               onClick={goToToday}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 text-sm"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 text-sm whitespace-nowrap"
             >
               <Calendar className="w-4 h-4" />
               <span>오늘</span>
+            </button>
+          )}
+          {/* CSV 내보내기 */}
+          {!customMonth && allEmployees.length > 0 && (
+            <button
+              onClick={handleExportCSV}
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center space-x-2 text-sm whitespace-nowrap"
+              title="CSV 내보내기"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">CSV</span>
             </button>
           )}
           {/* 일괄 설정 버튼 - admin/owner만 표시 */}
           {!customMonth && canBulkEdit && (
             <button
               onClick={() => setShowBulkSetting(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 text-sm whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>일괄 설정</span>
@@ -805,7 +856,30 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden" style={{ 
+      {/* 직원 검색 */}
+      {!customMonth && allEmployees.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="이름 또는 부서로 검색..."
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      )}
+
+      {/* 빈 상태 (직원 0명) */}
+      {allEmployees.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 직원이 없습니다</h3>
+          <p className="text-sm text-gray-500">구성원 관리 탭에서 직원을 추가해 주세요.</p>
+        </div>
+      ) : (
+      <>
+      <div className="bg-white rounded-lg shadow overflow-hidden" style={{
         visibility: isReady ? 'visible' : 'hidden',
         minHeight: isReady ? 'auto' : '400px'
       }}>
@@ -1020,7 +1094,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       </div>
 
       {/* 가로 스크롤 컨트롤 바 - overflow-hidden 바깥에 배치 */}
-      <ScrollControlBar 
+      <ScrollControlBar
         scrollState={scrollState}
         onScroll={handleScroll}
         onTrackClick={handleTrackClick}
@@ -1030,6 +1104,8 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         showTooltip={showScrollTooltip}
         onCloseTooltip={handleCloseTooltip}
       />
+      </>
+      )}
 
       <TimeInputPopup
         show={showTimeInputPopup}

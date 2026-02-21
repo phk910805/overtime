@@ -1,6 +1,6 @@
-import React, { useCallback, memo, useMemo } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, FileText } from 'lucide-react';
+import { Clock, FileText, Filter } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { timeUtils, useSortingPaging } from '../utils';
 import { SortableHeader, TableHeader, EmptyState, Pagination } from './CommonUI';
@@ -162,6 +162,10 @@ const RecordHistory = memo(() => {
   const navigate = useNavigate();
   const activeHistoryTab = tab === 'vacation' ? 'vacation' : 'overtime';
   
+  // 날짜 필터
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const overtimeSorting = useSortingPaging(
     { field: 'createdAt', direction: 'desc' }, 
     10, 
@@ -214,17 +218,36 @@ const RecordHistory = memo(() => {
     });
   }, []);
 
+  // 날짜 필터 적용 함수
+  const applyDateFilter = useCallback((records) => {
+    if (!startDate && !endDate) return records;
+    return records.filter(r => {
+      if (startDate && r.date < startDate) return false;
+      if (endDate && r.date > endDate) return false;
+      return true;
+    });
+  }, [startDate, endDate]);
+
   const sortedOvertimeRecords = useMemo(() => {
-    return sortRecords(overtimeRecords, overtimeSorting.sortConfig, employees);
-  }, [overtimeRecords, overtimeSorting.sortConfig, sortRecords, employees]);
+    const sorted = sortRecords(overtimeRecords, overtimeSorting.sortConfig, employees);
+    return applyDateFilter(sorted);
+  }, [overtimeRecords, overtimeSorting.sortConfig, sortRecords, employees, applyDateFilter]);
 
   const sortedVacationRecords = useMemo(() => {
-    return sortRecords(vacationRecords, vacationSorting.sortConfig, employees);
-  }, [vacationRecords, vacationSorting.sortConfig, sortRecords, employees]);
+    const sorted = sortRecords(vacationRecords, vacationSorting.sortConfig, employees);
+    return applyDateFilter(sorted);
+  }, [vacationRecords, vacationSorting.sortConfig, sortRecords, employees, applyDateFilter]);
 
   const handleTabChange = useCallback((newTab) => {
     navigate(`/records/${newTab}`);
   }, [navigate]);
+
+  const handleClearFilter = useCallback(() => {
+    setStartDate('');
+    setEndDate('');
+    overtimeSorting.setCurrentPage(1);
+    vacationSorting.setCurrentPage(1);
+  }, [overtimeSorting, vacationSorting]);
 
   const getTotalPages = useCallback((totalItems, itemsPerPage) => {
     return Math.ceil(totalItems / itemsPerPage);
@@ -261,6 +284,32 @@ const RecordHistory = memo(() => {
             휴가전환 기록 ({sortedVacationRecords.length})
           </button>
         </nav>
+      </div>
+
+      {/* 날짜 필터 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Filter className="w-4 h-4 text-gray-400" />
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => { setStartDate(e.target.value); overtimeSorting.setCurrentPage(1); vacationSorting.setCurrentPage(1); }}
+          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="text-gray-400 text-sm">~</span>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => { setEndDate(e.target.value); overtimeSorting.setCurrentPage(1); vacationSorting.setCurrentPage(1); }}
+          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {(startDate || endDate) && (
+          <button
+            onClick={handleClearFilter}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            초기화
+          </button>
+        )}
       </div>
 
       {/* 초과근무 및 휴가전환 기록 탭 */}

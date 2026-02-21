@@ -92,12 +92,24 @@ const NotificationBell = memo(() => {
     if (!user) return;
     try {
       const dataService = getDataService();
-      const [notifs, count] = await Promise.all([
+      const [notifs] = await Promise.all([
         dataService.getNotifications(user.id, { limit: 20 }),
         dataService.getUnreadNotificationCount(user.id)
       ]);
-      setNotifications(notifs || []);
-      setUnreadCount(count || 0);
+      // 알림 설정에 따라 필터링
+      let filteredNotifs = notifs || [];
+      try {
+        const prefStr = localStorage.getItem('notification_preferences');
+        if (prefStr) {
+          const prefs = JSON.parse(prefStr);
+          filteredNotifs = filteredNotifs.filter(n => prefs[n.type] !== false);
+        }
+      } catch {
+        // ignore
+      }
+      setNotifications(filteredNotifs);
+      const filteredUnread = filteredNotifs.filter(n => !n.isRead).length;
+      setUnreadCount(filteredUnread);
     } catch (e) {
       // 알림 로드 실패는 무시
     }
