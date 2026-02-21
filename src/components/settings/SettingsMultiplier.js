@@ -5,9 +5,10 @@ import { useAuth } from '../../hooks/useAuth';
 import { Toast } from '../CommonUI';
 
 const SettingsMultiplier = memo(() => {
-  const { multiplier: contextMultiplier, updateSettings } = useOvertimeContext();
+  const { multiplier: contextMultiplier, approvalMode: contextApprovalMode, updateSettings } = useOvertimeContext();
   const { canEditSettings } = useAuth();
   const [multiplier, setMultiplier] = useState('1.0');
+  const [localApprovalMode, setLocalApprovalMode] = useState('manual');
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -22,6 +23,10 @@ const SettingsMultiplier = memo(() => {
     setMultiplier(contextMultiplier?.toString() || '1.0');
     setError('');
   }, [contextMultiplier]);
+
+  useEffect(() => {
+    setLocalApprovalMode(contextApprovalMode || 'manual');
+  }, [contextApprovalMode]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -56,16 +61,17 @@ const SettingsMultiplier = memo(() => {
 
     try {
       const multiplierValue = parseFloat(multiplier);
-      await updateSettings({ multiplier: multiplierValue });
+      await updateSettings({ multiplier: multiplierValue, approvalMode: localApprovalMode });
       showToast('설정이 저장되었습니다');
     } catch (err) {
       console.error('설정 저장 실패:', err);
       showToast('설정 저장에 실패했습니다', 'error');
     }
-  }, [multiplier, validateMultiplier, updateSettings, showToast]);
+  }, [multiplier, localApprovalMode, validateMultiplier, updateSettings, showToast]);
 
   const handleReset = useCallback(() => {
     setMultiplier('1.0');
+    setLocalApprovalMode('manual');
     setError('');
   }, []);
 
@@ -151,6 +157,73 @@ const SettingsMultiplier = memo(() => {
               <li>예: 초과근무 10시간 × 1.5배 = 잔여시간 15시간</li>
               <li>휴가사용 시간에는 배수가 적용되지 않습니다</li>
               <li>잔여시간 = (초과시간 × 배수) - 사용시간</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* 구분선 */}
+        <div className="border-t border-gray-200 my-8" />
+
+        {/* 승인 모드 설정 */}
+        <h3 className="text-lg font-semibold text-gray-900 mb-6">승인 모드</h3>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label
+              className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                localApprovalMode === 'manual'
+                  ? 'border-blue-300 bg-blue-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+              } ${!canEditSettings ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <input
+                type="radio"
+                name="approvalMode"
+                value="manual"
+                checked={localApprovalMode === 'manual'}
+                onChange={() => canEditSettings && setLocalApprovalMode('manual')}
+                disabled={!canEditSettings}
+                className="mt-0.5 mr-3"
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">수동 승인</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  구성원이 제출한 시간을 관리자가 직접 확인 후 승인/반려합니다
+                </div>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                localApprovalMode === 'auto'
+                  ? 'border-blue-300 bg-blue-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+              } ${!canEditSettings ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <input
+                type="radio"
+                name="approvalMode"
+                value="auto"
+                checked={localApprovalMode === 'auto'}
+                onChange={() => canEditSettings && setLocalApprovalMode('auto')}
+                disabled={!canEditSettings}
+                className="mt-0.5 mr-3"
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">자동 승인</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  구성원이 제출한 시간이 즉시 승인됩니다. 별도의 관리자 확인이 필요 없습니다
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-blue-800 mb-2">구성원 시간 제출이란?</p>
+            <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
+              <li>초대 링크로 참여한 구성원(편집 권한)은 "내 근무" 탭에서 직접 시간을 제출할 수 있습니다</li>
+              <li>자동 승인을 활성화하면, 제출 즉시 대시보드에 반영됩니다</li>
+              <li>승인 관리 탭에서 모든 제출 내역을 확인할 수 있습니다</li>
             </ul>
           </div>
 

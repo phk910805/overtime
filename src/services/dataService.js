@@ -670,19 +670,20 @@ export class DataService {
   // ========== 시간 기록 승인 ==========
 
   /**
-   * 구성원 본인 시간 제출 (pending 상태로 저장)
+   * 구성원 본인 시간 제출
    * @param {string} type - 'overtime' | 'vacation'
    * @param {number} employeeId - 직원 ID
    * @param {string} date - 날짜 (YYYY-MM-DD)
    * @param {number} totalMinutes - 시간(분)
    * @param {string} submitReason - 제출 사유
+   * @param {string} status - 'pending' | 'approved' (기본: 'pending')
    */
-  async submitOwnTimeRecord(type, employeeId, date, totalMinutes, submitReason) {
+  async submitOwnTimeRecord(type, employeeId, date, totalMinutes, submitReason, status = 'pending') {
     const result = await this._getAdapter().saveTimeRecord(type, {
       employeeId,
       date,
       totalMinutes,
-      status: 'pending',
+      status,
       submitReason: submitReason || null
     });
     this._invalidateCache('allRecords');

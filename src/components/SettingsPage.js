@@ -22,7 +22,7 @@ const ALL_MENU_ITEMS = [
   { id: 'profile', label: '프로필 편집', icon: User, minRole: 'employee' },
   { id: 'notifications', label: '알림 설정', icon: Bell, minRole: 'employee' },
   { id: 'company', label: '회사 정보', icon: Building2, minRole: 'employee' },
-  { id: 'multiplier', label: '배수 설정', icon: SlidersHorizontal, minRole: 'admin' },
+  { id: 'multiplier', label: '계산/승인 설정', icon: SlidersHorizontal, minRole: 'admin' },
   { id: 'invite', label: '팀원 초대', icon: UserPlus, minRole: 'admin' },
   { id: 'plan', label: '플랜/결제', icon: CreditCard, minRole: 'owner' },
 ];

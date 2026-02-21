@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { ClipboardCheck, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ClipboardCheck, Clock, CheckCircle, XCircle, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOvertimeContext } from '../context';
 import { useAuth } from '../hooks/useAuth';
 import { Toast, Modal, Pagination } from './CommonUI';
@@ -116,8 +117,9 @@ const ReviewModal = memo(({ record, action, onConfirm, onClose, isLoading }) => 
 });
 
 const ApprovalManagement = memo(() => {
-  const { overtimeRecords, vacationRecords, reviewTimeRecord } = useOvertimeContext();
+  const { overtimeRecords, vacationRecords, reviewTimeRecord, approvalMode } = useOvertimeContext();
   const { isAdmin, user } = useAuth();
+  const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('pending');
   const [currentPage, setCurrentPage] = useState(1);
@@ -238,6 +240,41 @@ const ApprovalManagement = memo(() => {
         <ClipboardCheck className="w-6 h-6 text-blue-600" />
         <h2 className="text-xl font-bold text-gray-900">승인 관리</h2>
       </div>
+
+      {/* Approval mode banner */}
+      {approvalMode === 'auto' ? (
+        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <span className="text-sm text-green-800">
+              자동 승인이 활성화되어 있습니다. 구성원이 제출한 시간이 즉시 승인됩니다.
+            </span>
+          </div>
+          <button
+            onClick={() => navigate('/settings/multiplier')}
+            className="flex items-center space-x-1 text-sm text-green-700 hover:text-green-900 font-medium flex-shrink-0 ml-3"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>설정 변경</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <div className="flex items-center space-x-2">
+            <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <span className="text-sm text-blue-800">
+              구성원이 제출한 시간을 자동으로 승인하도록 설정할 수 있습니다.
+            </span>
+          </div>
+          <button
+            onClick={() => navigate('/settings/multiplier')}
+            className="flex items-center space-x-1 text-sm text-blue-700 hover:text-blue-900 font-medium flex-shrink-0 ml-3"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>설정 변경</span>
+          </button>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

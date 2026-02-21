@@ -401,8 +401,33 @@ const useOvertimeData = () => {
     }
   }, [dataService]);
 
+  // Settings state (submitOwnTimeRecord에서 approvalMode 참조하므로 먼저 선언)
+  const [multiplier, setMultiplier] = useState(1.0);
+  const [approvalMode, setApprovalMode] = useState('manual');
+  const [employeeInputScope, setEmployeeInputScope] = useState('self');
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await dataService.getSettings();
+        setMultiplier(settings.multiplier || 1.0);
+        setApprovalMode(settings.approvalMode || 'manual');
+        setEmployeeInputScope(settings.employeeInputScope || 'self');
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load settings:', error);
+        }
+      }
+    };
+
+    if (!isLoading) {
+      loadSettings();
+    }
+  }, [dataService, isLoading]);
+
   const submitOwnTimeRecord = useCallback(async (type, employeeId, date, totalMinutes, submitReason) => {
-    const newRecord = await dataService.submitOwnTimeRecord(type, employeeId, date, totalMinutes, submitReason);
+    const status = approvalMode === 'auto' ? 'approved' : 'pending';
+    const newRecord = await dataService.submitOwnTimeRecord(type, employeeId, date, totalMinutes, submitReason, status);
     if (newRecord) {
       if (type === 'overtime') {
         setOvertimeRecords(prev => [...prev, newRecord]);
@@ -411,7 +436,7 @@ const useOvertimeData = () => {
       }
     }
     return newRecord;
-  }, [dataService]);
+  }, [dataService, approvalMode]);
 
   const reviewTimeRecord = useCallback(async (recordId, type, status, reviewNote) => {
     const updatedRecord = await dataService.reviewTimeRecord(recordId, type, status, reviewNote);
@@ -516,28 +541,6 @@ const useOvertimeData = () => {
     }
   }, [updateOvertimeRecord, updateVacationRecord]);
 
-  const [multiplier, setMultiplier] = useState(1.0);
-  const [approvalMode, setApprovalMode] = useState('manual');
-  const [employeeInputScope, setEmployeeInputScope] = useState('self');
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await dataService.getSettings();
-        setMultiplier(settings.multiplier || 1.0);
-        setApprovalMode(settings.approvalMode || 'manual');
-        setEmployeeInputScope(settings.employeeInputScope || 'self');
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load settings:', error);
-        }
-      }
-    };
-
-    if (!isLoading) {
-      loadSettings();
-    }
-  }, [dataService, isLoading]);
 
   const updateSettings = useCallback(async (newSettings) => {
     try {

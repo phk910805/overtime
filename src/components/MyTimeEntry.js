@@ -27,7 +27,7 @@ const StatusBadge = memo(({ status }) => {
 const ITEMS_PER_PAGE = 10;
 
 const MyTimeEntry = memo(() => {
-  const { overtimeRecords, vacationRecords, submitOwnTimeRecord, selectedMonth } = useOvertimeContext();
+  const { overtimeRecords, vacationRecords, submitOwnTimeRecord, selectedMonth, approvalMode } = useOvertimeContext();
   const { user, canSubmitOwnTime } = useAuth();
 
   const [linkedEmployee, setLinkedEmployee] = useState(null);
@@ -176,9 +176,15 @@ const MyTimeEntry = memo(() => {
     setIsSubmitting(true);
     try {
       await submitOwnTimeRecord(type, linkedEmployee.id, date, validation.totalMinutes, reason);
-      showToast('시간이 제출되었습니다. 관리자 승인을 기다려주세요.');
 
-      // 회사 owner에게 제출 알림 (employee는 getCompanyMembers로 다른 멤버 조회 불가)
+      const isAutoApproved = approvalMode === 'auto';
+      showToast(
+        isAutoApproved
+          ? '시간이 자동 승인되었습니다.'
+          : '시간이 제출되었습니다. 관리자 승인을 기다려주세요.'
+      );
+
+      // 회사 owner에게 알림
       try {
         const dataService = getDataService();
         const company = await dataService.getMyCompany();
@@ -190,9 +196,11 @@ const MyTimeEntry = memo(() => {
           await dataService.createNotification({
             recipientId: company.ownerId,
             senderId: user.id,
-            type: 'time_submitted',
-            title: '초과근무 시간 제출',
-            message: `${linkedEmployee.name}님이 ${date} ${typeLabel} ${timeStr}을 제출했습니다.`,
+            type: isAutoApproved ? 'time_approved' : 'time_submitted',
+            title: isAutoApproved ? '초과근무 시간 자동 승인' : '초과근무 시간 제출',
+            message: isAutoApproved
+              ? `${linkedEmployee.name}님이 ${date} ${typeLabel} ${timeStr}을 제출하여 자동 승인되었습니다.`
+              : `${linkedEmployee.name}님이 ${date} ${typeLabel} ${timeStr}을 제출했습니다.`,
             relatedRecordType: type,
           });
           window.dispatchEvent(new Event('notification-created'));
