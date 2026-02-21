@@ -20,7 +20,10 @@ export function useSubscription() {
   const isTrialing = computedStatus === 'trialing';
   const isFree = computedStatus === 'free';
   const isPaid = computedStatus === 'active';
-  const hasFreeLimitations = isFree;
+  const hasFreeLimitations = useMemo(
+    () => subService.hasFreeLimitations(subscription),
+    [subService, subscription]
+  );
 
   const remainingDays = useMemo(
     () => subService.getRemainingTrialDays(subscription),

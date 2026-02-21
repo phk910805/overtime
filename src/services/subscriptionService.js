@@ -132,6 +132,7 @@ export class SubscriptionService {
    * trialing 중에는 제한 없음, free일 때만 제한
    */
   hasFreeLimitations(sub) {
+    if (!sub) return false; // 구독 레코드 없으면 제한 안 함
     return this.isFree(sub);
   }
 
