@@ -9,6 +9,7 @@ import React, { useState, useCallback, useMemo, useRef, memo } from 'react';
 import { X, Plus, ChevronRight, ChevronLeft, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useOvertimeContext } from '../context';
 import { getDataService } from '../services/dataService';
+import { supabase } from '../lib/supabase';
 import { dateUtils } from '../utils';
 
 // ========== 헬퍼 ==========
@@ -20,8 +21,13 @@ const createEmptyRow = () => ({
   id: generateRowId(),
   name: '',
   department: '',
-  hireDate: ''
+  hireDate: '',
+  email: '',
+  birthDate: '',
+  notes: ''
 });
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * 다양한 날짜 형식을 YYYY-MM-DD로 정규화
@@ -156,7 +162,7 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
     const lines = pasteData.split(/\r?\n/).filter(line => line.trim());
     if (lines.length === 0) return;
 
-    const fields = ['name', 'department', 'hireDate'];
+    const fields = ['name', 'department', 'hireDate', 'email', 'birthDate', 'notes'];
     const startFieldIdx = fields.indexOf(startField);
 
     setRows(prev => {
@@ -178,7 +184,7 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
           const fieldIdx = startFieldIdx + cellIdx;
           if (fieldIdx < fields.length) {
             const field = fields[fieldIdx];
-            if (field === 'hireDate') {
+            if (field === 'hireDate' || field === 'birthDate') {
               row[field] = normalizeDate(cell);
             } else {
               row[field] = cell.trim();
@@ -222,6 +228,7 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
     const activeNames = new Set(employees.map(e => e.name.toLowerCase()));
     const newErrors = {};
     const namesInList = {};
+    const emailsInList = {};
     let hasBlockingError = false;
 
     nonEmptyRows.forEach((row) => {
@@ -277,6 +284,23 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
         hasBlockingError = true;
       }
 
+      // 이메일 검증 (입력된 경우에만)
+      const trimEmail = (row.email || '').trim();
+      if (trimEmail) {
+        if (!EMAIL_REGEX.test(trimEmail)) {
+          errs.email = '이메일 형식이 올바르지 않습니다';
+          hasBlockingError = true;
+        } else if (emailsInList[trimEmail.toLowerCase()]) {
+          errs.email = '목록 내 이메일이 중복됩니다';
+          hasBlockingError = true;
+          const firstRowId = emailsInList[trimEmail.toLowerCase()];
+          if (!newErrors[firstRowId]) newErrors[firstRowId] = {};
+          newErrors[firstRowId].email = '목록 내 이메일이 중복됩니다';
+        } else {
+          emailsInList[trimEmail.toLowerCase()] = row.id;
+        }
+      }
+
       if (Object.keys(errs).length > 0) {
         newErrors[row.id] = { ...newErrors[row.id], ...errs };
       }
@@ -303,13 +327,14 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
     setBalances(prev => ({ ...prev, [rowId]: cleaned }));
   }, []);
 
-  // 완료 처리 (직원 생성 + 이월 레코드)
+  // 완료 처리 (직원 생성 + 이월 레코드 + 초대 이메일)
   const handleComplete = useCallback(async (skipBalance = false) => {
     setIsProcessing(true);
     setProgress({ current: 0, total: validRows.length });
 
     const successList = [];
     const failedList = [];
+    const emailTargets = []; // 이메일 발송 대상
 
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i];
@@ -318,7 +343,9 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
         const newEmployee = await addEmployee({
           name: row.name.trim(),
           department: row.department.trim(),
-          hireDate: row.hireDate
+          hireDate: row.hireDate,
+          birthDate: row.birthDate || null,
+          notes: row.notes || null
         });
 
         // 2. 잔여시간 설정 (건너뛰기가 아닌 경우)
@@ -338,6 +365,12 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
         }
 
         successList.push(row.name.trim());
+
+        // 이메일 대상 수집
+        const trimEmail = (row.email || '').trim();
+        if (trimEmail) {
+          emailTargets.push({ email: trimEmail, employeeName: row.name.trim() });
+        }
       } catch (error) {
         failedList.push({ name: row.name.trim(), error: error.message });
       }
@@ -345,8 +378,45 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
       setProgress({ current: i + 1, total: validRows.length });
     }
 
-    setResults({ success: successList, failed: failedList });
+    // 3. 초대 이메일 발송 (이메일 입력된 행이 있는 경우)
+    let emailResults = null;
+    if (emailTargets.length > 0 && supabase) {
+      try {
+        const dataService = getDataService();
+        const [company, inviteData] = await Promise.all([
+          dataService.getMyCompany(),
+          dataService.createInviteLink()
+        ]);
+        const companyName = company?.companyName || '회사';
+        const inviteUrl = `${window.location.origin}/invite/${inviteData.token}`;
+
+        const { data, error } = await supabase.functions.invoke('send-invite-email', {
+          body: { emails: emailTargets, inviteUrl, companyName }
+        });
+
+        if (error) {
+          emailResults = {
+            success: [],
+            failed: emailTargets.map(t => ({ email: t.email, error: error.message || '발송 실패' }))
+          };
+        } else {
+          const results = data?.results || [];
+          emailResults = {
+            success: results.filter(r => r.success).map(r => r.email),
+            failed: results.filter(r => !r.success).map(r => ({ email: r.email, error: r.error || '발송 실패' }))
+          };
+        }
+      } catch (err) {
+        emailResults = {
+          success: [],
+          failed: emailTargets.map(t => ({ email: t.email, error: err.message || '발송 실패' }))
+        };
+      }
+    }
+
+    setResults({ success: successList, failed: failedList, emailResults });
     setIsProcessing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validRows, balances, selectedMonth, addEmployee, createCarryoverRecord]);
 
   // 결과 확인 후 닫기
@@ -373,24 +443,29 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
 
   // 결과 화면
   if (results) {
+    const hasEmailResults = results.emailResults !== null && results.emailResults !== undefined;
+    const allSuccess = results.failed.length === 0 &&
+      (!hasEmailResults || results.emailResults.failed.length === 0);
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40" onClick={handleResultClose}>
         <div className="bg-white rounded-lg w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
           <div className="text-center mb-4">
-            {results.failed.length === 0 ? (
+            {allSuccess ? (
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
             ) : (
               <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-2" />
             )}
             <h3 className="text-lg font-semibold text-gray-900">
-              {results.failed.length === 0 ? '등록 완료' : '부분 완료'}
+              {allSuccess ? '등록 완료' : '부분 완료'}
             </h3>
           </div>
 
+          {/* 직원 등록 결과 */}
           {results.success.length > 0 && (
             <div className="mb-3">
               <p className="text-sm font-medium text-green-700 mb-1">
-                성공 ({results.success.length}명)
+                등록 성공 ({results.success.length}명)
               </p>
               <p className="text-sm text-gray-600">
                 {results.success.join(', ')}
@@ -401,7 +476,7 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
           {results.failed.length > 0 && (
             <div className="mb-3">
               <p className="text-sm font-medium text-red-700 mb-1">
-                실패 ({results.failed.length}명)
+                등록 실패 ({results.failed.length}명)
               </p>
               <div className="space-y-1">
                 {results.failed.map((f, i) => (
@@ -411,6 +486,40 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* 초대 이메일 발송 결과 */}
+          {hasEmailResults && (
+            <>
+              <div className="border-t border-gray-200 my-3" />
+              <p className="text-xs font-medium text-gray-500 mb-2">초대 메일 발송</p>
+
+              {results.emailResults.success.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-green-700 mb-1">
+                    발송 성공 ({results.emailResults.success.length}건)
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {results.emailResults.success.join(', ')}
+                  </p>
+                </div>
+              )}
+
+              {results.emailResults.failed.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-red-700 mb-1">
+                    발송 실패 ({results.emailResults.failed.length}건)
+                  </p>
+                  <div className="space-y-1">
+                    {results.emailResults.failed.map((f, i) => (
+                      <p key={i} className="text-sm text-red-600">
+                        {f.email}: {f.error}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <button
@@ -450,7 +559,7 @@ const BulkEmployeeModal = memo(({ show, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40" onClick={onClose}>
       <div
-        className="bg-white rounded-lg w-full max-w-2xl max-h-[85vh] flex flex-col"
+        className="bg-white rounded-lg w-full max-w-4xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -564,19 +673,28 @@ const Step1Table = memo(({ rows, rowErrors, onUpdateRow, onAddRow, onRemoveRow, 
       </p>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" style={{ minWidth: '700px' }}>
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 w-[30%]">
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '18%' }}>
                 이름 <span className="text-red-500">*</span>
               </th>
-              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 w-[30%]">
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '15%' }}>
                 부서 <span className="text-red-500">*</span>
               </th>
-              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 w-[30%]">
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '15%' }}>
                 입사일 <span className="text-red-500">*</span>
               </th>
-              <th className="w-[10%]" />
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '20%' }}>
+                이메일
+              </th>
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '13%' }}>
+                생년월일
+              </th>
+              <th className="text-left py-2 px-2 text-xs font-medium text-gray-500" style={{ width: '15%' }}>
+                메모
+              </th>
+              <th style={{ width: '4%' }} />
             </tr>
           </thead>
           <tbody>
@@ -640,6 +758,47 @@ const Step1Table = memo(({ rows, rowErrors, onUpdateRow, onAddRow, onRemoveRow, 
                     {errs.hireDate && (
                       <p className="text-xs mt-0.5 text-red-600">{errs.hireDate}</p>
                     )}
+                  </td>
+                  <td className="py-2 px-2">
+                    <input
+                      type="email"
+                      value={row.email}
+                      onChange={(e) => onUpdateRow(row.id, 'email', e.target.value)}
+                      onPaste={(e) => onPaste(e, row.id, 'email')}
+                      className={`w-full px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                        errs.email ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="email@example.com"
+                    />
+                    {errs.email && (
+                      <p className="text-xs mt-0.5 text-red-600">{errs.email}</p>
+                    )}
+                  </td>
+                  <td className="py-2 px-2">
+                    <input
+                      type="date"
+                      value={row.birthDate}
+                      onChange={(e) => onUpdateRow(row.id, 'birthDate', e.target.value)}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData('text');
+                        const normalized = normalizeDate(pasted);
+                        if (normalized) {
+                          e.preventDefault();
+                          onUpdateRow(row.id, 'birthDate', normalized);
+                        }
+                      }}
+                      className={`w-full px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 border-gray-300 ${row.birthDate ? 'has-value' : ''}`}
+                    />
+                  </td>
+                  <td className="py-2 px-2">
+                    <input
+                      type="text"
+                      value={row.notes}
+                      onChange={(e) => onUpdateRow(row.id, 'notes', e.target.value)}
+                      onPaste={(e) => onPaste(e, row.id, 'notes')}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="메모"
+                    />
                   </td>
                   <td className="py-2 px-2 text-center">
                     {rows.length > 1 && (
