@@ -453,7 +453,7 @@ const EmployeeManagement = memo(() => {
       </div>
 
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8" aria-label="Tabs">
+        <nav className="flex space-x-4 sm:space-x-8" aria-label="Tabs">
           <button
             onClick={() => handleEmployeeTabChange('list')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -510,7 +510,7 @@ const EmployeeManagement = memo(() => {
         {activeEmployeeTab === 'list' && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+              <table className="min-w-[700px] divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
                 <colgroup>
                   <col style={{width: '15%'}} />
                   <col style={{width: '15%'}} />
@@ -556,12 +556,12 @@ const EmployeeManagement = memo(() => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedEmployees.map((employee) => (
                     <tr key={employee.id}>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-500">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {new Date(employee.createdAt).toLocaleDateString('ko-KR')}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {employee.name}
                           {employee.linkedUserId && (
@@ -569,22 +569,22 @@ const EmployeeManagement = memo(() => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-500">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {employee.department || '미지정'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-500">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ko-KR') : '-'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500" title={employee.notes || ''}>
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-500" title={employee.notes || ''}>
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {employee.notes || '-'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {canEditEmployees ? (
                           <>
                             <button
@@ -777,7 +777,7 @@ const EmployeeManagement = memo(() => {
         {activeEmployeeTab === 'history' && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+              <table className="min-w-[600px] divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
                 <colgroup>
                   <col style={{width: '20%'}} />
                   <col style={{width: '10%'}} />
@@ -813,12 +813,12 @@ const EmployeeManagement = memo(() => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedHistoryRecords.map((record) => (
                     <tr key={record.id}>
-                      <td className="px-6 py-4 text-xs text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 text-xs text-gray-500">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {new Date(record.createdAt).toLocaleString('ko-KR')}
                         </div>
                       </td>
-                      <td className={`px-6 py-4 text-sm font-medium ${
+                      <td className={`px-3 sm:px-6 py-4 text-sm font-medium ${
                         record.action === '생성' ? 'text-green-600' :
                         record.action === '수정' ? 'text-orange-600' : 'text-red-600'
                       }`}>
@@ -826,12 +826,12 @@ const EmployeeManagement = memo(() => {
                           {record.action}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {record.employeeName}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-500">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
                           {record.details}
                         </div>

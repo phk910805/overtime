@@ -240,7 +240,7 @@ const ApprovalManagement = memo(() => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-1">
             <Clock className="w-4 h-4 text-yellow-600" />
@@ -266,7 +266,7 @@ const ApprovalManagement = memo(() => {
 
       {/* Filter tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex space-x-6">
+        <div className="flex space-x-3 sm:space-x-6">
           {FILTER_TABS.map(tab => (
             <button
               key={tab.key}
@@ -291,22 +291,22 @@ const ApprovalManagement = memo(() => {
       {/* Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-[700px] divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">직원</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 사유</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">직원</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 사유</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-3 sm:px-4 py-12 text-center">
                     {statusFilter === 'pending' ? (
                       <div>
                         <CheckCircle className="w-10 h-10 text-green-300 mx-auto mb-3" />
@@ -324,17 +324,17 @@ const ApprovalManagement = memo(() => {
               ) : (
                 paginatedRecords.map(record => (
                   <tr key={`${record.recordType}-${record.id}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-4 py-3 text-sm font-medium text-gray-900">
                       {record.employeeName || '알 수 없음'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-gray-600">{record.date}</td>
+                    <td className="px-3 sm:px-4 py-3 text-sm text-gray-600">
                       {record.recordType === 'overtime' ? '초과근무' : '휴가'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-gray-600">
                       {timeUtils.formatTime(record.totalMinutes)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px]">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 max-w-[200px]">
                       <div style={{
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -345,7 +345,7 @@ const ApprovalManagement = memo(() => {
                         {record.submitReason || '-'}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 sm:px-4 py-3">
                       <StatusBadge status={record.status} />
                       {record.reviewNote && (
                         <p className="mt-1 text-xs text-gray-500 max-w-[150px] truncate" title={record.reviewNote}>
@@ -353,7 +353,7 @@ const ApprovalManagement = memo(() => {
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 sm:px-4 py-3 text-right">
                       {record.status === 'pending' ? (
                         <div className="flex justify-end space-x-2">
                           <button

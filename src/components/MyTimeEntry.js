@@ -248,7 +248,7 @@ const MyTimeEntry = memo(() => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500 mb-1">승인된 초과근무</div>
           <div className="text-xl font-bold text-blue-600">{timeUtils.formatTime(summary.approvedOvertime)}</div>
@@ -360,34 +360,34 @@ const MyTimeEntry = memo(() => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-[600px] divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사유</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">리뷰노트</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사유</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">리뷰노트</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedRecords.map((record) => (
                     <tr key={`${record.recordType}-${record.id}`}>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date}</td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                         {record.recordType === 'overtime' ? '초과근무' : '휴가전환'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                         {timeUtils.formatTime(record.totalMinutes)}
                       </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 text-sm whitespace-nowrap">
                         <StatusBadge status={record.status || 'approved'} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                         {record.submit_reason || record.submitReason || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                         {record.review_note || record.reviewNote || '-'}
                       </td>
                     </tr>

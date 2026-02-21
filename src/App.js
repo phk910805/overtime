@@ -72,8 +72,8 @@ const OvertimeManagementApp = memo(() => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <Clock className="w-8 h-8 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">초과 근무시간 관리!</h1>
+              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+              <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">초과 근무시간 관리!</h1>
             </div>
             <div className="flex items-center space-x-2">
               {user && <NotificationBell />}
@@ -103,73 +103,73 @@ const OvertimeManagementApp = memo(() => {
 
       <nav className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-4 sm:space-x-8 overflow-x-auto" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'}}>
             <button
               onClick={() => handleTabChange('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'dashboard'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <BarChart3 className="w-4 h-4 inline-block mr-2" />
-              대시보드
+              <BarChart3 className="w-4 h-4 inline-block sm:mr-2" />
+              <span className="hidden sm:inline">대시보드</span>
             </button>
             <button
               onClick={() => handleTabChange('records')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'records'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <Calendar className="w-4 h-4 inline-block mr-2" />
-              히스토리
+              <Calendar className="w-4 h-4 inline-block sm:mr-2" />
+              <span className="hidden sm:inline">히스토리</span>
             </button>
             {isAdmin && (
               <button
                 onClick={() => handleTabChange('approvals')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'approvals'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <ClipboardCheck className="w-4 h-4 inline-block mr-2" />
-                승인 관리
+                <ClipboardCheck className="w-4 h-4 inline-block sm:mr-2" />
+                <span className="hidden sm:inline">승인 관리</span>
               </button>
             )}
             {canSubmitOwnTime && (
               <button
                 onClick={() => handleTabChange('my-time')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'my-time'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Edit3 className="w-4 h-4 inline-block mr-2" />
-                내 근무
+                <Edit3 className="w-4 h-4 inline-block sm:mr-2" />
+                <span className="hidden sm:inline">내 근무</span>
               </button>
             )}
             {canManageEmployees && (
               <button
                 onClick={() => handleTabChange('employees')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'employees'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Users className="w-4 h-4 inline-block mr-2" />
-                구성원 관리
+                <Users className="w-4 h-4 inline-block sm:mr-2" />
+                <span className="hidden sm:inline">구성원 관리</span>
               </button>
             )}
           </div>
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
         {activeTab === 'dashboard' && (
           <Dashboard />
         )}

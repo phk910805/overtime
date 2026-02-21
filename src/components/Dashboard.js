@@ -56,9 +56,9 @@ const HeaderCellWithTooltip = memo(({ children, tooltipText, alignment = "start"
   const handleMouseEnter = () => {
     if (iconRef.current) {
       const rect = iconRef.current.getBoundingClientRect();
-      setTooltipPos({ 
-        x: rect.left + rect.width / 2, 
-        y: rect.top 
+      setTooltipPos({
+        x: Math.max(60, Math.min(rect.left + rect.width / 2, window.innerWidth - 60)),
+        y: rect.top
       });
       setShowTooltip(true);
     }
@@ -69,7 +69,7 @@ const HeaderCellWithTooltip = memo(({ children, tooltipText, alignment = "start"
       <div className="flex-shrink-0">
         <div className="flex items-center">
           <span>{children}</span>
-          <span 
+          <span
             ref={iconRef}
             className="cursor-help text-gray-400 hover:text-gray-600"
             style={{ fontSize: '14px' }}
@@ -80,7 +80,7 @@ const HeaderCellWithTooltip = memo(({ children, tooltipText, alignment = "start"
           </span>
         </div>
         {showTooltip && (
-          <span 
+          <span
             style={{
               position: 'fixed',
               left: `${tooltipPos.x}px`,
@@ -109,16 +109,16 @@ const DateHeaderCell = memo(({ children, holidayName = '', birthdayEmployees = [
   const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
   const iconRef = React.useRef(null);
   const hasBirthday = birthdayEmployees.length > 0;
-  const birthdayTooltip = hasBirthday 
-    ? birthdayEmployees.map(emp => `${emp}님`).join(', ') + ' 생일' 
+  const birthdayTooltip = hasBirthday
+    ? birthdayEmployees.map(emp => `${emp}님`).join(', ') + ' 생일'
     : '';
 
   const handleMouseEnter = () => {
     if (iconRef.current) {
       const rect = iconRef.current.getBoundingClientRect();
-      setTooltipPos({ 
-        x: rect.left + rect.width / 2, 
-        y: rect.top 
+      setTooltipPos({
+        x: Math.max(60, Math.min(rect.left + rect.width / 2, window.innerWidth - 60)),
+        y: rect.top
       });
       setShowTooltip(true);
     }
@@ -453,6 +453,17 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     type: 'overtime'
   });
   
+  // 모바일 감지 (640px 이하)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 가로 스크롤 상태 및 ref
   const scrollContainerRef = useRef(null);
   const leftTableRef = useRef(null);
@@ -555,7 +566,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       // 지연 없이 즉시 재측정
       setLeftTableWidth(leftTableRef.current.offsetWidth);
     }
-  }, [employees.length]);
+  }, [employees.length, isMobile]);
 
   // 월 변경 감지 및 알림
   useEffect(() => {
@@ -627,7 +638,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
     }, 50);
 
     return () => clearTimeout(timerId);
-  }, [selectedMonth, holidays, allEmployees.length]);
+  }, [selectedMonth, holidays, allEmployees.length, isMobile]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -792,7 +803,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
         duration={3000}
       />
       
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         {/* 월 선택 네비게이션 */}
         {!customMonth && (
           <MonthSelector
@@ -807,7 +818,7 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
             {selectedMonth} 월별 현황
           </h2>
         )}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {/* 오늘로 가기 버튼 - 항상 표시 */}
           {!customMonth && (
             <button
@@ -885,11 +896,11 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
       }}>
         <div className="flex">
           <div ref={leftTableRef} className="flex-shrink-0 border-r-2 border-gray-300">
-            <table className="divide-y divide-gray-300" style={{tableLayout: 'fixed', minWidth: '560px'}}>
+            <table className="divide-y divide-gray-300" style={{tableLayout: 'fixed', minWidth: isMobile ? '340px' : '560px'}}>
               <colgroup>
-                <col style={{width: '112px'}} />
-                <col style={{width: '112px'}} />
-                <col style={{width: '72px'}} />
+                <col style={{width: isMobile ? '100px' : '112px'}} />
+                {!isMobile && <col style={{width: '112px'}} />}
+                {!isMobile && <col style={{width: '72px'}} />}
                 <col />
                 <col style={{width: '72px'}} />
                 <col style={{width: '72px'}} />
@@ -902,16 +913,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                       이름
                     </HeaderCell>
                   </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
-                    <HeaderCell>
-                      부서
-                    </HeaderCell>
-                  </th>
-                  <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
-                    <HeaderCell>
-                      이월
-                    </HeaderCell>
-                  </th>
+                  {!isMobile && (
+                    <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
+                      <HeaderCell>
+                        부서
+                      </HeaderCell>
+                    </th>
+                  )}
+                  {!isMobile && (
+                    <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
+                      <HeaderCell>
+                        이월
+                      </HeaderCell>
+                    </th>
+                  )}
                   <th className={STYLES.LEFT_HEADER_CLASSES} style={{padding: STYLES.HEADER_PADDING, minHeight: '43px', verticalAlign: 'top'}}>
                     <HeaderCell>
                       초과시간{multiplier !== 1.0 ? `(×${multiplier})` : ''}
@@ -953,16 +968,20 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
                           )}
                         </div>
                       </td>
-                      <td className={`px-2 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`} title={employee.department || '-'}>
-                        <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
-                          {employee.department || '-'}
-                        </div>
-                      </td>
-                      <td className={`px-3 py-4 text-sm border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
-                        <span className={carryoverMinutes > 0 ? "text-orange-600" : carryoverMinutes < 0 ? "text-red-600" : "text-gray-500"}>
-                          {carryoverMinutes > 0 && '+'}{carryoverMinutes < 0 && '-'}{timeUtils.formatTime(Math.abs(carryoverMinutes))}
-                        </span>
-                      </td>
+                      {!isMobile && (
+                        <td className={`px-2 py-4 text-sm text-gray-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`} title={employee.department || '-'}>
+                          <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all'}}>
+                            {employee.department || '-'}
+                          </div>
+                        </td>
+                      )}
+                      {!isMobile && (
+                        <td className={`px-3 py-4 text-sm border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
+                          <span className={carryoverMinutes > 0 ? "text-orange-600" : carryoverMinutes < 0 ? "text-red-600" : "text-gray-500"}>
+                            {carryoverMinutes > 0 && '+'}{carryoverMinutes < 0 && '-'}{timeUtils.formatTime(Math.abs(carryoverMinutes))}
+                          </span>
+                        </td>
+                      )}
                       <td className={`px-3 py-4 text-sm text-blue-600 border-r border-gray-300 ${getEmployeeBgClass(employee.isActive)}`}>
                         +{timeUtils.formatTime(stats.totalOvertime)}
                       </td>

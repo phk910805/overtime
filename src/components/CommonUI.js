@@ -171,7 +171,7 @@ export const Toast = memo(({ message, show, onClose, type = 'success', duration 
 
   return (
     <div className={`fixed ${getPositionClass()} z-50 animate-in slide-in-from-top-2 duration-300`}>
-      <div className={`${config.bgColor} ${config.textColor} px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-[500px]`}>
+      <div className={`${config.bgColor} ${config.textColor} px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[250px] max-w-[calc(100vw-2rem)]`}>
         {config.icon}
         <span className="flex-1 text-sm font-medium">{message}</span>
         <button
@@ -414,8 +414,8 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
   if (totalItems === 0 || totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200" style={{minHeight: '60px'}}>
-      <div className="flex-1 flex items-center justify-between">
+    <div className="flex flex-col sm:flex-row items-center justify-between px-3 sm:px-6 py-3 bg-gray-50 border-t border-gray-200 gap-2" style={{minHeight: '60px'}}>
+      <div className="flex-1 flex items-center justify-between w-full">
         <div>
           <p className="text-xs text-gray-500">
             총 <span className="font-medium">{totalItems}</span>개 중{' '}
@@ -456,7 +456,7 @@ export const Pagination = memo(({ currentPage, totalPages, onPageChange, itemsPe
           </button>
           
           {/* 페이지 번호들 - 항상 5개 표시 */}
-          <div className="flex items-center space-x-1 min-w-[200px] justify-center">
+          <div className="flex items-center space-x-1 min-w-[120px] sm:min-w-[200px] justify-center">
             {getPageNumbers().map((page) => (
               <button
                 key={page.number}
