@@ -8,7 +8,7 @@ import React, { useState, memo, useCallback } from 'react';
 import { Crown, Users, Calendar, Check, Zap } from 'lucide-react';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useOvertimeContext } from '../../context';
-import { FREE_EMPLOYEE_LIMIT, TRIAL_DAYS } from '../../services/subscriptionService';
+import { TRIAL_DAYS } from '../../services/subscriptionService';
 
 const SettingsPlan = memo(() => {
   const { subscription, isTrialing, isFree, isPaid, remainingDays, elapsedDays } = useSubscription();
@@ -64,7 +64,7 @@ const SettingsPlan = memo(() => {
             </div>
             <p className="text-sm text-gray-600 mt-1">
               {isTrialing && '14일 무료 체험 중 — 모든 기능을 사용할 수 있습니다.'}
-              {isFree && '무료 플랜 — 직원 3명, 당월 데이터만 조회 가능합니다.'}
+              {isFree && '무료 플랜 — 당월 데이터만 조회 가능합니다.'}
               {isPaid && '유료 플랜 — 모든 기능을 무제한으로 사용할 수 있습니다.'}
               {!subscription && '플랜 정보를 불러오는 중...'}
             </p>
@@ -92,9 +92,6 @@ const SettingsPlan = memo(() => {
           <div className="flex items-center space-x-1.5 text-gray-600">
             <Users className="w-4 h-4" />
             <span>활성 직원: <strong>{employeeCount}명</strong></span>
-            {(isFree) && (
-              <span className="text-gray-400">/ {FREE_EMPLOYEE_LIMIT}명 제한</span>
-            )}
           </div>
           {isFree && (
             <div className="flex items-center space-x-1.5 text-gray-600">
@@ -142,7 +139,7 @@ const SettingsPlan = memo(() => {
             price="₩0"
             period=""
             features={[
-              `직원 ${FREE_EMPLOYEE_LIMIT}명까지`,
+              '직원 무제한',
               '당월 데이터만 조회',
               '모든 기능 동일'
             ]}

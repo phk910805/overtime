@@ -1,6 +1,6 @@
 /**
  * 구독/플랜 관리 서비스
- * 리버스 트라이얼 모델: 14일 체험 → 무료 플랜(직원 3명/당월 제한)
+ * 리버스 트라이얼 모델: 14일 체험 → 무료 플랜(당월 데이터 제한)
  */
 
 import { supabase } from '../lib/supabase';
@@ -20,7 +20,6 @@ export const SUBSCRIPTION_STATUS = {
   PAST_DUE: 'past_due'
 };
 
-export const FREE_EMPLOYEE_LIMIT = 3;
 export const TRIAL_DAYS = 14;
 
 // ========== SubscriptionService ==========
@@ -169,19 +168,7 @@ export class SubscriptionService {
    * @param {number} currentCount - 현재 직원 수 (owner+admin+employee 모두 포함)
    * @returns {{ allowed: boolean, reason?: string }}
    */
-  canAddEmployee(sub, currentCount) {
-    if (!this.hasFreeLimitations(sub)) {
-      return { allowed: true };
-    }
-
-    const limit = sub?.employeeLimit || FREE_EMPLOYEE_LIMIT;
-    if (currentCount >= limit) {
-      return {
-        allowed: false,
-        reason: `무료 플랜은 최대 ${limit}명까지 등록할 수 있습니다. 유료 플랜으로 업그레이드해주세요.`
-      };
-    }
-
+  canAddEmployee() {
     return { allowed: true };
   }
 

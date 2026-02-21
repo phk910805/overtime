@@ -6,8 +6,7 @@ import { useSortingPaging, useValidation } from '../utils';
 import { getDataService } from '../services/dataService';
 import { Modal, ConfirmModal, Toast, TableHeader, SortableHeader, EmptyState, Pagination } from './CommonUI';
 import EmployeeLinkModal from './EmployeeLinkModal';
-import UpgradeModal from './UpgradeModal';
-import { useSubscription } from '../hooks/useSubscription';
+import BulkEmployeeModal from './BulkEmployeeModal';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
@@ -22,11 +21,10 @@ const formatDate = (dateStr) => {
 const EmployeeManagement = memo(() => {
   const { canManageEmployees, canEditEmployees, canManageTeam, user } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee, employeeChangeRecords } = useOvertimeContext();
-  const { canAddEmployee: canAddEmployeeCheck } = useSubscription();
   const [activeEmployeeTab, setActiveEmployeeTab] = useState('list');
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [employeeToResign, setEmployeeToResign] = useState(null);
@@ -436,19 +434,22 @@ const EmployeeManagement = memo(() => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">구성원 관리</h2>
         {activeEmployeeTab === 'list' && canEditEmployees && (
-          <button
-            onClick={() => {
-              if (!canAddEmployeeCheck.allowed) {
-                setShowUpgradeModal(true);
-                return;
-              }
-              setShowModal(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>직원 추가</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2"
+            >
+              <Users className="w-4 h-4" />
+              <span>여러 명 추가</span>
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>직원 추가</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -1095,11 +1096,13 @@ const EmployeeManagement = memo(() => {
         />
       )}
 
-      <UpgradeModal
-        show={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        title="직원 추가 제한"
-        message={canAddEmployeeCheck.reason || '무료 플랜은 직원 3명까지 등록할 수 있습니다. 더 많은 직원을 관리하려면 플랜을 업그레이드하세요.'}
+      <BulkEmployeeModal
+        show={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onSuccess={(message) => {
+          setShowBulkModal(false);
+          showToast(message);
+        }}
       />
     </div>
   );

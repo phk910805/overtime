@@ -55,7 +55,7 @@ const TrialBanner = memo(() => {
     bgClass = 'bg-blue-50';
     borderClass = 'border-blue-200';
     textClass = 'text-blue-800';
-    message = '무료 플랜 사용 중 (직원 3명/당월)';
+    message = '무료 플랜 사용 중 (당월 데이터만)';
     linkText = '업그레이드 →';
   } else {
     return null;
