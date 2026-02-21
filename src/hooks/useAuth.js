@@ -7,10 +7,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAuthService } from '../services/authService';
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
-
   // useRef로 변경: 의존성 문제 해결 (성능 최적화)
   const authServiceRef = useRef(null);
   if (!authServiceRef.current) {
@@ -18,14 +14,29 @@ export function useAuth() {
   }
   const authService = authServiceRef.current;
 
+  // authService 싱글톤에 이미 유저가 있으면 동기적으로 초기값 설정 (FOUC 방지)
+  const [user, setUser] = useState(() => authService.currentUser || null);
+  const [loading, setLoading] = useState(() => !authService.currentUser);
+  const [initialized, setInitialized] = useState(() => !!authService.currentUser);
+
   // 초기 사용자 상태 확인
   useEffect(() => {
     let isMounted = true;
 
     const initializeAuth = async () => {
+      // authService에 이미 유저가 있으면 async 호출 스킵
+      if (authService.currentUser) {
+        if (isMounted) {
+          setUser(authService.currentUser);
+          setInitialized(true);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
-        
+
         // 현재 세션 확인
         await authService.getCurrentSession();
         const currentUser = await authService.getCurrentUser();
