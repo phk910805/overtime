@@ -49,6 +49,9 @@ firebase-debug.log
 # Image upload (AI 소통용)
 /upload_image
 
+# Cache
+.cache/
+
 # OS generated files
 Thumbs.db
 .DS_Store?
