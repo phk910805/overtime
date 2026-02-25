@@ -34,14 +34,12 @@
 | DS | MCP 서버 | Skill | Figma fileKey | 트리거 키워드 |
 |----|---------|-------|---------------|-------------|
 | Wanted Design System | `wds-mcp-server` | `wds-react` | `avRUqtDeoui3K1UkB0FwBi` | "원티드", "WDS" |
-| Material Design 3 | `material3` | `m3-react` | `OaM3Z7IOEaMGPRqfUKiv5d` | "머티리얼", "M3", "Material" |
 
 ### 워크플로우 (모든 DS 공통)
 
 #### 1단계: 토큰/스펙 확인 (DS MCP)
 - 해당 DS의 MCP 서버로 컴포넌트/토큰/아이콘 조회
 - WDS: `mcp__wds-mcp-server__*` (9개 도구)
-- M3: `mcp__material3__*` (5개 도구)
 - 기존 CommonUI.js 컴포넌트(Modal, Toast, Button 등) 재사용 우선
 
 #### 2단계: 시각적 확인 필요 시 Figma 조회 (일 200회 제한)
