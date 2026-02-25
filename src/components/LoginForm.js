@@ -131,47 +131,47 @@ const LoginForm = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="flex justify-center">
-            <Clock className="w-12 h-12 text-blue-600" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            초과 근무시간 관리
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {isLogin ? '로그인하여 시작하세요' : '새 계정을 만들어보세요'}
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md px-6 py-12 sm:px-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, #2563eb, #3b82f6)'}}>
+                <Clock className="w-7 h-7 text-white" />
+              </div>
+            </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <h2 className="text-3xl font-bold text-gray-900 mb-1 text-center">
+              {isLogin ? '로그인' : '회원가입'}
+            </h2>
+            <p className="text-gray-500 mb-8 text-center">
+              {isLogin ? '계정에 로그인하여 시작하세요' : '새 계정을 만들어보세요'}
+            </p>
+
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {!isLogin && (
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-500 mb-1.5">
                     이름
                   </label>
-                  <div className="mt-1 relative">
+                  <div className="relative">
                     <input
                       id="fullName"
                       name="fullName"
                       type="text"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="appearance-none block w-full px-4 py-3 pl-11 border border-gray-300 rounded-xl placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                       placeholder="홍길동"
                     />
-                    <User className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                    <User className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                   </div>
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-500 mb-1.5">
                   이메일
                 </label>
-                <div className="mt-1 relative">
+                <div className="relative">
                   <input
                     id="email"
                     name="email"
@@ -179,18 +179,18 @@ const LoginForm = () => {
                     autoComplete="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none block w-full px-4 py-3 pl-11 border border-gray-300 rounded-xl placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     placeholder="user@example.com"
                   />
-                  <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                  <Mail className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-500 mb-1.5">
                   비밀번호
                 </label>
-                <div className="mt-1 relative">
+                <div className="relative">
                   <input
                     id="password"
                     name="password"
@@ -198,14 +198,14 @@ const LoginForm = () => {
                     autoComplete={isLogin ? "current-password" : "new-password"}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none block w-full px-4 py-3 pl-11 pr-11 border border-gray-300 rounded-xl placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     placeholder={isLogin ? "비밀번호" : "6자리 이상 입력"}
                   />
-                  <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                  <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -231,10 +231,10 @@ const LoginForm = () => {
 
               {!isLogin && (
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-500 mb-1.5">
                     비밀번호 확인
                   </label>
-                  <div className="mt-1 relative">
+                  <div className="relative">
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
@@ -242,14 +242,14 @@ const LoginForm = () => {
                       autoComplete="new-password"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
-                      className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="appearance-none block w-full px-4 py-3 pl-11 pr-11 border border-gray-300 rounded-xl placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                       placeholder="비밀번호 재입력"
                     />
-                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                    <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -259,24 +259,24 @@ const LoginForm = () => {
 
               {/* 에러 메시지 */}
               {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-sm">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-xl">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* 성공 메시지 */}
               {message && (
-                <div className="text-green-600 text-sm text-center">
+                <div className="text-green-700 text-sm text-center bg-green-50 px-4 py-3 rounded-xl">
                   {message}
                 </div>
               )}
 
-              <div>
+              <div className="pt-1">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? (
                     <div className="flex items-center">
@@ -304,18 +304,22 @@ const LoginForm = () => {
             <div className="mt-6 space-y-3">
               {/* 로그인/회원가입 전환 */}
               <div className="text-center">
+                <span className="text-sm text-gray-500">
+                  {isLogin ? '계정이 없으신가요?' : '이미 계정이 있으신가요?'}
+                </span>
+                {' '}
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
                 >
-                  {isLogin ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
+                  {isLogin ? '회원가입' : '로그인'}
                 </button>
               </div>
 
               {/* 이메일/비밀번호 찾기 (로그인 화면에서만 표시) */}
               {isLogin && (
-                <div className="text-center text-sm text-gray-600 space-x-3">
+                <div className="text-center text-sm text-gray-500 space-x-3">
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
@@ -323,7 +327,7 @@ const LoginForm = () => {
                   >
                     비밀번호 찾기
                   </button>
-                  <span className="text-gray-400">·</span>
+                  <span className="text-gray-300">|</span>
                   <button
                     type="button"
                     onClick={() => setShowFindEmail(true)}
@@ -336,10 +340,9 @@ const LoginForm = () => {
             </div>
           </div>
         </div>
-      </div>
 
       {/* 비밀번호 재설정 모달 */}
-      <ForgotPasswordModal 
+      <ForgotPasswordModal
         show={showForgotPassword}
         onClose={() => setShowForgotPassword(false)}
       />
