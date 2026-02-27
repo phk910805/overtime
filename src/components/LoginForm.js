@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Clock, Mail, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -47,6 +47,7 @@ const LoginForm = () => {
   const [showFindEmail, setShowFindEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const { signIn, signUp, loading } = useAuth();
 
@@ -55,6 +56,7 @@ const LoginForm = () => {
     setFormData({ email: '', password: '', confirmPassword: '', fullName: '' });
     setError('');
     setMessage('');
+    setAgreedToTerms(false);
   }, [location.pathname]);
 
   const handleInputChange = (e) => {
@@ -86,6 +88,10 @@ const LoginForm = () => {
       }
       if (!formData.fullName.trim()) {
         setError('이름을 입력해주세요.');
+        return false;
+      }
+      if (!agreedToTerms) {
+        setError('이용약관 및 개인정보 처리방침에 동의해주세요.');
         return false;
       }
     }
@@ -272,10 +278,29 @@ const LoginForm = () => {
                 </div>
               )}
 
+              {/* 약관 동의 체크박스 (회원가입만) */}
+              {!isLogin && (
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => { setAgreedToTerms(e.target.checked); if (error) setError(''); }}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-600 leading-relaxed">
+                    <span className="text-blue-600 font-medium">[필수]</span>{' '}
+                    <Link to="/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">이용약관</Link>
+                    {' '}및{' '}
+                    <Link to="/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">개인정보 처리방침</Link>
+                    에 동의합니다.
+                  </span>
+                </label>
+              )}
+
               <div className="pt-1">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (!isLogin && !agreedToTerms)}
                   className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? (
@@ -289,17 +314,6 @@ const LoginForm = () => {
                 </button>
               </div>
             </form>
-
-            {/* 약관/개인정보 링크 (회원가입만) */}
-            {!isLogin && (
-              <div className="mt-4 text-center text-xs text-gray-500">
-                회원가입 시{' '}
-                <button type="button" onClick={() => alert('서비스 이용약관은 준비 중입니다.')} className="text-blue-600 hover:underline">이용약관</button>
-                {' '}및{' '}
-                <button type="button" onClick={() => alert('개인정보 처리방침은 준비 중입니다.')} className="text-blue-600 hover:underline">개인정보 처리방침</button>
-                에 동의하게 됩니다.
-              </div>
-            )}
 
             <div className="mt-6 space-y-3">
               {/* 로그인/회원가입 전환 */}

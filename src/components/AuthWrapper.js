@@ -10,7 +10,7 @@ import { getDataService } from '../services/dataService';
 import { getAuthService } from '../services/authService';
 
 // 공개 경로 (인증 불필요)
-const PUBLIC_PATHS = ['/login', '/signup'];
+const PUBLIC_PATHS = ['/login', '/signup', '/', '/terms', '/privacy'];
 
 // 회사 설정 경로 (인증 필요, 회사 불필요)
 const SETUP_PATHS = ['/setup', '/setup/register'];
@@ -109,9 +109,9 @@ const AuthWrapper = ({ children }) => {
     return <>{children}</>;
   }
 
-  // 4. 미로그인 + 비공개 경로 → /login으로 리다이렉트
+  // 4. 미로그인 + 비공개 경로 → /로 리다이렉트 (랜딩 페이지)
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // 5. 로그인 + 공개 경로 → 회사 유무에 따라 리다이렉트

@@ -16,6 +16,9 @@ import CompanySetup from './components/CompanySetup';
 import SettingsPage from './components/SettingsPage';
 import InviteAccept from './components/InviteAccept';
 import PendingApproval from './components/PendingApproval';
+import LandingPage from './pages/LandingPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 // 로딩 컴포넌트
 const LoadingScreen = () => (
@@ -47,8 +50,11 @@ const AuthenticatedApp = () => {
     <AuthWrapper>
       <Routes>
         {/* 공개 라우트 */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/signup" element={<LoginForm />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/invite/:token" element={<InviteAccept />} />
 
@@ -72,7 +78,6 @@ const AuthenticatedApp = () => {
         </Route>
 
         {/* 폴백 */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AuthWrapper>
