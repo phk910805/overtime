@@ -42,7 +42,7 @@ const TermsPage = memo(() => {
             {/* 제1조 */}
             <section>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">제1조 (목적)</h2>
-              <p>이 약관은 [회사명](이하 "회사")이 제공하는 초과근무시간 관리 서비스 "오버타임"(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+              <p>이 약관은 오버타임(이하 "회사")이 제공하는 초과근무시간 관리 서비스 "오버타임"(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
             </section>
 
             {/* 제2조 */}
@@ -194,14 +194,14 @@ const TermsPage = memo(() => {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">제14조 (분쟁 해결)</h2>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>이 약관과 관련한 분쟁은 대한민국 법률을 적용합니다.</li>
-                <li>서비스 이용 관련 분쟁에 대한 소송은 [회사명]의 소재지를 관할하는 법원을 제1심 관할법원으로 합니다.</li>
+                <li>서비스 이용 관련 분쟁에 대한 소송은 오버타임의 소재지를 관할하는 법원을 제1심 관할법원으로 합니다.</li>
               </ol>
             </section>
 
             {/* 부칙 */}
             <section className="pt-4 border-t border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">부칙</h2>
-              <p>이 약관은 20XX년 XX월 XX일부터 시행합니다.</p>
+              <p>이 약관은 2026년 3월 1일부터 시행합니다.</p>
             </section>
 
             <p className="text-sm text-gray-500 italic pt-4">

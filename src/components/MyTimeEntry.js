@@ -244,55 +244,55 @@ const MyTimeEntry = memo(() => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Toast message={toast.message} show={toast.show} onClose={hideToast} type={toast.type} duration={3000} />
 
-      {/* Header */}
+      {/* Header — 모바일: 컴팩트 */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">내 근무</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-lg sm:text-2xl font-bold text-gray-900">내 근무</h2>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
           {linkedEmployee.name} {linkedEmployee.department ? `| ${linkedEmployee.department}` : ''}
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500 mb-1">승인된 초과근무</div>
-          <div className="text-xl font-bold text-blue-600">{timeUtils.formatTime(summary.approvedOvertime)}</div>
+      {/* Summary Cards — 모바일: 3열 컴팩트 */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-white rounded-lg shadow p-2.5 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">승인 초과근무</div>
+          <div className="text-base sm:text-xl font-bold text-blue-600">{timeUtils.formatTime(summary.approvedOvertime)}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500 mb-1">대기 중</div>
-          <div className="text-xl font-bold text-yellow-600">{summary.pendingCount}건</div>
+        <div className="bg-white rounded-lg shadow p-2.5 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">대기 중</div>
+          <div className="text-base sm:text-xl font-bold text-yellow-600">{summary.pendingCount}건</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500 mb-1">반려</div>
-          <div className="text-xl font-bold text-red-600">{summary.rejectedCount}건</div>
+        <div className="bg-white rounded-lg shadow p-2.5 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">반려</div>
+          <div className="text-base sm:text-xl font-bold text-red-600">{summary.rejectedCount}건</div>
         </div>
       </div>
 
-      {/* Submit Form */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">시간 제출</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Submit Form — 모바일: 패딩 축소 */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">시간 제출</h3>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">날짜</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2.5 sm:px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             {/* Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">유형</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2.5 sm:px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="overtime">초과근무</option>
                 <option value="vacation">휴가전환</option>
@@ -302,24 +302,26 @@ const MyTimeEntry = memo(() => {
 
           {/* Time Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">시간</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">시간</label>
             <div className="flex items-center space-x-2">
               <input
                 ref={hoursRef}
                 type="text"
+                inputMode="numeric"
                 value={hours}
                 onChange={handleHoursChange}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-16 sm:w-20 px-2 sm:px-3 py-2 border border-gray-300 rounded-md text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="00"
                 maxLength={2}
               />
-              <span className="text-xl font-bold text-gray-400">:</span>
+              <span className="text-lg sm:text-xl font-bold text-gray-400">:</span>
               <input
                 ref={minutesRef}
                 type="text"
+                inputMode="numeric"
                 value={minutes}
                 onChange={handleMinutesChange}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-16 sm:w-20 px-2 sm:px-3 py-2 border border-gray-300 rounded-md text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="00"
                 maxLength={2}
               />
@@ -328,12 +330,12 @@ const MyTimeEntry = memo(() => {
 
           {/* Reason */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">사유 (선택)</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">사유 (선택)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2.5 sm:px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="사유를 입력하세요"
             />
           </div>
@@ -342,7 +344,7 @@ const MyTimeEntry = memo(() => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-full px-6 py-2.5 sm:py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -354,48 +356,79 @@ const MyTimeEntry = memo(() => {
         </form>
       </div>
 
-      {/* Records Table */}
+      {/* Records — 모바일: 카드 리스트, 데스크탑: 테이블 */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">
             제출 내역 ({selectedMonth})
           </h3>
         </div>
         {filteredRecords.length === 0 ? (
-          <div className="px-6 py-8 text-center text-gray-500">
+          <div className="px-4 sm:px-6 py-8 text-center text-sm text-gray-500">
             이번 달 제출 내역이 없습니다.
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="min-w-[600px] divide-y divide-gray-200">
+            {/* 모바일 카드 리스트 */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {paginatedRecords.map((record) => (
+                <div key={`${record.recordType}-${record.id}`} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-900">{record.date?.slice(5)}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${record.recordType === 'overtime' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                        {record.recordType === 'overtime' ? '초과' : '휴가'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-gray-900">{timeUtils.formatTime(record.totalMinutes)}</span>
+                      <StatusBadge status={record.status || 'approved'} />
+                    </div>
+                  </div>
+                  {(record.submit_reason || record.submitReason) && (
+                    <p className="text-xs text-gray-500 truncate">
+                      {record.submit_reason || record.submitReason}
+                    </p>
+                  )}
+                  {(record.review_note || record.reviewNote) && (
+                    <p className="text-xs text-orange-600 truncate mt-0.5">
+                      리뷰: {record.review_note || record.reviewNote}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* 데스크탑 테이블 */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사유</th>
-                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">리뷰노트</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시간</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사유</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">리뷰노트</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedRecords.map((record) => (
                     <tr key={`${record.recordType}-${record.id}`}>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date}</td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                         {record.recordType === 'overtime' ? '초과근무' : '휴가전환'}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                         {timeUtils.formatTime(record.totalMinutes)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
                         <StatusBadge status={record.status || 'approved'} />
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                         {record.submit_reason || record.submitReason || '-'}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                         {record.review_note || record.reviewNote || '-'}
                       </td>
                     </tr>
@@ -403,10 +436,11 @@ const MyTimeEntry = memo(() => {
                 </tbody>
               </table>
             </div>
+
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
-                <span className="text-sm text-gray-500">
+              <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                <span className="text-xs sm:text-sm text-gray-500">
                   {filteredRecords.length}건 중 {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredRecords.length)}
                 </span>
                 <div className="flex space-x-2">

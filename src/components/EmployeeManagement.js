@@ -122,19 +122,37 @@ const EmployeeManagement = memo(() => {
     }
   }, [showToast, loadMembers]);
 
+  const handleRemoveClick = useCallback(async (member) => {
+    try {
+      const dataService = getDataService();
+      const pendingCount = await dataService.getMemberPendingCount(member.id);
+      setRemoveTarget({ id: member.id, name: member.fullName, pendingCount });
+    } catch (err) {
+      console.error('대기 중 기록 조회 실패:', err);
+      setRemoveTarget({ id: member.id, name: member.fullName, pendingCount: 0 });
+    }
+  }, []);
+
   const handleRemoveConfirm = useCallback(async () => {
     if (!removeTarget) return;
 
     setMemberUpdating(removeTarget.id);
     try {
       const dataService = getDataService();
+      // 1. DB 처리 (soft-delete + pending 기록 취소)
       await dataService.removeMember(removeTarget.id);
-      showToast('팀원을 내보냈습니다.');
+      // 2. Auth 계정 삭제 (Edge Function)
+      try {
+        await dataService.withdrawMemberAuth(removeTarget.id);
+      } catch (authErr) {
+        console.error('Auth 삭제 실패 (DB 처리는 완료):', authErr);
+      }
+      showToast('탈퇴 처리되었습니다.');
       setRemoveTarget(null);
       await loadMembers();
     } catch (err) {
-      console.error('팀원 내보내기 실패:', err);
-      showToast(err.message || '팀원 내보내기에 실패했습니다.', 'error');
+      console.error('탈퇴 처리 실패:', err);
+      showToast(err.message || '탈퇴 처리에 실패했습니다.', 'error');
     } finally {
       setMemberUpdating(null);
     }
@@ -631,9 +649,9 @@ const EmployeeManagement = memo(() => {
               show={!!removeTarget}
               onClose={() => setRemoveTarget(null)}
               onConfirm={handleRemoveConfirm}
-              title="팀원 내보내기"
-              message={`${removeTarget?.name || '이 팀원'}을(를) 회사에서 내보내시겠습니까?\n내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다.`}
-              confirmText="내보내기"
+              title="구성원 탈퇴 처리"
+              message={`${removeTarget?.name || '이 구성원'}을(를) 탈퇴 처리하시겠습니까?${removeTarget?.pendingCount > 0 ? `\n\n⚠️ 대기 중인 근무 기록 ${removeTarget.pendingCount}건이 자동으로 취소됩니다.` : ''}\n\n• 연결된 직원 레코드가 삭제(퇴사) 처리됩니다\n• 로그인 계정이 삭제되어 재가입이 필요합니다\n• 이 작업은 되돌릴 수 없습니다`}
+              confirmText="탈퇴 처리"
               cancelText="취소"
               type="danger"
               loading={!!memberUpdating}
@@ -745,10 +763,10 @@ const EmployeeManagement = memo(() => {
                           )}
                           {canRemove && (
                             <button
-                              onClick={() => setRemoveTarget({ id: member.id, name: member.fullName })}
+                              onClick={() => handleRemoveClick(member)}
                               disabled={isUpdating}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                              title="내보내기"
+                              title="탈퇴 처리"
                             >
                               <UserMinus className="w-4 h-4" />
                             </button>
@@ -769,7 +787,7 @@ const EmployeeManagement = memo(() => {
                 <li>역할/권한 변경은 해당 팀원이 다음 로그인 시 적용됩니다</li>
                 <li>소유자 역할은 변경할 수 없습니다</li>
                 <li>뷰어 권한은 조회만 가능합니다</li>
-                <li>내보낸 팀원은 다시 초대 링크를 통해 재참여해야 합니다</li>
+                <li>탈퇴 처리된 구성원은 계정이 삭제되며, 재가입이 필요합니다</li>
                 <li>구성원 + 편집 권한 = 직접 시간 제출 가능 (내 근무 탭)</li>
               </ul>
             </div>

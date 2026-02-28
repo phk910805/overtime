@@ -1,8 +1,16 @@
-import React, { memo, useCallback, useEffect } from 'react';
+import React, { useState, memo, useCallback, useEffect } from 'react';
 import { ChevronUp, ChevronDown, CheckCircle, XCircle, AlertTriangle, Info, Loader } from 'lucide-react';
 
 // ========== BASIC COMPONENTS ==========
 export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!show) return null;
 
   const sizeClasses = {
@@ -12,6 +20,34 @@ export const Modal = memo(({ show, onClose, title, size = 'md', children }) => {
     xl: 'max-w-xl'
   };
 
+  // 모바일: 바텀 시트
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose}>
+        <div
+          className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl z-40 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxHeight: '85vh' }}
+        >
+          {/* 드래그 인디케이터 */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          </div>
+          <div
+            className="overflow-y-auto px-4"
+            style={{ maxHeight: 'calc(85vh - 2rem)', paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+          >
+            {title && (
+              <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
+            )}
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 데스크탑: 기존 중앙 모달
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40" onClick={onClose}>
       <div className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]}`} onClick={(e) => e.stopPropagation()}>

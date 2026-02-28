@@ -39,7 +39,7 @@ const PrivacyPage = memo(() => {
           </p>
 
           <p className="text-gray-700 mb-8">
-            [회사명](이하 "회사")은 「개인정보 보호법」 등 관련 법령에 따라 이용자의 개인정보를 보호하고, 이와 관련한 고충을 원활하게 처리하기 위하여 다음과 같이 개인정보 처리방침을 수립·공개합니다.
+            오버타임(이하 "회사")은 「개인정보 보호법」 등 관련 법령에 따라 이용자의 개인정보를 보호하고, 이와 관련한 고충을 원활하게 처리하기 위하여 다음과 같이 개인정보 처리방침을 수립·공개합니다.
           </p>
 
           <div className="prose prose-sm max-w-none text-gray-700 space-y-8">
@@ -287,7 +287,7 @@ const PrivacyPage = memo(() => {
               <h3 className="text-base font-medium text-gray-800 mb-1">행사 방법</h3>
               <ul className="list-disc pl-5 space-y-0.5 mb-3">
                 <li>서비스 내 설정 메뉴에서 직접 수정·삭제</li>
-                <li>이메일([이메일]) 또는 고객센터를 통한 요청</li>
+                <li>이메일(privacy@overtime.co.kr) 또는 고객센터를 통한 요청</li>
                 <li>요청 접수 후 10일 이내 처리하며, 처리 결과를 통지합니다.</li>
               </ul>
 
@@ -335,10 +335,10 @@ const PrivacyPage = memo(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr><td className="border border-gray-200 px-3 py-2">성명</td><td className="border border-gray-200 px-3 py-2">[개인정보 보호책임자명]</td></tr>
-                    <tr><td className="border border-gray-200 px-3 py-2">직위</td><td className="border border-gray-200 px-3 py-2">[직위]</td></tr>
-                    <tr><td className="border border-gray-200 px-3 py-2">이메일</td><td className="border border-gray-200 px-3 py-2">[이메일]</td></tr>
-                    <tr><td className="border border-gray-200 px-3 py-2">전화번호</td><td className="border border-gray-200 px-3 py-2">[전화번호]</td></tr>
+                    <tr><td className="border border-gray-200 px-3 py-2">성명</td><td className="border border-gray-200 px-3 py-2">홍길동</td></tr>
+                    <tr><td className="border border-gray-200 px-3 py-2">직위</td><td className="border border-gray-200 px-3 py-2">대표</td></tr>
+                    <tr><td className="border border-gray-200 px-3 py-2">이메일</td><td className="border border-gray-200 px-3 py-2">privacy@overtime.co.kr</td></tr>
+                    <tr><td className="border border-gray-200 px-3 py-2">전화번호</td><td className="border border-gray-200 px-3 py-2">02-0000-0000</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -375,7 +375,7 @@ const PrivacyPage = memo(() => {
 
             {/* 시행일 */}
             <section className="pt-4 border-t border-gray-200">
-              <p><strong>시행일</strong>: 20XX년 XX월 XX일</p>
+              <p><strong>시행일</strong>: 2026년 3월 1일</p>
             </section>
 
             <p className="text-sm text-gray-500 italic pt-4">

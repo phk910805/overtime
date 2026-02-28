@@ -32,6 +32,7 @@ const AuthWrapper = ({ children }) => {
   const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
   const isSetupPath = SETUP_PATHS.includes(location.pathname);
   const isInvitePath = location.pathname.startsWith('/invite/');
+  const isAlwaysAccessible = ['/terms', '/privacy'].includes(location.pathname);
   const isPendingPath = location.pathname === '/pending';
 
   // 로그인 후 회사 정보 + 멤버십 상태 확인
@@ -101,6 +102,11 @@ const AuthWrapper = ({ children }) => {
 
   // 2.5. 초대 링크 경로 → 항상 통과 (InviteAccept가 자체 인증 처리)
   if (isInvitePath) {
+    return <>{children}</>;
+  }
+
+  // 2.6. 이용약관/개인정보처리방침 → 로그인 여부 무관하게 항상 통과
+  if (isAlwaysAccessible) {
     return <>{children}</>;
   }
 

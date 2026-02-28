@@ -1244,6 +1244,68 @@ export class SupabaseAdapter extends StorageAdapter {
     }
   }
 
+  /**
+   * 탈퇴 대상의 대기 중(pending) 기록 수 조회
+   */
+  async getMemberPendingCount(memberId) {
+    try {
+      const { company_id } = await this._getProfileInfo();
+      if (!company_id) throw new Error('회사 정보가 없습니다.');
+
+      // 해당 멤버에 연결된 직원 찾기
+      const { data: employee, error: empError } = await this.supabase
+        .from('employees')
+        .select('id')
+        .eq('linked_user_id', memberId)
+        .eq('company_id', company_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (empError) throw empError;
+      if (!employee) return 0;
+
+      // pending 초과근무 + 휴가 기록 수 조회
+      const [overtimeRes, vacationRes] = await Promise.all([
+        this.supabase
+          .from('overtime_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('employee_id', employee.id)
+          .eq('company_id', company_id)
+          .eq('status', 'pending'),
+        this.supabase
+          .from('vacation_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('employee_id', employee.id)
+          .eq('company_id', company_id)
+          .eq('status', 'pending')
+      ]);
+
+      if (overtimeRes.error) throw overtimeRes.error;
+      if (vacationRes.error) throw vacationRes.error;
+
+      return (overtimeRes.count || 0) + (vacationRes.count || 0);
+    } catch (error) {
+      this._handleError(error, 'getMemberPendingCount');
+    }
+  }
+
+  /**
+   * 구성원 Auth 계정 삭제 (Edge Function 호출)
+   */
+  async withdrawMemberAuth(memberId) {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('withdraw-member', {
+        body: { memberId }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      this._handleError(error, 'withdrawMemberAuth');
+    }
+  }
+
   // ========== 초대 링크 기반 메서드 ==========
 
   /**

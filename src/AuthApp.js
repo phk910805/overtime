@@ -73,6 +73,7 @@ const AuthenticatedApp = () => {
           <Route path="/approvals" element={<App />} />
           <Route path="/my-time" element={<App />} />
           <Route path="/employees" element={<App />} />
+          <Route path="/more" element={<App />} />
           <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route path="/settings/:section" element={<SettingsPage />} />
         </Route>

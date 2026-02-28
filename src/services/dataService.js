@@ -507,11 +507,31 @@ export class DataService {
   }
 
   /**
-   * 팀원 내보내기 (소유자 전용)
+   * 팀원 탈퇴 처리 (소유자 전용) — DB soft-delete + pending 기록 취소
    * @param {string} memberId - 팀원 UUID
    */
   async removeMember(memberId) {
-    return await this._getAdapter().removeMember(memberId);
+    const result = await this._getAdapter().removeMember(memberId);
+    this._invalidateCache('employees', 'allEmployees', 'allRecords');
+    this._invalidateCacheByPrefix('employeesForMonth:');
+    this._invalidateCacheByPrefix('changeRecords');
+    return result;
+  }
+
+  /**
+   * 탈퇴 대상의 대기 중(pending) 기록 수 조회
+   * @param {string} memberId - 팀원 UUID
+   */
+  async getMemberPendingCount(memberId) {
+    return await this._getAdapter().getMemberPendingCount(memberId);
+  }
+
+  /**
+   * 구성원 Auth 계정 삭제 (Edge Function 호출)
+   * @param {string} memberId - 팀원 UUID
+   */
+  async withdrawMemberAuth(memberId) {
+    return await this._getAdapter().withdrawMemberAuth(memberId);
   }
 
   // ========== 초대 링크 기반 메서드 ==========

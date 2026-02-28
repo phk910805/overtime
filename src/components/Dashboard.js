@@ -311,7 +311,7 @@ const TimeInputPopup = memo(({ show, value, onClose, onSave, title = "시간 입
         onClose={hideToast}
         type={toast.type}
         duration={3000}
-        position="bottom-center"
+        position="top-center"
       />
       <Modal show={show} onClose={onClose} title={title}>
         <div className="mb-6">
