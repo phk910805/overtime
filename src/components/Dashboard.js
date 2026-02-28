@@ -571,7 +571,9 @@ const Dashboard = memo(({ editable = true, showReadOnlyBadge = false, isHistoryM
   // Dashboard 내부에서 월 선택 state 관리 (customMonth가 없을 때만)
   const [internalMonth, setInternalMonth] = useState(() => {
     if (customMonth) return customMonth;
-    return contextSelectedMonth || new Date().toISOString().slice(0, 7);
+    if (contextSelectedMonth) return contextSelectedMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
   // customMonth가 제공되면 사용, 아니면 내부 state 사용

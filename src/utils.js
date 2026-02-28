@@ -151,7 +151,7 @@ export const dateUtils = {
    */
   getEmployeeCreatedMonth: (createdAt) => {
     const date = dateUtils.parseEmployeeCreatedDate(createdAt);
-    return date ? date.toISOString().slice(0, 7) : '1900-01';
+    return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` : '1900-01';
   },
 
   /**
@@ -161,9 +161,9 @@ export const dateUtils = {
    */
   getEmployeeDeletedMonth: (deletedAt) => {
     if (!deletedAt) return '9999-12'; // 삭제되지 않은 경우 먼 미래
-    
+
     const date = dateUtils.parseEmployeeCreatedDate(deletedAt);
-    return date ? date.toISOString().slice(0, 7) : '9999-12';
+    return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` : '9999-12';
   },
 
   /**

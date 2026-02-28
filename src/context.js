@@ -119,7 +119,7 @@ const useOvertimeData = () => {
         }
 
         // 현재 월 기준 직원 + 전체 데이터 병렬 로드
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        const _now = new Date(); const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
         const isCurrentMonth = selectedMonth === currentMonth;
 
         const [
@@ -171,7 +171,7 @@ const useOvertimeData = () => {
 
     const updateEmployeesForMonth = async () => {
       try {
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        const _now = new Date(); const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
         let employeesData;
 
         if (selectedMonth === currentMonth) {
@@ -200,7 +200,7 @@ const useOvertimeData = () => {
         // 캐시 무효화 후 전체 재로드
         dataService.clearCache();
 
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        const _now = new Date(); const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
         const isCurrentMonth = selectedMonth === currentMonth;
 
         const [
@@ -276,7 +276,7 @@ const useOvertimeData = () => {
       const newEmployee = await dataService.addEmployee(employeeData);
       
       // 현재 월인 경우에만 직원 목록에 추가
-      const currentMonth = new Date().toISOString().slice(0, 7);
+      const _now = new Date(); const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
       if (selectedMonth === currentMonth) {
         setEmployees(prev => [...prev, newEmployee]);
       }
@@ -466,7 +466,7 @@ const useOvertimeData = () => {
         try {
           const createdDate = new Date(employee.createdAt);
           if (!isNaN(createdDate.getTime())) {
-            createdMonth = createdDate.toISOString().slice(0, 7);
+            createdMonth = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
           }
         } catch (error) {
           // 오류 시 기본값 사용
@@ -479,7 +479,7 @@ const useOvertimeData = () => {
         try {
           const deletedDate = new Date(employee.deletedAt);
           if (!isNaN(deletedDate.getTime())) {
-            deletedMonth = deletedDate.toISOString().slice(0, 7);
+            deletedMonth = `${deletedDate.getFullYear()}-${String(deletedDate.getMonth() + 1).padStart(2, '0')}`;
           }
         } catch (error) {
           // 오류 시 기본값 사용
@@ -810,7 +810,7 @@ const useOvertimeData = () => {
       const end = new Date(endMonth + '-01');
       
       while (current <= end) {
-        const yearMonth = current.toISOString().slice(0, 7);
+        const yearMonth = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
         months.push(yearMonth);
         current.setMonth(current.getMonth() + 1);
       }
@@ -867,7 +867,9 @@ const useOvertimeData = () => {
     }
     
     // 현재 달만 자동 생성 (과거 달은 수동 관리)
-    const currentYearMonth = new Date().toISOString().slice(0, 7);
+    // 로컬 시간 기준으로 비교 (selectedMonth도 로컬 시간 기준이므로 일치시켜야 함)
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     if (selectedMonth !== currentYearMonth) {
       return;
     }
